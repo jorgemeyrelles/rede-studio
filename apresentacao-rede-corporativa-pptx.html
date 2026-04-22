@@ -1,0 +1,3818 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <script
+      type="text/javascript"
+      src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=V9_b9V9MbcL4n2led1vWZyAUyLQdwNjkWb-rC8jcj3P1O49-GoSN62VpW5kRsos7DV2kqG_zzBoWIjzJwRvTUifOkpWQVpdFuYLx4I5WiA-_GimCf8s93SZxIxErjTiZsapHaxrXoBihD835RFcR_uj4SHDzk43nYtmBGRfp4p7eL6eo-ksePTt28kWAgOrIam6eLwH9ZjkiF3WbraaikR3gKQMKrZuHnhr0bbJ02Qabo8mUL9u_xV4L2c_t4FLAZe24fffIQQsivEiN3gFEncAjA7c8oFLbxueAL4f4Wnd8jCbeWvIColgQIuHgB3R1rkLuEsuIJ-dSfPK7Ysn1PXz-qTNbGatpHDk7wmZm55aNrLPQEOcwp7P5PI9tOSlz"
+      charset="UTF-8"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://hitssbr-my.sharepoint.com/EQRJIu3L4YhJI5WM3oBSoeMppInAsCiviCnfSjhdXwIjPUWcqu910fWx-3stpBQRDnAwTE-jy6c4E-XK5AEr4PdqdD0jAljcc0iaG3tviAlWOzhy5gCcOrZNMs45oLNO7gRu7DlCfWsGkXBgOnZf9uUv19rDoPJTw6ELkCuChyVVescCIA-ht3O32wBlorDlBCQuMePMQ07md1vJty55O2XNtVF-Veo2v2zk0fYubYIq5AR4To4F4WXmzYTDYxNS4jndve-WSMmJS9S4-L3A97Y709bosn49DVrGJ9kJGr9t2ArrDuxOzxgh6jTxEIsAkqyXqb2Y_SVeschIpIcP1fy_t_PTd-ruCd8cCHL_MayQ2NaN8uPbNm8EOhMhfUz9J0wXJCk_oN0LVvOtFphW9jApDXPJf3lLJUFt9JTyyvfarMwQZF3czH21lA7TAC_UGIfmZJUNnUo9xwsZ17jjx06I_CJLO47Guu4gOgwnPtCS3kFJZrLrRxnD7P3Y3QRe5Qaxn7uVuBAam77CETf2Gj0Pnw05RZEJCwi8n2L71FIueTFZwCAuSvrM1wg1dNeOdLwOGkZ-t2oQPqaXAfM4n5L5VzT2CY8_D9rsVKZFWkKSADj1xGMKcSYpvlVwEYTH2VMU0BnApUFU9SOi0xbT-3AjwfGtQYTc9Gpzr2UvKcUc0C_GEYI9ijJTSjmqVxLfF7JiobMYadN832vAKz18Dxkbec5e5VkjSFBo497m22ZqBEahaIDvQ4hb89DZ5N6rbGtfnT1FznWxLGd5XC5Z_Q6GCLxyfmB5eL40xdQ6K6Qp"
+    ></script>
+    <meta charset="UTF-8" />
+    <title>Apresentação — Rede Corporativa Matriz/Filial</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap");
+      :root {
+        --bg: #0a0e1a;
+        --panel: #0f1525;
+        --border: #1e2d4a;
+        --blue: #2d7fff;
+        --green: #00c97a;
+        --orange: #ff7b2d;
+        --yellow: #ffd166;
+        --cyan: #22d3ee;
+        --red: #ff4444;
+        --purple: #a855f7;
+        --dim: #4a6080;
+        --text: #c8d8f0;
+        --mono: "Share Tech Mono", monospace;
+        --sans: "Barlow", sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        background: #060810;
+        font-family: var(--sans);
+        color: var(--text);
+      }
+      body {
+        padding: 30px 20px 60px;
+      }
+
+      /* mh ini corpo */
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+      }
+      .corpo {
+        padding: 22px 14px 40px;
+        min-width: 1080px;
+      }
+
+      h1 {
+        text-align: center;
+        font-size: 18px;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .subtitle {
+        text-align: center;
+        font-size: 10px;
+        color: var(--dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+      }
+
+      /* Layout */
+      .wrap {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .site {
+        width: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .center {
+        width: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 64px;
+      }
+
+      /* Site header */
+      .site-header {
+        width: 100%;
+        padding: 10px 14px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 12px 12px 0 0;
+        border: 1.5px solid var(--border);
+        border-bottom: none;
+      }
+      .sh-blue {
+        background: #0d2040;
+        color: var(--blue);
+        border-color: #1a3a6a;
+      }
+      .sh-green {
+        background: #0a1f14;
+        color: var(--green);
+        border-color: #0f3a22;
+      }
+
+      .site-sub {
+        width: 100%;
+        background: #0b1220;
+        border-left: 1.5px solid var(--border);
+        border-right: 1.5px solid var(--border);
+        padding: 6px 10px;
+        font-size: 10px;
+        text-align: center;
+        color: var(--yellow);
+        font-family: var(--mono);
+      }
+      .site-sub.blue {
+        border-color: #1a3a6a;
+      }
+      .site-sub.green {
+        border-color: #0f3a22;
+      }
+
+      /* Zone containers */
+      .zone {
+        width: 100%;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 0 0 12px 12px;
+        padding: 12px 12px 14px;
+      }
+      .zone.blue {
+        border-color: #1a3a6a;
+      }
+      .zone.green {
+        border-color: #0f3a22;
+      }
+
+      /* Labels */
+      .label-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        justify-content: center;
+      }
+      .pill {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #060a12;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+      .pill.lan {
+        color: var(--cyan);
+        border-color: #0a2a3a;
+        background: #051218;
+      }
+      .pill.wan {
+        color: var(--orange);
+        border-color: #3a1a00;
+        background: #1a0d00;
+      }
+      .pill.vlan {
+        color: var(--purple);
+        border-color: #2a0a4a;
+        background: #0e0418;
+      }
+      .pill.vpn {
+        color: #55cc55;
+        border-color: #1a4a1a;
+        background: #040c04;
+      }
+
+      /* Devices */
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .device {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #0b1220;
+        border: 1px solid #1e2d4a;
+      }
+      .device.router {
+        border-color: #3a1a00;
+        background: #130b04;
+      }
+      .device.fw {
+        border-color: #3a0000;
+        background: #1a0404;
+      }
+      .device.sw {
+        border-color: #1a3a6a;
+        background: #060f1a;
+      }
+      .device.srv {
+        border-color: #2a0a4a;
+        background: #0d0618;
+      }
+      .device.end {
+        border-color: #1a2a40;
+        background: #0a101b;
+      }
+      .device.ap {
+        border-color: #1a0a2a;
+        background: #0e0018;
+      }
+
+      .icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        background: #050814;
+        border: 1px solid #111c2e;
+      }
+      .t {
+        line-height: 1.2;
+      }
+      .name {
+        font-size: 10px;
+        font-weight: 800;
+        color: #e8f2ff;
+      }
+      .role {
+        font-size: 8px;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .ip {
+        text-align: right;
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--yellow);
+        white-space: nowrap;
+      }
+      .ip .muted {
+        color: var(--dim);
+        font-size: 8px;
+      }
+
+      /* VLAN block */
+      .vlan-area {
+        margin-top: 10px;
+        border: 1.5px dashed #2a0a4a;
+        border-radius: 12px;
+        padding: 10px 10px 12px;
+        background: #080410;
+      }
+      .vlan-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .vlan-title .left {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--purple);
+      }
+      .vlan-title .right {
+        font-family: var(--mono);
+        font-size: 8.5px;
+        color: var(--dim);
+      }
+
+      .vlan-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .vcard {
+        border: 1px solid #1e2d4a;
+        background: #0b1220;
+        border-radius: 10px;
+        padding: 8px 10px;
+      }
+      .vcard .vh {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      .vid {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 900;
+        color: var(--purple);
+      }
+      .vname {
+        font-size: 9px;
+        font-weight: 800;
+        color: #ddeeff;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .vrange {
+        font-family: var(--mono);
+        font-size: 8.5px;
+        color: var(--yellow);
+      }
+      .vdesc {
+        margin-top: 4px;
+        font-size: 8px;
+        color: var(--dim);
+        line-height: 1.5;
+      }
+
+      /* Trunks / lines */
+      .line-v {
+        width: 2px;
+        height: 14px;
+        margin: 8px auto;
+        border-radius: 2px;
+      }
+      .lv-blue {
+        background: linear-gradient(to bottom, #1a3a6a, #2d7fff55);
+      }
+      .lv-green {
+        background: linear-gradient(to bottom, #0f3a22, #00c97a55);
+      }
+      .lv-red {
+        background: linear-gradient(to bottom, #3a0000, #ff444455);
+      }
+      .lv-orange {
+        background: linear-gradient(to bottom, #3a1a00, #ff7b2d55);
+      }
+
+      /* Center cloud */
+      .cloud {
+        width: 100%;
+        background: #050c18;
+        border: 1.5px solid #1a3060;
+        border-radius: 14px;
+        padding: 14px 14px 12px;
+        text-align: center;
+      }
+      .cloud .big {
+        font-size: 30px;
+      }
+      .cloud .lbl {
+        margin-top: 5px;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: var(--cyan);
+        text-transform: uppercase;
+      }
+      .cloud .sub {
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 8.5px;
+        color: var(--dim);
+        line-height: 1.6;
+      }
+
+      .fork {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 12px 0 8px;
+        gap: 8px;
+      }
+      .fork .h {
+        height: 2px;
+        flex: 1;
+        background: linear-gradient(to right, #1a3060, transparent);
+      }
+      .fork .h.r {
+        background: linear-gradient(to left, #1a3060, transparent);
+      }
+      .fork .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 10px var(--cyan);
+      }
+
+      .vpn-box {
+        width: 100%;
+        border: 1.5px dashed #1a4a1a;
+        border-radius: 12px;
+        background: #040c04;
+        padding: 10px 10px;
+        text-align: center;
+        margin-top: 10px;
+      }
+      .vpn-box .t {
+        font-size: 10px;
+        font-weight: 900;
+        color: #55cc55;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .vpn-box .d {
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 8.5px;
+        color: #88cc88;
+        line-height: 1.6;
+      }
+
+      /* Explanation panel */
+      .notes {
+        margin: 16px auto 0;
+        max-width: 1100px;
+        background: #060a12;
+        border: 1px solid #111c2e;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 9px;
+        color: var(--dim);
+        line-height: 1.9;
+      }
+      .notes strong {
+        color: #6a90b8;
+      }
+      .notes code {
+        font-family: var(--mono);
+        color: var(--yellow);
+        background: #0b1220;
+        border: 1px solid #111c2e;
+        padding: 1px 5px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+      .notes .k {
+        color: var(--cyan);
+        font-weight: 800;
+      }
+      .notes .p {
+        color: var(--purple);
+        font-weight: 800;
+      }
+      .notes .o {
+        color: var(--orange);
+        font-weight: 800;
+      }
+
+      /* mh fim corpo */
+
+      /* ?? SLIDE CONTAINER ?? */
+      .slide {
+        width: 960px;
+        min-height: 540px;
+        margin: 0 auto 40px;
+        background: var(--bg);
+        border: 2px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 40px #000a;
+      }
+      .slide-number {
+        position: absolute;
+        top: 14px;
+        right: 18px;
+        font-size: 9px;
+        color: var(--dim);
+        letter-spacing: 2px;
+        font-family: var(--mono);
+      }
+
+      /* ── SLIDE HEADER BARS ── */
+      .slide-bar {
+        height: 4px;
+        width: 100%;
+        background: linear-gradient(
+          to right,
+          var(--blue),
+          var(--cyan),
+          var(--green)
+        );
+      }
+      .slide-bar.orange {
+        background: linear-gradient(to right, var(--orange), var(--yellow));
+      }
+      .slide-bar.red {
+        background: linear-gradient(to right, var(--red), var(--orange));
+      }
+      .slide-bar.purple {
+        background: linear-gradient(to right, var(--purple), var(--cyan));
+      }
+      .slide-bar.green {
+        background: linear-gradient(to right, var(--green), var(--cyan));
+      }
+
+      /* ── SLIDE BODY ── */
+      .slide-body {
+        flex: 1;
+        padding: 28px 36px 24px;
+        display: flex;
+        flex-direction: column;
+      }
+      .slide-body.row {
+        flex-direction: row;
+        gap: 28px;
+      }
+      .slide-body.center-all {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      /* ── TYPOGRAPHY ── */
+      .slide-tag {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin-bottom: 8px;
+      }
+      .slide-title {
+        font-size: 32px;
+        font-weight: 900;
+        color: #fff;
+        line-height: 1.1;
+        margin-bottom: 6px;
+      }
+      .slide-title span {
+        color: var(--cyan);
+      }
+      .slide-subtitle {
+        font-size: 13px;
+        color: var(--dim);
+        font-weight: 400;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 14px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .st-blue {
+        color: var(--blue);
+        border-color: #1a3a6a;
+      }
+      .st-green {
+        color: var(--green);
+        border-color: #0f3a22;
+      }
+      .st-orange {
+        color: var(--orange);
+        border-color: #3a1a00;
+      }
+      .st-red {
+        color: var(--red);
+        border-color: #3a0000;
+      }
+      .st-purple {
+        color: var(--purple);
+        border-color: #2a0a4a;
+      }
+      .st-yellow {
+        color: var(--yellow);
+        border-color: #2a2000;
+      }
+      .st-cyan {
+        color: var(--cyan);
+        border-color: #0a2a3a;
+      }
+
+      /* ── COVER ELEMENTS ── */
+      .cover-logo {
+        font-size: 54px;
+        margin-bottom: 16px;
+      }
+      .cover-title {
+        font-size: 36px;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 2px;
+        line-height: 1.15;
+      }
+      .cover-title span {
+        color: var(--cyan);
+      }
+      .cover-sub {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 10px;
+        letter-spacing: 2px;
+      }
+      .cover-badges {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 22px;
+        flex-wrap: wrap;
+      }
+      .cbadge {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 5px 14px;
+        border-radius: 20px;
+      }
+      .cb-blue {
+        background: #0d2040;
+        color: var(--blue);
+        border: 1px solid #1a3a6a;
+      }
+      .cb-green {
+        background: #0a1f14;
+        color: var(--green);
+        border: 1px solid #0f3a22;
+      }
+      .cb-orange {
+        background: #1a0d00;
+        color: var(--orange);
+        border: 1px solid #3a1a00;
+      }
+      .cb-cyan {
+        background: #051218;
+        color: var(--cyan);
+        border: 1px solid #0a2a3a;
+      }
+      .cb-yellow {
+        background: #110e02;
+        color: var(--yellow);
+        border: 1px solid #2a2000;
+      }
+
+      /* ── AGENDA ── */
+      .agenda-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .agenda-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+      }
+      .agenda-num {
+        font-size: 18px;
+        font-weight: 900;
+        color: var(--cyan);
+        font-family: var(--mono);
+        min-width: 28px;
+      }
+      .agenda-text {
+        font-size: 11px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .agenda-sub {
+        font-size: 9px;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+
+      /* ── SCOPE TABLE ── */
+      .scope-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .scope-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .sc-icon {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+      .sc-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      .sc-items {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .sc-item {
+        font-size: 9.5px;
+        color: var(--text);
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .sc-item::before {
+        content: "▸";
+        color: var(--cyan);
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .sc-item.red::before {
+        color: var(--red);
+      }
+      .sc-item.green::before {
+        color: var(--green);
+      }
+      .sc-item.orange::before {
+        color: var(--orange);
+      }
+
+      /* ── TOPOLOGY BOX ── */
+      .topo-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .topo-site-header {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 8px 12px;
+        border-radius: 8px 8px 0 0;
+        text-align: center;
+      }
+      .tsh-blue {
+        background: #0d2040;
+        color: var(--blue);
+        border: 1.5px solid #1a3a6a;
+        border-bottom: none;
+      }
+      .tsh-green {
+        background: #0a1f14;
+        color: var(--green);
+        border: 1.5px solid #0f3a22;
+        border-bottom: none;
+      }
+      .topo-layer {
+        border-left: 3px solid var(--border);
+        margin-left: 12px;
+        padding: 6px 0 6px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .tl-blue {
+        border-color: #1a3a6a;
+      }
+      .tl-green {
+        border-color: #0f3a22;
+      }
+      .topo-device {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 6px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .td-icon {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .td-info {
+        flex: 1;
+      }
+      .td-name {
+        font-size: 9px;
+        font-weight: 700;
+        color: #ddeeff;
+      }
+      .td-role {
+        font-size: 7.5px;
+        color: var(--dim);
+      }
+      .td-ip {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--yellow);
+        text-align: right;
+      }
+      .td-ip-wan {
+        font-family: var(--mono);
+        font-size: 7.5px;
+        color: #ff9955;
+        text-align: right;
+        margin-top: 2px;
+      }
+      .layer-label {
+        font-size: 7px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 2px 7px;
+        border-radius: 10px;
+        align-self: flex-start;
+        margin-bottom: 2px;
+      }
+      .ll-core {
+        background: #1a0d00;
+        color: var(--orange);
+        border: 1px solid #3a1a00;
+      }
+      .ll-dist {
+        background: #000e1f;
+        color: var(--blue);
+        border: 1px solid #0a2040;
+      }
+      .ll-acc {
+        background: #00130a;
+        color: var(--green);
+        border: 1px solid #004020;
+      }
+      .ll-end {
+        background: #0d0d1a;
+        color: #8888cc;
+        border: 1px solid #222260;
+      }
+
+      .vpn-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 10px;
+        min-width: 110px;
+      }
+      .vpn-inet {
+        font-size: 28px;
+      }
+      .vpn-lbl {
+        font-size: 8px;
+        font-weight: 700;
+        color: var(--cyan);
+        letter-spacing: 2px;
+      }
+      .vpn-arrow {
+        font-size: 18px;
+        color: #1a6a1a;
+      }
+      .vpn-badge-sm {
+        font-size: 8px;
+        color: #55cc55;
+        background: #040c04;
+        border: 1px solid #1a4a1a;
+        border-radius: 6px;
+        padding: 4px 8px;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .vpn-badge-ssl {
+        font-size: 8px;
+        color: #aa88ff;
+        background: #080410;
+        border: 1px solid #2a1a4a;
+        border-radius: 6px;
+        padding: 4px 8px;
+        text-align: center;
+        line-height: 1.5;
+      }
+
+      /* ── IP TABLE ── */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--mono);
+        font-size: 8.5px;
+      }
+      th {
+        color: var(--dim);
+        text-align: left;
+        padding: 5px 8px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--sans);
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      td {
+        padding: 5px 8px;
+        border-bottom: 1px solid #0d1420;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: #0d1525;
+      }
+      .tc-site {
+        color: var(--cyan);
+      }
+      .tc-device {
+        color: #ddeeff;
+        font-family: var(--sans);
+        font-size: 8px;
+      }
+      .tc-ip {
+        color: var(--yellow);
+      }
+      .tc-mask {
+        color: var(--dim);
+      }
+      .tc-gw {
+        color: #88aacc;
+      }
+      .tc-layer {
+        font-family: var(--sans);
+      }
+      .tc-core {
+        color: var(--orange);
+      }
+      .tc-dist {
+        color: var(--blue);
+      }
+      .tc-acc {
+        color: var(--green);
+      }
+      .tc-end {
+        color: #8888cc;
+      }
+      .tc-res {
+        color: var(--dim);
+        font-style: italic;
+      }
+
+      /* ── ROUTE TABLE ── */
+      .route-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .route-block {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .route-header {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+      }
+      .rh-blue {
+        background: #0d2040;
+        color: var(--blue);
+        border: 1px solid #1a3a6a;
+      }
+      .rh-green {
+        background: #0a1f14;
+        color: var(--green);
+        border: 1px solid #0f3a22;
+      }
+      .rt-type-direct {
+        color: var(--green);
+      }
+      .rt-type-static {
+        color: var(--yellow);
+      }
+      .rt-type-default {
+        color: var(--orange);
+      }
+
+      /* ── FIREWALL TABLE ── */
+      .fw-allow {
+        color: #44ff88;
+        font-weight: 700;
+      }
+      .fw-deny {
+        color: #ff4444;
+        font-weight: 700;
+      }
+      .fw-log {
+        color: #ffaa44;
+        font-weight: 700;
+      }
+      .fw-src {
+        color: var(--cyan);
+      }
+      .fw-dst {
+        color: #ff9955;
+      }
+      .fw-port {
+        color: var(--yellow);
+      }
+
+      /* ── VLAN TABLE ── */
+      .vlan-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .vlan-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .vc-id {
+        font-family: var(--mono);
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .vc-name {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+      .vc-range {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--yellow);
+        margin-bottom: 4px;
+      }
+      .vc-desc {
+        font-size: 8.5px;
+        color: var(--dim);
+        line-height: 1.6;
+      }
+      .vc-1 {
+        border-color: #1a3a6a;
+      }
+      .vc-1 .vc-id,
+      .vc-1 .vc-name {
+        color: var(--blue);
+      }
+      .vc-2 {
+        border-color: #0f3a22;
+      }
+      .vc-2 .vc-id,
+      .vc-2 .vc-name {
+        color: var(--green);
+      }
+      .vc-3 {
+        border-color: #2a2000;
+      }
+      .vc-3 .vc-id,
+      .vc-3 .vc-name {
+        color: var(--yellow);
+      }
+      .vc-4 {
+        border-color: #082a1a;
+      }
+      .vc-4 .vc-id,
+      .vc-4 .vc-name {
+        color: #44ffaa;
+      }
+      .vc-5 {
+        border-color: #1a0a2a;
+      }
+      .vc-5 .vc-id,
+      .vc-5 .vc-name {
+        color: var(--purple);
+      }
+      .vc-6 {
+        border-color: #2a1a00;
+      }
+      .vc-6 .vc-id,
+      .vc-6 .vc-name {
+        color: var(--orange);
+      }
+
+      /* ── VPN SLIDE ── */
+      .vpn-flow {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin-top: 10px;
+      }
+      .vpn-site-box {
+        flex: 1;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .vpn-arrow-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+        gap: 6px;
+      }
+      .vpn-flow-arrow {
+        font-size: 22px;
+        color: #1a6a1a;
+      }
+      .vpn-flow-label {
+        font-size: 8px;
+        color: #55cc55;
+        background: #040c04;
+        border: 1px solid #1a4a1a;
+        border-radius: 5px;
+        padding: 3px 8px;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .vpn-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: #060c18;
+        border: 1px solid #1a2a40;
+        border-radius: 7px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+      }
+      .vpn-step-num {
+        font-size: 14px;
+        font-weight: 900;
+        color: var(--cyan);
+        min-width: 20px;
+        font-family: var(--mono);
+      }
+      .vpn-step-text {
+        font-size: 9px;
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .vpn-step-text strong {
+        color: var(--yellow);
+      }
+
+      /* ── SECURITY SLIDE ── */
+      .security-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .sec-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .sec-icon {
+        font-size: 22px;
+        margin-bottom: 6px;
+      }
+      .sec-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      .sec-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .sec-item {
+        font-size: 9px;
+        color: var(--text);
+        display: flex;
+        gap: 7px;
+        line-height: 1.5;
+      }
+      .sec-item .bullet {
+        color: var(--red);
+        flex-shrink: 0;
+      }
+      .sec-item .bullet.g {
+        color: var(--green);
+      }
+      .sec-item .bullet.y {
+        color: var(--yellow);
+      }
+
+      /* ── SOW SLIDE ── */
+      .sow-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+      }
+      .sow-phase {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .sow-phase-num {
+        font-size: 28px;
+        font-weight: 900;
+        font-family: var(--mono);
+        margin-bottom: 4px;
+      }
+      .sow-phase-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      .sow-tasks {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .sow-task {
+        font-size: 8.5px;
+        color: var(--text);
+        display: flex;
+        gap: 6px;
+        background: #060a12;
+        border: 1px solid #111c2e;
+        border-radius: 5px;
+        padding: 5px 8px;
+      }
+      .sow-task .ck {
+        color: var(--green);
+        flex-shrink: 0;
+      }
+      .sp-1 .sow-phase-num {
+        color: var(--blue);
+      }
+      .sp-1 {
+        border-color: #1a3a6a;
+      }
+      .sp-2 .sow-phase-num {
+        color: var(--yellow);
+      }
+      .sp-2 {
+        border-color: #2a2000;
+      }
+      .sp-3 .sow-phase-num {
+        color: var(--green);
+      }
+      .sp-3 {
+        border-color: #0f3a22;
+      }
+
+      .sow-bottom {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .sow-metric {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        text-align: center;
+      }
+      .sow-metric-val {
+        font-size: 22px;
+        font-weight: 900;
+        font-family: var(--mono);
+        color: var(--cyan);
+      }
+      .sow-metric-lbl {
+        font-size: 8px;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 3px;
+      }
+
+      /* ── CLOSING SLIDE ── */
+      .closing-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        width: 100%;
+        max-width: 680px;
+      }
+      .closing-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        text-align: left;
+      }
+      .cc-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      .cc-item {
+        font-size: 9.5px;
+        color: var(--text);
+        display: flex;
+        gap: 7px;
+        margin-bottom: 5px;
+        line-height: 1.5;
+      }
+      .cc-item::before {
+        content: "✔";
+        color: var(--green);
+        flex-shrink: 0;
+      }
+
+      /* ── DIVIDERS ── */
+      hr.slide-hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 12px 0;
+      }
+      .spacer {
+        height: 14px;
+      }
+
+      /* ── PRINT/NAV ── */
+      .nav-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #060810ee;
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid #1e2d4a;
+        padding: 10px 20px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 30px;
+      }
+      .nav-btn {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        border: none;
+        background: #0d1525;
+        color: var(--cyan);
+        border: 1px solid #1e2d4a;
+        text-decoration: none;
+      }
+      .nav-btn:hover {
+        background: #1a2a40;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAVIGATION -->
+    <div class="nav-bar">
+      <a class="nav-btn" href="#s1">01 · Capa</a>
+      <a class="nav-btn" href="#s2">02 · Agenda</a>
+      <a class="nav-btn" href="#s3">03 · Escopo</a>
+      <a class="nav-btn" href="#s4">04 · Topologia Lógica</a>
+      <a class="nav-btn" href="#s5">05 · Topologia Física</a>
+      <a class="nav-btn" href="#s51">051 · Diagramas</a>
+      <a class="nav-btn" href="#s6">06 · Endereçamento IP</a>
+      <a class="nav-btn" href="#s7">07 · VLANs</a>
+      <a class="nav-btn" href="#s8">08 · Tabela de Rotas</a>
+      <a class="nav-btn" href="#s9">09 · VPN</a>
+      <a class="nav-btn" href="#s10">10 · Firewall/ACL</a>
+      <a class="nav-btn" href="#s11">11 · Segurança</a>
+      <a class="nav-btn" href="#s12">12 · SOW</a>
+      <a class="nav-btn" href="#s13">13 · Encerramento</a>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 01 — CAPA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s1">
+      <div class="slide-bar"></div>
+      <div class="slide-number">01 / 13</div>
+      <div
+        class="slide-body center-all"
+        style="
+          background: radial-gradient(
+            ellipse at 50% 40%,
+            #0d1f3a 0%,
+            #0a0e1a 70%
+          );
+        "
+      >
+        <div class="cover-logo">🌐</div>
+        <div class="cover-title">
+          Projeto de Rede Corporativa<br /><span>Matriz & Filial</span>
+        </div>
+        <div class="cover-sub">
+          São Paulo · SP &nbsp;·&nbsp; Curitiba · PR &nbsp;·&nbsp; IPv4 RFC-1918
+          &nbsp;·&nbsp; VPN IPsec/IKEv2
+        </div>
+        <div class="cover-badges">
+          <span class="cbadge cb-blue">🏢 Matriz SP</span>
+          <span class="cbadge cb-green">🏭 Filial CWB</span>
+          <span class="cbadge cb-orange">🛡️ Firewalls Dedicados</span>
+          <span class="cbadge cb-cyan">🔒 VPN Site-to-Site</span>
+          <span class="cbadge cb-yellow">📡 Wi-Fi 802.11ac</span>
+        </div>
+        <div
+          style="
+            margin-top: 28px;
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 2px;
+          "
+        >
+          ARQUITETURA HIERÁRQUICA 4 CAMADAS &nbsp;·&nbsp; ESCALÁVEL
+          &nbsp;·&nbsp; SEGURA &nbsp;·&nbsp; DOCUMENTADA
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 02 — AGENDA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s2">
+      <div class="slide-bar"></div>
+      <div class="slide-number">02 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Sumário</div>
+        <div class="slide-title">O que será <span>apresentado</span></div>
+        <div class="slide-subtitle">
+          Roteiro completo da apresentação técnica
+        </div>
+        <ul class="agenda-list">
+          <li class="agenda-item" style="border-color: #1a3a6a">
+            <div class="agenda-num">01</div>
+            <div>
+              <div class="agenda-text">Escopo de Trabalho (SOW)</div>
+              <div class="agenda-sub">
+                Objetivos, entregáveis, fases e cronograma
+              </div>
+            </div>
+          </li>
+          <li class="agenda-item" style="border-color: #0f3a22">
+            <div class="agenda-num">02</div>
+            <div>
+              <div class="agenda-text">Topologia Lógica e Física</div>
+              <div class="agenda-sub">
+                Hierarquia 4 camadas · ligações entre dispositivos · sites SP e
+                CWB
+              </div>
+            </div>
+          </li>
+          <li class="agenda-item" style="border-color: #2a2000">
+            <div class="agenda-num">03</div>
+            <div>
+              <div class="agenda-text">
+                Endereçamento IPv4 · VLANs · Tabela de Rotas
+              </div>
+              <div class="agenda-sub">
+                Cálculo de sub-redes · plano completo · IPs de cada dispositivo
+              </div>
+            </div>
+          </li>
+          <li class="agenda-item" style="border-color: #1a0a2a">
+            <div class="agenda-num">04</div>
+            <div>
+              <div class="agenda-text">VPN Site-to-Site & Acesso Remoto</div>
+              <div class="agenda-sub">
+                IPsec/IKEv2 · SSL-VPN · túneis · autenticação
+              </div>
+            </div>
+          </li>
+          <li class="agenda-item" style="border-color: #3a0000">
+            <div class="agenda-num">05</div>
+            <div>
+              <div class="agenda-text">
+                Política de Segurança · Firewalls · ACL
+              </div>
+              <div class="agenda-sub">
+                Regras de acesso assimétrico · IDS/IPS · zonas de segurança
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 03 — ESCOPO DE TRABALHO (SOW)
+════════════════════════════════════════════ -->
+    <div class="slide" id="s3">
+      <div class="slide-bar orange"></div>
+      <div class="slide-number">03 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Documento de Escopo</div>
+        <div class="slide-title">Escopo de <span>Trabalho</span></div>
+        <div class="slide-subtitle">
+          Statement of Work — SOW · Rede Corporativa Matriz/Filial
+        </div>
+        <div class="scope-grid">
+          <div class="scope-card" style="border-color: #1a3a6a">
+            <div class="sc-icon">🎯</div>
+            <div class="sc-title" style="color: var(--blue)">
+              Objetivo do Projeto
+            </div>
+            <ul class="sc-items">
+              <li class="sc-item">
+                Implantar infraestrutura de rede para Matriz SP e Filial CWB
+              </li>
+              <li class="sc-item">
+                Garantir escalabilidade para +18 computadores + 20% reserva
+              </li>
+              <li class="sc-item">
+                Interligação segura via VPN Site-to-Site IPsec/IKEv2
+              </li>
+              <li class="sc-item">
+                Acesso remoto via SSL-VPN para usuários externos
+              </li>
+              <li class="sc-item">
+                Controle de acesso assimétrico entre Matriz e Filial
+              </li>
+            </ul>
+          </div>
+          <div class="scope-card" style="border-color: #0f3a22">
+            <div class="sc-icon">📦</div>
+            <div class="sc-title" style="color: var(--green)">Entregáveis</div>
+            <ul class="sc-items">
+              <li class="sc-item green">
+                Diagrama de topologia lógica e física
+              </li>
+              <li class="sc-item green">
+                Plano de endereçamento IPv4 completo
+              </li>
+              <li class="sc-item green">
+                Configuração de VLANs e tabela de rotas
+              </li>
+              <li class="sc-item green">
+                Política de firewall/ACL documentada
+              </li>
+              <li class="sc-item green">
+                Configuração VPN Site-to-Site e SSL-VPN
+              </li>
+              <li class="sc-item green">
+                Documento SOW e apresentação PowerPoint
+              </li>
+            </ul>
+          </div>
+          <div class="scope-card" style="border-color: #3a1a00">
+            <div class="sc-icon">⛔</div>
+            <div class="sc-title" style="color: var(--orange)">
+              Fora do Escopo
+            </div>
+            <ul class="sc-items">
+              <li class="sc-item orange">
+                Cabeamento estruturado físico (obra civil)
+              </li>
+              <li class="sc-item orange">
+                Aquisição de equipamentos (orçamento separado)
+              </li>
+              <li class="sc-item orange">
+                Sistemas de CFTV e controle de acesso físico
+              </li>
+              <li class="sc-item orange">
+                Servidores de aplicação e bancos de dados
+              </li>
+            </ul>
+          </div>
+          <div class="scope-card" style="border-color: #2a2000">
+            <div class="sc-icon">✅</div>
+            <div class="sc-title" style="color: var(--yellow)">
+              Premissas e Requisitos
+            </div>
+            <ul class="sc-items">
+              <li class="sc-item">Links de internet dedicados em SP e CWB</li>
+              <li class="sc-item">
+                IPs WAN fixos nos dois roteadores de borda
+              </li>
+              <li class="sc-item">
+                Switches gerenciáveis Layer 3 em ambos os sites
+              </li>
+              <li class="sc-item">
+                Firewalls dedicados (não embutidos no roteador)
+              </li>
+              <li class="sc-item">Suporte a VLANs 802.1Q nos switches</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 04 — TOPOLOGIA LÓGICA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s4" style="min-height: 600px">
+      <div class="slide-bar"></div>
+      <div class="slide-number">04 / 13</div>
+      <div class="slide-body row" style="padding-top: 20px">
+        <!-- MATRIZ SP -->
+        <div class="topo-col">
+          <div class="topo-site-header tsh-blue">
+            🏢 Matriz — São Paulo · 10.0.1.0/24
+          </div>
+
+          <div class="layer-label ll-core">Camada 1 — Core / WAN</div>
+          <div class="topo-layer tl-blue">
+            <div
+              class="topo-device"
+              style="border-color: #7a3a10; background: #130b04"
+            >
+              <div class="td-icon">🔴</div>
+              <div class="td-info">
+                <div class="td-name">Roteador Matriz SP</div>
+                <div class="td-role">Gateway · NAT · BGP/OSPF · WAN</div>
+              </div>
+              <div>
+                <div class="td-ip">LAN: 10.0.1.1</div>
+                <div class="td-ip-wan">WAN: 200.10.1.1/30</div>
+              </div>
+            </div>
+            <div
+              class="topo-device"
+              style="border-color: #7a1010; background: #1a0404"
+            >
+              <div class="td-icon">🛡️</div>
+              <div class="td-info">
+                <div class="td-name">Firewall Matriz SP</div>
+                <div class="td-role">
+                  Stateful · ACL · IDS/IPS · VPN Endpoint
+                </div>
+              </div>
+              <div class="td-ip" style="color: #ff6666">ACL ativa</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-dist">Camada 2 — Distribuição</div>
+          <div class="topo-layer tl-blue">
+            <div
+              class="topo-device"
+              style="border-color: #1a3a6a; background: #060f1a"
+            >
+              <div class="td-icon">🔵</div>
+              <div class="td-info">
+                <div class="td-name">Switch L3 Matriz</div>
+                <div class="td-role">VLANs · Trunk · Gerenciamento</div>
+              </div>
+              <div class="td-ip">10.0.1.2</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-acc">Camada 3 — Acesso</div>
+          <div class="topo-layer tl-blue">
+            <div
+              class="topo-device"
+              style="border-color: #3a1a6a; background: #0d0618"
+            >
+              <div class="td-icon">🖧</div>
+              <div class="td-info">
+                <div class="td-name">Servidores SP (3)</div>
+                <div class="td-role">
+                  File · AD/DNS · App · 🔒 ACL filial parcial
+                </div>
+              </div>
+              <div class="td-ip">10.0.1.200–.202</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-end">Camada 4 — Endpoints</div>
+          <div class="topo-layer tl-blue">
+            <div class="topo-device">
+              <div class="td-icon">🖥️</div>
+              <div class="td-info">
+                <div class="td-name">PCs Admin (21)</div>
+                <div class="td-role">Estações cabeadas</div>
+              </div>
+              <div class="td-ip">10.0.1.10–.30</div>
+            </div>
+            <div class="topo-device">
+              <div class="td-icon">🖨️</div>
+              <div class="td-info">
+                <div class="td-name">Impressoras (3)</div>
+                <div class="td-role">TCP/IP · switch direto</div>
+              </div>
+              <div class="td-ip">10.0.1.40–.42</div>
+            </div>
+            <div class="topo-device">
+              <div class="td-icon">📞</div>
+              <div class="td-info">
+                <div class="td-name">Telefones VoIP (6)</div>
+                <div class="td-role">SIP · VLAN voz</div>
+              </div>
+              <div class="td-ip">10.0.1.50–.55</div>
+            </div>
+            <div
+              class="topo-device"
+              style="border-color: #2a1a40; background: #0d0818"
+            >
+              <div class="td-icon">🔐</div>
+              <div class="td-info">
+                <div class="td-name">PCs VPN Remoto (2)</div>
+                <div class="td-role">SSL-VPN · acesso externo</div>
+              </div>
+              <div class="td-ip">10.0.1.100–.101</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER VPN -->
+        <div class="vpn-center">
+          <div class="vpn-inet">☁️</div>
+          <div class="vpn-lbl">INTERNET</div>
+          <div
+            style="
+              height: 12px;
+              width: 2px;
+              background: linear-gradient(to bottom, #22d3ee, #1a3060);
+              margin: 0 auto;
+            "
+          ></div>
+          <div class="vpn-badge-sm">
+            🔒 VPN<br />Site-to-Site<br /><span
+              style="font-family: var(--mono); font-size: 7px; color: #338833"
+              >IPsec/IKEv2<br />10.10.0.0/30</span
+            >
+          </div>
+          <div
+            style="
+              height: 12px;
+              width: 2px;
+              border-left: 2px dashed #1a6a1a;
+              margin: 0 auto;
+            "
+          ></div>
+          <div class="vpn-badge-ssl">
+            🔐 SSL-VPN<br />Remoto<br /><span
+              style="font-family: var(--mono); font-size: 7px; color: #7755aa"
+              >pool 10.10.1.0/28</span
+            >
+          </div>
+        </div>
+
+        <!-- FILIAL CWB -->
+        <div class="topo-col">
+          <div class="topo-site-header tsh-green">
+            🏭 Filial — Curitiba · 10.0.2.0/25
+          </div>
+
+          <div class="layer-label ll-core">Camada 1 — Core / WAN</div>
+          <div class="topo-layer tl-green">
+            <div
+              class="topo-device"
+              style="border-color: #7a3a10; background: #130b04"
+            >
+              <div class="td-icon">🔴</div>
+              <div class="td-info">
+                <div class="td-name">Roteador Filial CWB</div>
+                <div class="td-role">Gateway · NAT · OSPF · WAN</div>
+              </div>
+              <div>
+                <div class="td-ip">LAN: 10.0.2.1</div>
+                <div class="td-ip-wan">WAN: 200.20.1.1/30</div>
+              </div>
+            </div>
+            <div
+              class="topo-device"
+              style="border-color: #7a1010; background: #1a0404"
+            >
+              <div class="td-icon">🛡️</div>
+              <div class="td-info">
+                <div class="td-name">Firewall Filial CWB</div>
+                <div class="td-role">
+                  Stateful · ACL · IDS/IPS · VPN Endpoint
+                </div>
+              </div>
+              <div class="td-ip" style="color: #ff6666">ACL ativa</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-dist">Camada 2 — Distribuição</div>
+          <div class="topo-layer tl-green">
+            <div
+              class="topo-device"
+              style="border-color: #0f3a22; background: #061a0e"
+            >
+              <div class="td-icon">🟢</div>
+              <div class="td-info">
+                <div class="td-name">Switch L3 Filial</div>
+                <div class="td-role">VLANs · Trunk · Gerenciamento</div>
+              </div>
+              <div class="td-ip">10.0.2.2</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-acc">Camada 3 — Acesso</div>
+          <div class="topo-layer tl-green">
+            <div
+              class="topo-device"
+              style="border-color: #3a1a6a; background: #0d0618"
+            >
+              <div class="td-icon">🖧</div>
+              <div class="td-info">
+                <div class="td-name">Servidores CWB (2)</div>
+                <div class="td-role">File · App · ✅ Matriz: acesso total</div>
+              </div>
+              <div class="td-ip">10.0.2.200–.201</div>
+            </div>
+            <div class="topo-device" style="border-color: #1a0a2a">
+              <div class="td-icon">📡</div>
+              <div class="td-info">
+                <div class="td-name">Access Points (4)</div>
+                <div class="td-role">802.11ac · PoE · cabeado</div>
+              </div>
+              <div class="td-ip">10.0.2.60–.63</div>
+            </div>
+          </div>
+
+          <div class="layer-label ll-end">Camada 4 — Endpoints</div>
+          <div class="topo-layer tl-green">
+            <div class="topo-device">
+              <div class="td-icon">🖥️</div>
+              <div class="td-info">
+                <div class="td-name">Computadores (22)</div>
+                <div class="td-role">Cabeados · 18 mín + crescimento</div>
+              </div>
+              <div class="td-ip">10.0.2.10–.31</div>
+            </div>
+            <div class="topo-device">
+              <div class="td-icon">💻</div>
+              <div class="td-info">
+                <div class="td-name">Dispositivos Wi-Fi</div>
+                <div class="td-role">📶 AP → Switch → Roteador</div>
+              </div>
+              <div class="td-ip">10.0.2.70–.85</div>
+            </div>
+            <div class="topo-device">
+              <div class="td-icon">🖨️</div>
+              <div class="td-info">
+                <div class="td-name">Impressoras (4)</div>
+                <div class="td-role">TCP/IP · switch direto</div>
+              </div>
+              <div class="td-ip">10.0.2.40–.43</div>
+            </div>
+            <div class="topo-device">
+              <div class="td-icon">📞</div>
+              <div class="td-info">
+                <div class="td-name">Telefones VoIP (8)</div>
+                <div class="td-role">SIP · VLAN voz</div>
+              </div>
+              <div class="td-ip">10.0.2.50–.57</div>
+            </div>
+            <div
+              class="topo-device"
+              style="border-color: #2a1a40; background: #0d0818"
+            >
+              <div class="td-icon">🔐</div>
+              <div class="td-info">
+                <div class="td-name">PCs VPN Remoto (2)</div>
+                <div class="td-role">SSL-VPN · acesso externo</div>
+              </div>
+              <div class="td-ip">10.0.2.100–.101</div>
+            </div>
+            <div
+              class="topo-device"
+              style="border-color: #1a1a2a; border-style: dashed; opacity: 0.65"
+            >
+              <div class="td-icon">📦</div>
+              <div class="td-info">
+                <div class="td-name">Reserva (~30 hosts)</div>
+                <div class="td-role">Expansão futura · 20% mínimo</div>
+              </div>
+              <div class="td-ip">10.0.2.110–.126</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 05 — TOPOLOGIA FÍSICA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s5" style="min-height: 600px">
+      <div class="slide-bar green"></div>
+      <div class="slide-number">05 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Topologia Física</div>
+        <div class="slide-title">
+          Ligações <span>Físicas</span> entre Dispositivos
+        </div>
+        <div class="slide-subtitle">
+          Cada enlace com meio físico, velocidade e tipo de conexão
+        </div>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr;
+            gap: 0;
+            margin-top: 10px;
+          "
+        >
+          <!-- FÍSICO SP -->
+          <div
+            style="
+              background: #060e18;
+              border: 1px solid #1a3a6a;
+              border-radius: 10px;
+              padding: 14px 16px;
+            "
+          >
+            <div class="section-title st-blue">🏢 Física — Matriz SP</div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                font-size: 9px;
+              "
+            >
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--orange);
+                "
+              >
+                <strong style="color: var(--orange)">ISP → Roteador</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cabo óptico monomodo · Gbps · porta WAN · IP público
+                  200.10.1.1/30</span
+                >
+              </div>
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--red);
+                "
+              >
+                <strong style="color: var(--red)">Roteador → Firewall</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Par trançado Cat6 · 1Gbps · link dedicado · zona
+                  DMZ/WAN</span
+                >
+              </div>
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--blue);
+                "
+              >
+                <strong style="color: var(--blue)">Firewall → Switch L3</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Par trançado Cat6A · 1Gbps · trunk 802.1Q · uplink
+                  principal</span
+                >
+              </div>
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #3a1a6a;
+                "
+              >
+                <strong style="color: #aa88ff">Switch → Servidores (3)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6A · 1Gbps por servidor · IPs estáticos · rack de
+                  servidores</span
+                >
+              </div>
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #1a2a40;
+                "
+              >
+                <strong style="color: var(--text)"
+                  >Switch → PCs Admin (21)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6 · 100/1000Mbps · patch panel · DHCP automático</span
+                >
+              </div>
+              <div
+                style="
+                  background: #0d1a2a;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #2a2000;
+                "
+              >
+                <strong style="color: var(--yellow)"
+                  >Switch → Impressoras (3) · VoIP (6)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6 · 100Mbps · IPs estáticos · VoIP via VLAN de voz</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER PHYSICAL -->
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              padding: 0 8px;
+            "
+          >
+            <div style="font-size: 22px">☁️</div>
+            <div
+              style="
+                font-size: 8px;
+                color: var(--cyan);
+                letter-spacing: 1px;
+                text-align: center;
+              "
+            >
+              INTERNET
+            </div>
+            <div
+              style="width: 2px; height: 30px; border-left: 3px dashed #1a6a1a"
+            ></div>
+            <div
+              style="
+                font-size: 8px;
+                color: #55cc55;
+                text-align: center;
+                background: #040c04;
+                border: 1px solid #1a4a1a;
+                border-radius: 5px;
+                padding: 3px 6px;
+              "
+            >
+              VPN<br />IPsec
+            </div>
+            <div
+              style="width: 2px; height: 30px; border-left: 3px dashed #1a6a1a"
+            ></div>
+            <div
+              style="width: 2px; height: 20px; background: var(--cyan)"
+            ></div>
+          </div>
+
+          <!-- FÍSICO CWB -->
+          <div
+            style="
+              background: #060e10;
+              border: 1px solid #0f3a22;
+              border-radius: 10px;
+              padding: 14px 16px;
+            "
+          >
+            <div class="section-title st-green">🏭 Física — Filial CWB</div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                font-size: 9px;
+              "
+            >
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--orange);
+                "
+              >
+                <strong style="color: var(--orange)">ISP → Roteador</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cabo óptico · Gbps · porta WAN · IP público
+                  200.20.1.1/30</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--red);
+                "
+              >
+                <strong style="color: var(--red)">Roteador → Firewall</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Par trançado Cat6 · 1Gbps · link dedicado · zona
+                  DMZ/WAN</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid var(--green);
+                "
+              >
+                <strong style="color: var(--green)">Firewall → Switch L3</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Par trançado Cat6A · 1Gbps · trunk 802.1Q · uplink
+                  principal</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #3a1a6a;
+                "
+              >
+                <strong style="color: #aa88ff">Switch → Servidores (2)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6A · 1Gbps por servidor · IPs estáticos · rack local</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #1a2a40;
+                "
+              >
+                <strong style="color: var(--text)"
+                  >Switch → PCs (22) · Impressoras (4) · VoIP (8)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6 · 100/1000Mbps · patch panel · DHCP / IPs
+                  estáticos</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #1a0a2a;
+                "
+              >
+                <strong style="color: var(--purple)"
+                  >Switch → Access Points (4)</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >Cat6 · 1Gbps · PoE 802.3af · APs gerenciados · SSID
+                  corporativo</span
+                >
+              </div>
+              <div
+                style="
+                  background: #071408;
+                  border-radius: 6px;
+                  padding: 8px 12px;
+                  border-left: 3px solid #1a3a22;
+                "
+              >
+                <strong style="color: #44ffaa">APs → Dispositivos Wi-Fi</strong
+                ><br />
+                <span style="color: var(--dim)"
+                  >📶 802.11ac (Wi-Fi 5) · 5GHz · WPA3-Enterprise · pool DHCP
+                  Wi-Fi</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--mh ini-->
+    <div class="corpo" id="s51">
+      <h1>Diagrama - Relação entre LAN, VLAN e WAN</h1>
+      <div class="subtitle">
+        LAN = Rede Local · VLAN = Segmentação dentro da LAN · WAN = Conexão
+        externa/ISP (Internet) · VPN roda sobre a WAN
+      </div>
+
+      <div class="wrap">
+        <!-- MATRIZ -->
+        <div class="site">
+          <div class="site-header sh-blue">Matriz - São Paulo</div>
+          <div class="site-sub blue">
+            LAN (site): <span style="color: var(--yellow)">10.0.1.0/24</span> ·
+            Gateway: <span style="color: var(--yellow)">10.0.1.1</span>
+          </div>
+
+          <div class="zone blue">
+            <div class="label-row">
+              <span class="pill wan">WAN</span>
+              <span class="pill lan">LAN</span>
+              <span class="pill vlan">VLANs (dentro da LAN)</span>
+            </div>
+
+            <!-- WAN side -->
+            <div class="stack">
+              <div class="device router">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Roteador Borda (SP)</div>
+                  <div class="role">
+                    <span style="color: var(--orange); font-weight: 800"
+                      >WAN</span
+                    >
+                    ISP / Internet ·
+                    <span style="color: var(--cyan); font-weight: 800"
+                      >LAN</span
+                    >
+                    Rede interna
+                  </div>
+                </div>
+                <div class="ip">
+                  LAN: 10.0.1.1<br />
+                  <span class="muted">WAN: 200.10.1.1/30</span>
+                </div>
+              </div>
+
+              <div class="line-v lv-orange"></div>
+
+              <div class="device fw">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Firewall (SP)</div>
+                  <div class="role">
+                    Políticas · ACL · NAT (se aplicÃ¡vel) · VPN Endpoint
+                  </div>
+                </div>
+                <div class="ip">
+                  Inside: 10.0.1.1<br />
+                  <span class="muted">Zonas: WAN/DMZ/LAN</span>
+                </div>
+              </div>
+
+              <div class="line-v lv-blue"></div>
+
+              <div class="device sw">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Switch L3 (Distribuição)</div>
+                  <div class="role">Trunk 802.1Q · Inter-VLAN · Gerência</div>
+                </div>
+                <div class="ip">Mgmt: 10.0.1.2</div>
+              </div>
+            </div>
+
+            <!-- VLANs inside LAN -->
+            <div class="vlan-area">
+              <div class="vlan-title">
+                <div class="left">
+                  VLANs (segmentação lógica dentro da LAN 10.0.1.0/24)
+                </div>
+                <div class="right">
+                  As VLANs compartilham o mesmo "site LAN", mas isolam o tráfego
+                </div>
+              </div>
+
+              <div class="vlan-grid">
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 10</div>
+                    <div class="vname">Dados</div>
+                  </div>
+                  <div class="vrange">Hosts: 10.0.1.10-.30</div>
+                  <div class="vdesc">
+                    PCs e uso geral (navegação, sistemas internos).
+                  </div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 20</div>
+                    <div class="vname">Voz (VoIP)</div>
+                  </div>
+                  <div class="vrange">Hosts: 10.0.1.50-.55</div>
+                  <div class="vdesc">
+                    Qualidade e prioridade (QoS), evita disputa com downloads.
+                  </div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 30</div>
+                    <div class="vname">Servidores</div>
+                  </div>
+                  <div class="vrange">Hosts: 10.0.1.200-.202</div>
+                  <div class="vdesc">
+                    Serviços corporativos (AD/DNS/Files/App) com ACL restrita.
+                  </div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 50</div>
+                    <div class="vname">Gerência</div>
+                  </div>
+                  <div class="vrange">Infra: 10.0.1.2 (ex.)</div>
+                  <div class="vdesc">
+                    Acesso admin (SSH/HTTPS) apenas para TI.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Endpoints note -->
+            <div
+              style="
+                margin-top: 10px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+              "
+            >
+              <div class="device end">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Endpoints (LAN)</div>
+                  <div class="role">PCs, impressoras, VoIP (em VLANs)</div>
+                </div>
+                <div class="ip"><span class="muted">Na LAN</span></div>
+              </div>
+              <div class="device srv">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Servidores (LAN)</div>
+                  <div class="role">
+                    Serviços internos acessados pela Matriz/Filial/VPN
+                  </div>
+                </div>
+                <div class="ip">10.0.1.200+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER -->
+        <div class="center">
+          <div class="cloud">
+            <div class="lbl">WAN / INTERNET</div>
+            <div class="sub">
+              <span class="o">WAN</span> é a rede externa (ISP)<br />
+              onde trafega a comunicação entre sites.
+            </div>
+          </div>
+
+          <div class="fork">
+            <div class="h"></div>
+            <div class="dot"></div>
+            <div class="h r"></div>
+          </div>
+
+          <div class="vpn-box">
+            <div class="t">VPN (sobre a WAN)</div>
+            <div class="d">
+              Site-to-Site IPsec/IKEv2<br />
+              <code>10.10.0.0/30</code> (túnel lógico)<br />
+              Conecta <code>LAN SP</code> <-> <code>LAN CWB</code>
+            </div>
+          </div>
+
+          <div
+            class="line-v lv-red"
+            style="height: 18px; margin-top: 14px"
+          ></div>
+
+          <div style="width: 100%; text-align: center; margin-top: 4px">
+            <span class="pill wan">WAN = fora do site</span>
+          </div>
+        </div>
+
+        <!-- FILIAL -->
+        <div class="site">
+          <div class="site-header sh-green">Filial - Curitiba</div>
+          <div class="site-sub green">
+            LAN (site): <span style="color: var(--yellow)">10.0.2.0/25</span> ·
+            Gateway: <span style="color: var(--yellow)">10.0.2.1</span> ·
+            Broadcast: <span style="color: var(--yellow)">10.0.2.127</span>
+          </div>
+
+          <div class="zone green">
+            <div class="label-row">
+              <span class="pill wan">WAN</span>
+              <span class="pill lan">LAN</span>
+              <span class="pill vlan">VLANs (dentro da LAN)</span>
+            </div>
+
+            <div class="stack">
+              <div class="device router">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Roteador Borda (CWB)</div>
+                  <div class="role">
+                    <span style="color: var(--orange); font-weight: 800"
+                      >WAN</span
+                    >
+                    ISP / Internet ·
+                    <span style="color: var(--cyan); font-weight: 800"
+                      >LAN</span
+                    >
+                    Rede interna
+                  </div>
+                </div>
+                <div class="ip">
+                  LAN: 10.0.2.1<br />
+                  <span class="muted">WAN: 200.20.1.1/30</span>
+                </div>
+              </div>
+
+              <div class="line-v lv-orange"></div>
+
+              <div class="device fw">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Firewall (CWB)</div>
+                  <div class="role">
+                    Políticas · ACL · NAT (se aplicável) · VPN Endpoint
+                  </div>
+                </div>
+                <div class="ip">
+                  Inside: 10.0.2.1<br />
+                  <span class="muted">Zonas: WAN/DMZ/LAN</span>
+                </div>
+              </div>
+
+              <div class="line-v lv-green"></div>
+
+              <div
+                class="device sw"
+                style="border-color: #0f3a22; background: #061a0e"
+              >
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Switch L3 (Distribuição)</div>
+                  <div class="role">Trunk 802.1Q · Inter-VLAN · Gerência</div>
+                </div>
+                <div class="ip">Mgmt: 10.0.2.2</div>
+              </div>
+            </div>
+
+            <div class="vlan-area">
+              <div class="vlan-title">
+                <div class="left">
+                  VLANs (segmentação lógica dentro da LAN 10.0.2.0/25)
+                </div>
+                <div class="right">
+                  Broadcast fica dentro da VLAN/sub-rede (não atravessa o
+                  roteador)
+                </div>
+              </div>
+
+              <div class="vlan-grid">
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 10</div>
+                    <div class="vname">Dados</div>
+                  </div>
+                  <div class="vrange">PCs: 10.0.2.10-.31</div>
+                  <div class="vdesc">PCs cabeados e uso geral da filial.</div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 20</div>
+                    <div class="vname">Voz (VoIP)</div>
+                  </div>
+                  <div class="vrange">VoIP: 10.0.2.50-.57</div>
+                  <div class="vdesc">
+                    Prioridade de voz e isolamento de tráfego.
+                  </div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 30</div>
+                    <div class="vname">Servidores</div>
+                  </div>
+                  <div class="vrange">Srv: 10.0.2.200-.201</div>
+                  <div class="vdesc">
+                    Servidores locais acessados pela Matriz via VPN.
+                  </div>
+                </div>
+
+                <div class="vcard">
+                  <div class="vh">
+                    <div class="vid">VLAN 40</div>
+                    <div class="vname">Wi-Fi</div>
+                  </div>
+                  <div class="vrange">Wi-Fi: 10.0.2.70-.85</div>
+                  <div class="vdesc">
+                    Clientes Wi-Fi em VLAN separada; APs conectados ao switch
+                    via trunk.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="
+                margin-top: 10px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+              "
+            >
+              <div class="device ap">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Access Points (LAN)</div>
+                  <div class="role">
+                    Conecta Wi-Fi (VLAN 40) e gerência (VLAN 50)
+                  </div>
+                </div>
+                <div class="ip">10.0.2.60-.63</div>
+              </div>
+              <div class="device end">
+                <div class="icon"></div>
+                <div class="t">
+                  <div class="name">Clientes Wi-Fi (LAN)</div>
+                  <div class="role">
+                    Recebem IP do pool Wi-Fi (DHCP) na VLAN 40
+                  </div>
+                </div>
+                <div class="ip">10.0.2.70-.85</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <strong>Como ler este diagrama:</strong><br />
+        <span class="k">LAN</span> = rede interna do site (ex.:
+        <code>10.0.1.0/24</code> na Matriz e <code>10.0.2.0/25</code> na
+        Filial).<br />
+        <span class="p">VLAN</span> = sub-rede lógica dentro da LAN (separa
+        tráfego por tipo: dados, voz, servidores, Em uma implementação ideal,
+        cada VLAN teria sua <em>própria</em> sub-rede (ex.: /27, /28 etc.).<br />
+        <span class="o">WAN</span> = rede externa (ISP/Internet) que conecta os
+        sites a longas distâncias. É por onde passa o tráfego "fora" da
+        empresa.<br />
+        <strong>VPN</strong> = túnel criptografado que roda <em>sobre</em> a WAN
+        para interligar as LANs com segurança. O túnel não substitui LAN/WAN;
+        ele cria um "caminho seguro" por cima da internet.<br />
+        <strong>Broadcast:</strong> na Filial <code>10.0.2.0/25</code> o
+        broadcast é <code>10.0.2.127</code> porque é o último IP do bloco /25.
+        Broadcast atua apenas dentro do domínio local (VLAN/sub-rede) e não
+        atravessa o roteador.
+      </div>
+    </div>
+
+    <!--mh fim-->
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 06 — ENDEREÇAMENTO IPv4
+════════════════════════════════════════════ -->
+    <div class="slide" id="s6" style="min-height: 620px">
+      <div class="slide-bar orange"></div>
+      <div class="slide-number">06 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Plano de Endereçamento</div>
+        <div class="slide-title">IPv4 — <span>Cálculo e Atribuição</span></div>
+
+        <!-- JUSTIFICATIVA IPv4 -->
+        <div style="display: flex; gap: 10px; margin-bottom: 14px">
+          <div
+            style="
+              background: #060c18;
+              border: 1px solid #1a2a40;
+              border-radius: 8px;
+              padding: 10px 14px;
+              flex: 1;
+            "
+          >
+            <div
+              style="
+                font-size: 9px;
+                font-weight: 700;
+                color: var(--cyan);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 6px;
+              "
+            >
+              Por que IPv4?
+            </div>
+            <div style="font-size: 8.5px; color: var(--text); line-height: 1.7">
+              ▸ Ambiente &lt;500 hosts — IPv4 RFC-1918 suficiente<br />
+              ▸ Compatibilidade total com todos os equipamentos atuais<br />
+              ▸ NAT nas bordas protege os endereços internos<br />
+              ▸ IPv6 recomendado em expansão futura ou acesso público
+            </div>
+          </div>
+          <div
+            style="
+              background: #060c18;
+              border: 1px solid #1a2a40;
+              border-radius: 8px;
+              padding: 10px 14px;
+              flex: 1;
+            "
+          >
+            <div
+              style="
+                font-size: 9px;
+                font-weight: 700;
+                color: var(--yellow);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 6px;
+              "
+            >
+              Cálculo — Filial /25
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-family: var(--mono);
+                color: var(--text);
+                line-height: 1.8;
+              "
+            >
+              18 PCs + 4 impressoras + 8 VoIP<br />
+              + 4 APs + 2 Servidores + infra = ~40<br />
+              40 × 1,20 (reserva 20%) = 48 hosts mín<br />
+              → /25 = <strong style="color: var(--green)">126 hosts</strong> ✅
+              escalável
+            </div>
+          </div>
+          <div
+            style="
+              background: #060c18;
+              border: 1px solid #1a2a40;
+              border-radius: 8px;
+              padding: 10px 14px;
+              flex: 1;
+            "
+          >
+            <div
+              style="
+                font-size: 9px;
+                font-weight: 700;
+                color: var(--orange);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 6px;
+              "
+            >
+              Cálculo — Matriz /24
+            </div>
+            <div
+              style="
+                font-size: 8.5px;
+                font-family: var(--mono);
+                color: var(--text);
+                line-height: 1.8;
+              "
+            >
+              21 PCs + 3 impressoras + 6 VoIP<br />
+              + 3 Servidores + infra = ~35 hosts<br />
+              35 × 1,20 = 42 hosts mínimo<br />
+              → /24 = <strong style="color: var(--green)">254 hosts</strong> ✅
+              folga ampla
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Dispositivo</th>
+              <th>IP / Range</th>
+              <th>Máscara</th>
+              <th>Gateway</th>
+              <th>Camada</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Roteador (LAN)</td>
+              <td class="tc-ip">10.0.1.1</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">ISP 200.10.1.2</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Roteador (WAN)</td>
+              <td class="tc-ip">200.10.1.1</td>
+              <td class="tc-mask">/30</td>
+              <td class="tc-gw">200.10.1.2</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Firewall</td>
+              <td class="tc-ip">10.0.1.1</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">—</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Switch L3</td>
+              <td class="tc-ip">10.0.1.2</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-dist">Distribuição</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Servidores (3)</td>
+              <td class="tc-ip">10.0.1.200–.202</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-acc">Acesso</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">PCs Admin (21)</td>
+              <td class="tc-ip">10.0.1.10–.30</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">Impressoras (3)</td>
+              <td class="tc-ip">10.0.1.40–.42</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">VoIP (6)</td>
+              <td class="tc-ip">10.0.1.50–.55</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Matriz SP</td>
+              <td class="tc-device">PCs VPN Remoto (2)</td>
+              <td class="tc-ip">10.0.1.100–.101</td>
+              <td class="tc-mask">/24</td>
+              <td class="tc-gw">10.0.1.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Roteador (LAN)</td>
+              <td class="tc-ip">10.0.2.1</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">ISP 200.20.1.2</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Roteador (WAN)</td>
+              <td class="tc-ip">200.20.1.1</td>
+              <td class="tc-mask">/30</td>
+              <td class="tc-gw">200.20.1.2</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Firewall</td>
+              <td class="tc-ip">10.0.2.1</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">—</td>
+              <td class="tc-core">Core</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Switch L3</td>
+              <td class="tc-ip">10.0.2.2</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-dist">Distribuição</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Servidores (2)</td>
+              <td class="tc-ip">10.0.2.200–.201</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-acc">Acesso</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Computadores (22)</td>
+              <td class="tc-ip">10.0.2.10–.31</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Impressoras (4)</td>
+              <td class="tc-ip">10.0.2.40–.43</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">VoIP (8)</td>
+              <td class="tc-ip">10.0.2.50–.57</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Access Points (4)</td>
+              <td class="tc-ip">10.0.2.60–.63</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-acc">Acesso</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Dispositivos Wi-Fi</td>
+              <td class="tc-ip">10.0.2.70–.85</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">PCs VPN Remoto (2)</td>
+              <td class="tc-ip">10.0.2.100–.101</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-end">Endpoint</td>
+            </tr>
+            <tr>
+              <td class="tc-site">Filial CWB</td>
+              <td class="tc-device">Reserva Crescimento</td>
+              <td class="tc-ip">10.0.2.110–.126</td>
+              <td class="tc-mask">/25</td>
+              <td class="tc-gw">10.0.2.1</td>
+              <td class="tc-res">Reserva</td>
+            </tr>
+            <tr>
+              <td class="tc-site">VPN Tunnel</td>
+              <td class="tc-device">Túnel Site-to-Site</td>
+              <td class="tc-ip">10.10.0.0</td>
+              <td class="tc-mask">/30</td>
+              <td class="tc-gw">—</td>
+              <td class="tc-core">Core WAN</td>
+            </tr>
+            <tr>
+              <td class="tc-site">VPN SSL</td>
+              <td class="tc-device">Pool Clientes Remotos</td>
+              <td class="tc-ip">10.10.1.0</td>
+              <td class="tc-mask">/28</td>
+              <td class="tc-gw">—</td>
+              <td class="tc-core">Core WAN</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 07 — VLANs
+════════════════════════════════════════════ -->
+    <div class="slide" id="s7">
+      <div class="slide-bar purple"></div>
+      <div class="slide-number">07 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Segmentação de Rede</div>
+        <div class="slide-title">VLANs — <span>Segmentação Lógica</span></div>
+        <div class="slide-subtitle">
+          Isolamento de tráfego por tipo de dispositivo · 802.1Q Trunk nos
+          switches L3
+        </div>
+        <div class="vlan-grid">
+          <div class="vlan-card vc-1">
+            <div class="vc-id">10</div>
+            <div class="vc-name">VLAN Dados</div>
+            <div class="vc-range">SP: 10.0.1.10–.55 · CWB: 10.0.2.10–.43</div>
+            <div class="vc-desc">
+              PCs administrativos e impressoras de rede. Tráfego de dados
+              corporativos. Acesso à internet via NAT.
+            </div>
+          </div>
+          <div class="vlan-card vc-2">
+            <div class="vc-id">20</div>
+            <div class="vc-name">VLAN Voz (VoIP)</div>
+            <div class="vc-range">SP: 10.0.1.50–.55 · CWB: 10.0.2.50–.57</div>
+            <div class="vc-desc">
+              Telefones IP SIP. Tráfego QoS prioritário (DSCP EF). Isolado do
+              tráfego de dados para garantir qualidade de chamada.
+            </div>
+          </div>
+          <div class="vlan-card vc-3">
+            <div class="vc-id">30</div>
+            <div class="vc-name">VLAN Servidores</div>
+            <div class="vc-range">
+              SP: 10.0.1.200–.202 · CWB: 10.0.2.200–.201
+            </div>
+            <div class="vc-desc">
+              Servidores de arquivos, AD/DNS e aplicações. Acesso controlado por
+              ACL no firewall. Acesso assimétrico entre sites.
+            </div>
+          </div>
+          <div class="vlan-card vc-4">
+            <div class="vc-id">40</div>
+            <div class="vc-name">VLAN Wi-Fi</div>
+            <div class="vc-range">CWB: 10.0.2.70–.85 (pool DHCP)</div>
+            <div class="vc-desc">
+              Dispositivos sem fio. APs em modo trunk, clientes em VLAN
+              segregada. Autenticação WPA3-Enterprise via RADIUS.
+            </div>
+          </div>
+          <div class="vlan-card vc-5">
+            <div class="vc-id">50</div>
+            <div class="vc-name">VLAN Gerência</div>
+            <div class="vc-range">SP: 10.0.1.2 · CWB: 10.0.2.2 (infra)</div>
+            <div class="vc-desc">
+              Switches, roteadores, firewalls e APs. Acesso SSH/HTTPS exclusivo
+              para administradores. Bloqueado para usuários finais.
+            </div>
+          </div>
+          <div class="vlan-card vc-6">
+            <div class="vc-id">99</div>
+            <div class="vc-name">VLAN Nativa (Native)</div>
+            <div class="vc-range">Portas trunk entre switches e roteadores</div>
+            <div class="vc-desc">
+              VLAN nativa configurada como VLAN 99 (não VLAN 1) por segurança.
+              Tráfego untagged isolado para evitar ataques de VLAN hopping.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 08 — TABELA DE ROTAS
+════════════════════════════════════════════ -->
+    <div class="slide" id="s8">
+      <div class="slide-bar"></div>
+      <div class="slide-number">08 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Roteamento</div>
+        <div class="slide-title">Tabela de <span>Rotas</span></div>
+        <div class="slide-subtitle">
+          Rotas estáticas e diretas em cada roteador de borda
+        </div>
+        <div class="route-cols">
+          <div class="route-block">
+            <div class="route-header rh-blue">
+              🏢 Roteador Matriz — São Paulo
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Destino</th>
+                  <th>Máscara</th>
+                  <th>Gateway</th>
+                  <th>Interface</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="rt-type-direct">Direta</td>
+                  <td class="tc-ip">10.0.1.0</td>
+                  <td class="tc-mask">/24</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--green)">eth0 — LAN</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-direct">Direta</td>
+                  <td class="tc-ip">200.10.1.0</td>
+                  <td class="tc-mask">/30</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--orange)">eth1 — WAN</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-static">Estática</td>
+                  <td class="tc-ip">10.0.2.0</td>
+                  <td class="tc-mask">/25</td>
+                  <td class="tc-gw">10.10.0.2</td>
+                  <td style="color: var(--cyan)">vpn0 — túnel</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-static">Estática</td>
+                  <td class="tc-ip">10.10.1.0</td>
+                  <td class="tc-mask">/28</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--purple)">vpn1 — SSL</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-default">Default</td>
+                  <td class="tc-ip">0.0.0.0</td>
+                  <td class="tc-mask">/0</td>
+                  <td class="tc-gw">200.10.1.2</td>
+                  <td style="color: var(--orange)">eth1 — WAN</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="route-block">
+            <div class="route-header rh-green">
+              🏭 Roteador Filial — Curitiba
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Destino</th>
+                  <th>Máscara</th>
+                  <th>Gateway</th>
+                  <th>Interface</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="rt-type-direct">Direta</td>
+                  <td class="tc-ip">10.0.2.0</td>
+                  <td class="tc-mask">/25</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--green)">eth0 — LAN</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-direct">Direta</td>
+                  <td class="tc-ip">200.20.1.0</td>
+                  <td class="tc-mask">/30</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--orange)">eth1 — WAN</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-static">Estática</td>
+                  <td class="tc-ip">10.0.1.0</td>
+                  <td class="tc-mask">/24</td>
+                  <td class="tc-gw">10.10.0.1</td>
+                  <td style="color: var(--cyan)">vpn0 — túnel</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-static">Estática</td>
+                  <td class="tc-ip">10.10.1.0</td>
+                  <td class="tc-mask">/28</td>
+                  <td class="tc-gw">—</td>
+                  <td style="color: var(--purple)">vpn1 — SSL</td>
+                </tr>
+                <tr>
+                  <td class="rt-type-default">Default</td>
+                  <td class="tc-ip">0.0.0.0</td>
+                  <td class="tc-mask">/0</td>
+                  <td class="tc-gw">200.20.1.2</td>
+                  <td style="color: var(--orange)">eth1 — WAN</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div
+          style="
+            background: #060a12;
+            border: 1px solid #111c2e;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 8.5px;
+            color: #4a6080;
+            line-height: 2;
+          "
+        >
+          <strong style="color: #6a90b8">Legenda de tipos:</strong>
+          &nbsp;<span style="color: var(--green)">■ Direta</span> = rede
+          conectada diretamente à interface &nbsp;|&nbsp;
+          <span style="color: var(--yellow)">■ Estática</span> = rota
+          configurada manualmente pelo administrador &nbsp;|&nbsp;
+          <span style="color: var(--orange)">■ Default</span> = rota padrão para
+          todo tráfego não correspondido (next hop = ISP)
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 09 — VPN
+════════════════════════════════════════════ -->
+    <div class="slide" id="s9">
+      <div class="slide-bar purple"></div>
+      <div class="slide-number">09 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Conectividade Segura</div>
+        <div class="slide-title">
+          VPN — <span>Site-to-Site & Acesso Remoto</span>
+        </div>
+        <div class="slide-subtitle">
+          IPsec/IKEv2 · SSL-VPN · Autenticação por certificados digitais
+        </div>
+        <div class="vpn-flow" style="margin-bottom: 16px">
+          <div class="vpn-site-box" style="border-color: #1a3a6a">
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--blue);
+                margin-bottom: 8px;
+              "
+            >
+              🏢 Firewall Matriz SP
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--yellow);
+              "
+            >
+              IP WAN: 200.10.1.1
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--dim);
+              "
+            >
+              Túnel local: 10.10.0.1
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--dim);
+              "
+            >
+              Rede local: 10.0.1.0/24
+            </div>
+            <hr style="border-color: #1a3a6a; margin: 8px 0" />
+            <div style="font-size: 8px; color: var(--text); line-height: 1.7">
+              Protocolo: <strong style="color: var(--cyan)">IPsec IKEv2</strong
+              ><br />
+              Cifra: <strong style="color: var(--yellow)">AES-256-GCM</strong
+              ><br />
+              Auth:
+              <strong style="color: var(--green)">Certificado X.509</strong
+              ><br />
+              DH Group:
+              <strong style="color: var(--purple)">Group 14 (2048-bit)</strong>
+            </div>
+          </div>
+          <div class="vpn-arrow-col">
+            <div style="font-size: 18px">↔️</div>
+            <div class="vpn-flow-label">
+              Túnel Criptografado<br /><span
+                style="font-family: var(--mono); font-size: 7px"
+                >10.10.0.0/30</span
+              >
+            </div>
+          </div>
+          <div class="vpn-site-box" style="border-color: #0f3a22">
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--green);
+                margin-bottom: 8px;
+              "
+            >
+              🏭 Firewall Filial CWB
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--yellow);
+              "
+            >
+              IP WAN: 200.20.1.1
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--dim);
+              "
+            >
+              Túnel local: 10.10.0.2
+            </div>
+            <div
+              style="
+                font-family: var(--mono);
+                font-size: 8.5px;
+                color: var(--dim);
+              "
+            >
+              Rede local: 10.0.2.0/25
+            </div>
+            <hr style="border-color: #0f3a22; margin: 8px 0" />
+            <div style="font-size: 8px; color: var(--text); line-height: 1.7">
+              Protocolo: <strong style="color: var(--cyan)">IPsec IKEv2</strong
+              ><br />
+              Cifra: <strong style="color: var(--yellow)">AES-256-GCM</strong
+              ><br />
+              Auth:
+              <strong style="color: var(--green)">Certificado X.509</strong
+              ><br />
+              DH Group:
+              <strong style="color: var(--purple)">Group 14 (2048-bit)</strong>
+            </div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+          <div>
+            <div class="section-title st-purple">
+              🔐 SSL-VPN — Acesso Remoto
+            </div>
+            <div class="vpn-step">
+              <div class="vpn-step-num">1</div>
+              <div class="vpn-step-text">
+                Usuário remoto abre cliente VPN no PC pessoal ou corporativo
+              </div>
+            </div>
+            <div class="vpn-step">
+              <div class="vpn-step-num">2</div>
+              <div class="vpn-step-text">
+                Autenticação com
+                <strong>usuário + senha + certificado digital (MFA)</strong>
+              </div>
+            </div>
+            <div class="vpn-step">
+              <div class="vpn-step-num">3</div>
+              <div class="vpn-step-text">
+                Firewall valida e atribui IP do pool
+                <strong>10.10.1.0/28</strong>
+              </div>
+            </div>
+            <div class="vpn-step">
+              <div class="vpn-step-num">4</div>
+              <div class="vpn-step-text">
+                Usuário acessa rede interna como se estivesse no escritório
+              </div>
+            </div>
+            <div class="vpn-step">
+              <div class="vpn-step-num">5</div>
+              <div class="vpn-step-text">
+                ACL determina o que cada usuário remoto pode acessar
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title st-cyan">📊 Resumo das VPNs</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Site-to-Site</th>
+                  <th>SSL Remoto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="tc-device">Protocolo</td>
+                  <td class="tc-ip">IPsec/IKEv2</td>
+                  <td class="tc-ip">SSL/TLS</td>
+                </tr>
+                <tr>
+                  <td class="tc-device">Cifra</td>
+                  <td class="tc-ip">AES-256-GCM</td>
+                  <td class="tc-ip">AES-256-GCM</td>
+                </tr>
+                <tr>
+                  <td class="tc-device">Autenticação</td>
+                  <td class="tc-ip">Cert X.509</td>
+                  <td class="tc-ip">Cert + MFA</td>
+                </tr>
+                <tr>
+                  <td class="tc-device">Rede túnel</td>
+                  <td class="tc-ip">10.10.0.0/30</td>
+                  <td class="tc-ip">10.10.1.0/28</td>
+                </tr>
+                <tr>
+                  <td class="tc-device">Endpoints</td>
+                  <td class="tc-ip">SP ↔ CWB</td>
+                  <td class="tc-ip">Usuário remoto</td>
+                </tr>
+                <tr>
+                  <td class="tc-device">Status</td>
+                  <td style="color: var(--green)">✅ ATIVA</td>
+                  <td style="color: var(--green)">✅ ATIVA</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 10 — FIREWALL / ACL
+════════════════════════════════════════════ -->
+    <div class="slide" id="s10">
+      <div class="slide-bar red"></div>
+      <div class="slide-number">10 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Política de Acesso</div>
+        <div class="slide-title">Firewall & <span>Regras ACL</span></div>
+        <div class="slide-subtitle">
+          Controle de acesso assimétrico entre Matriz e Filial · stateful
+          inspection
+        </div>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+          "
+        >
+          <div
+            style="
+              background: #0a0404;
+              border: 1px solid #3a0000;
+              border-radius: 8px;
+              padding: 10px 14px;
+            "
+          >
+            <div
+              style="
+                font-size: 9px;
+                font-weight: 700;
+                color: var(--red);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 6px;
+              "
+            >
+              🛡️ Zonas de Segurança — Matriz SP
+            </div>
+            <div style="font-size: 8.5px; color: var(--text); line-height: 1.8">
+              <span style="color: var(--orange)">■ WAN</span> → Internet pública
+              (untrusted)<br />
+              <span style="color: var(--yellow)">■ DMZ</span> → Entre roteador e
+              firewall<br />
+              <span style="color: var(--blue)">■ LAN</span> → Rede interna
+              10.0.1.0/24 (trusted)<br />
+              <span style="color: #aa88ff">■ SVR</span> → VLAN servidores
+              10.0.1.200–.202
+            </div>
+          </div>
+          <div
+            style="
+              background: #0a0404;
+              border: 1px solid #3a0000;
+              border-radius: 8px;
+              padding: 10px 14px;
+            "
+          >
+            <div
+              style="
+                font-size: 9px;
+                font-weight: 700;
+                color: var(--red);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 6px;
+              "
+            >
+              🛡️ Zonas de Segurança — Filial CWB
+            </div>
+            <div style="font-size: 8.5px; color: var(--text); line-height: 1.8">
+              <span style="color: var(--orange)">■ WAN</span> → Internet pública
+              (untrusted)<br />
+              <span style="color: var(--yellow)">■ DMZ</span> → Entre roteador e
+              firewall<br />
+              <span style="color: var(--green)">■ LAN</span> → Rede interna
+              10.0.2.0/25 (trusted)<br />
+              <span style="color: #aa88ff">■ SVR</span> → VLAN servidores
+              10.0.2.200–.201
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Origem</th>
+              <th>Destino</th>
+              <th>Porta / Serviço</th>
+              <th>Ação</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color: var(--dim)">1</td>
+              <td class="fw-src">10.0.1.0/24 (Matriz)</td>
+              <td class="fw-dst">10.0.2.200–.201 (Srv Filial)</td>
+              <td class="fw-port">TCP 445/22/80/443</td>
+              <td class="fw-allow">✅ ALLOW</td>
+              <td style="font-size: 8px">
+                Matriz acessa servidores da Filial integralmente
+              </td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">2</td>
+              <td class="fw-src">10.0.2.10–.20 (Filial autorizada)</td>
+              <td class="fw-dst">10.0.1.200–.202 (Srv Matriz)</td>
+              <td class="fw-port">TCP 443/80</td>
+              <td class="fw-allow">✅ ALLOW</td>
+              <td style="font-size: 8px">
+                Apenas IPs autorizados da Filial acessam a Matriz
+              </td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">3</td>
+              <td class="fw-src">10.0.2.21–.31 (Filial outros)</td>
+              <td class="fw-dst">10.0.1.200–.202 (Srv Matriz)</td>
+              <td class="fw-port">Qualquer</td>
+              <td class="fw-deny">🚫 DENY</td>
+              <td style="font-size: 8px">
+                Demais usuários da Filial BLOQUEADOS nos servidores da Matriz
+              </td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">4</td>
+              <td class="fw-src">10.10.1.0/28 (VPN SSL)</td>
+              <td class="fw-dst">10.0.1.0/24 · 10.0.2.0/25</td>
+              <td class="fw-port">TCP 443/22/3389</td>
+              <td class="fw-allow">✅ ALLOW</td>
+              <td style="font-size: 8px">
+                Usuários remotos VPN acessam ambas as redes
+              </td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">5</td>
+              <td class="fw-src">0.0.0.0/0 (Internet)</td>
+              <td class="fw-dst">10.0.1.0/24 · 10.0.2.0/25</td>
+              <td class="fw-port">Qualquer</td>
+              <td class="fw-deny">🚫 DENY</td>
+              <td style="font-size: 8px">
+                Bloqueia TODO acesso externo não autorizado (default deny)
+              </td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">6</td>
+              <td class="fw-src">LANs internas</td>
+              <td class="fw-dst">0.0.0.0/0 (Internet)</td>
+              <td class="fw-port">TCP 80/443</td>
+              <td class="fw-allow">✅ ALLOW</td>
+              <td style="font-size: 8px">Saída HTTP/HTTPS liberada via NAT</td>
+            </tr>
+            <tr>
+              <td style="color: var(--dim)">7</td>
+              <td class="fw-src">Qualquer</td>
+              <td class="fw-dst">Qualquer</td>
+              <td class="fw-port">ICMP</td>
+              <td class="fw-log">📋 LOG+ALLOW</td>
+              <td style="font-size: 8px">
+                Ping monitorado internamente para diagnóstico
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 11 — SEGURANÇA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s11">
+      <div class="slide-bar red"></div>
+      <div class="slide-number">11 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Boas Práticas e Hardening</div>
+        <div class="slide-title">Política de <span>Segurança</span></div>
+        <div class="slide-subtitle">
+          Camadas de proteção · Hardening · Monitoramento
+        </div>
+        <div class="security-grid">
+          <div class="sec-card" style="border-color: #3a0000">
+            <div class="sec-icon">🛡️</div>
+            <div class="sec-title" style="color: var(--red)">
+              Firewalls Dedicados
+            </div>
+            <ul class="sec-list">
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Stateful Packet Inspection em
+                ambos os sites
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>IDS/IPS integrado (detecção e
+                prevenção de intrusão)
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Zonas WAN / DMZ / LAN /
+                Servidores
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Logs de tráfego com retenção de
+                90 dias
+              </li>
+            </ul>
+          </div>
+          <div class="sec-card" style="border-color: #0f3a22">
+            <div class="sec-icon">🔒</div>
+            <div class="sec-title" style="color: var(--green)">
+              VPN & Criptografia
+            </div>
+            <ul class="sec-list">
+              <li class="sec-item">
+                <span class="bullet g">✔</span>IPsec IKEv2 com AES-256-GCM
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Certificados X.509 para
+                autenticação mútua
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>MFA obrigatório para SSL-VPN
+                remoto
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Perfect Forward Secrecy (DH Group
+                14)
+              </li>
+            </ul>
+          </div>
+          <div class="sec-card" style="border-color: #2a1a00">
+            <div class="sec-icon">📡</div>
+            <div class="sec-title" style="color: var(--yellow)">
+              Segurança Wi-Fi
+            </div>
+            <ul class="sec-list">
+              <li class="sec-item">
+                <span class="bullet g">✔</span>WPA3-Enterprise com autenticação
+                RADIUS
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>SSID corporativo oculto (SSID
+                broadcast off)
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Isolamento de clientes Wi-Fi por
+                VLAN 40
+              </li>
+              <li class="sec-item">
+                <span class="bullet y">⚠</span>Revisar senhas Wi-Fi a cada 90
+                dias
+              </li>
+            </ul>
+          </div>
+          <div class="sec-card" style="border-color: #1a0a2a">
+            <div class="sec-icon">🔧</div>
+            <div class="sec-title" style="color: var(--purple)">
+              Hardening de Dispositivos
+            </div>
+            <ul class="sec-list">
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Acesso admin via SSH/HTTPS
+                somente — HTTP/Telnet desabilitados
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>VLAN 99 nativa (não VLAN 1) —
+                previne VLAN hopping
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Portas não utilizadas do switch
+                em shutdown
+              </li>
+              <li class="sec-item">
+                <span class="bullet g">✔</span>Firmware atualizado em todos os
+                equipamentos
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 12 — SOW / CRONOGRAMA
+════════════════════════════════════════════ -->
+    <div class="slide" id="s12">
+      <div class="slide-bar orange"></div>
+      <div class="slide-number">12 / 13</div>
+      <div class="slide-body">
+        <div class="slide-tag">Planejamento</div>
+        <div class="slide-title">Cronograma de <span>Implantação</span></div>
+        <div class="slide-subtitle">
+          Fases do projeto · responsáveis · entregas
+        </div>
+        <div class="sow-grid">
+          <div class="sow-phase sp-1">
+            <div class="sow-phase-num">F1</div>
+            <div class="sow-phase-title" style="color: var(--blue)">
+              Planejamento & Design
+            </div>
+            <ul class="sow-tasks">
+              <li class="sow-task">
+                <span class="ck">✔</span>Levantamento de requisitos
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Definição do endereçamento IP
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Diagramas lógico e físico
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Política de segurança e ACL
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Aprovação do escopo
+              </li>
+            </ul>
+          </div>
+          <div class="sow-phase sp-2">
+            <div class="sow-phase-num">F2</div>
+            <div class="sow-phase-title" style="color: var(--yellow)">
+              Implementação
+            </div>
+            <ul class="sow-tasks">
+              <li class="sow-task">
+                <span class="ck">✔</span>Configuração roteadores e firewalls
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Criação e trunk de VLANs
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Implantação da VPN Site-to-Site
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Configuração SSL-VPN
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Setup APs e RADIUS
+              </li>
+            </ul>
+          </div>
+          <div class="sow-phase sp-3">
+            <div class="sow-phase-num">F3</div>
+            <div class="sow-phase-title" style="color: var(--green)">
+              Testes & Entrega
+            </div>
+            <ul class="sow-tasks">
+              <li class="sow-task">
+                <span class="ck">✔</span>Testes de conectividade ponta a ponta
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Testes de VPN e failover
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Validação das regras de ACL
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Treinamento dos administradores
+              </li>
+              <li class="sow-task">
+                <span class="ck">✔</span>Entrega da documentação completa
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="sow-bottom">
+          <div class="sow-metric">
+            <div class="sow-metric-val">3</div>
+            <div class="sow-metric-lbl">Fases do projeto</div>
+          </div>
+          <div class="sow-metric">
+            <div class="sow-metric-val">2</div>
+            <div class="sow-metric-lbl">Sites implantados</div>
+          </div>
+          <div class="sow-metric">
+            <div class="sow-metric-val">126</div>
+            <div class="sow-metric-lbl">Hosts disponíveis na Filial</div>
+          </div>
+          <div class="sow-metric">
+            <div class="sow-metric-val">
+              AES<br /><span style="font-size: 14px">256</span>
+            </div>
+            <div class="sow-metric-lbl">Criptografia VPN</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+     SLIDE 13 — ENCERRAMENTO
+════════════════════════════════════════════ -->
+    <div class="slide" id="s13">
+      <div class="slide-bar"></div>
+      <div class="slide-number">13 / 13</div>
+      <div
+        class="slide-body center-all"
+        style="
+          background: radial-gradient(
+            ellipse at 50% 40%,
+            #0d1f3a 0%,
+            #0a0e1a 70%
+          );
+        "
+      >
+        <div style="font-size: 44px; margin-bottom: 16px">✅</div>
+        <div class="cover-title" style="font-size: 28px">
+          Projeto Aprovado para <span>Implantação</span>
+        </div>
+        <div class="cover-sub">
+          Infraestrutura escalável · segura · documentada
+        </div>
+        <div class="closing-grid" style="margin-top: 24px">
+          <div class="closing-card" style="border-color: #1a3a6a">
+            <div class="cc-title" style="color: var(--blue)">🏢 Matriz SP</div>
+            <div class="cc-item">Sub-rede 10.0.1.0/24 (254 hosts)</div>
+            <div class="cc-item">21 PCs · 3 Impressoras · 6 VoIP</div>
+            <div class="cc-item">3 Servidores (File/AD/App)</div>
+            <div class="cc-item">Firewall dedicado + ACL</div>
+          </div>
+          <div class="closing-card" style="border-color: #0f3a22">
+            <div class="cc-title" style="color: var(--green)">
+              🏭 Filial CWB
+            </div>
+            <div class="cc-item">Sub-rede 10.0.2.0/25 (126 hosts)</div>
+            <div class="cc-item">22 PCs · 4 Impr · 8 VoIP · 4 APs</div>
+            <div class="cc-item">2 Servidores + reserva 20%+</div>
+            <div class="cc-item">Firewall dedicado + ACL</div>
+          </div>
+          <div class="closing-card" style="border-color: #1a4a1a">
+            <div class="cc-title" style="color: var(--cyan)">🔒 VPN</div>
+            <div class="cc-item">Site-to-Site IPsec/IKEv2 ATIVA</div>
+            <div class="cc-item">SSL-VPN para acesso remoto</div>
+            <div class="cc-item">AES-256-GCM + Cert X.509 + MFA</div>
+            <div class="cc-item">Pool remoto: 10.10.1.0/28</div>
+          </div>
+          <div class="closing-card" style="border-color: #2a1a00">
+            <div class="cc-title" style="color: var(--yellow)">
+              📋 Documentação
+            </div>
+            <div class="cc-item">Diagrama lógico e físico</div>
+            <div class="cc-item">Plano de endereçamento IPv4</div>
+            <div class="cc-item">Tabela de rotas + VLANs</div>
+            <div class="cc-item">Regras de firewall/ACL + SOW</div>
+          </div>
+        </div>
+        <div
+          style="
+            margin-top: 22px;
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 2px;
+          "
+        >
+          OBRIGADO · PERGUNTAS E CONSIDERAÇÕES
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

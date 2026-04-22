@@ -1,0 +1,10 @@
+node_modules
+
+# Build outputs
+dist
+coverage
+
+# Lock and generated artifacts
+package-lock.json
+*.min.js
+*.min.css

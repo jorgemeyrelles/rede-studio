@@ -1,0 +1,11 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#0a1020"/>
+  <g transform="translate(200, 150)">
+    <rect x="-70" y="-60" width="140" height="120" rx="8" fill="#1a0a0a" stroke="#ff4444" stroke-width="2"/>
+    <circle cx="-40" cy="-35" r="6" fill="#ff4444"/>
+    <circle cx="0" cy="-35" r="6" fill="#ff4444"/>
+    <circle cx="40" cy="-35" r="6" fill="#ff4444"/>
+    <rect x="-60" y="-15" width="120" height="25" fill="#0a1020" stroke="#ff4444" stroke-width="1"/>
+    <text x="0" y="50" font-size="16" fill="#ff4444" text-anchor="middle" font-family="Arial">Firepower 2100</text>
+  </g>
+</svg>

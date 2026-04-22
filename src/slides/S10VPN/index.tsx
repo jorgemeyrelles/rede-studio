@@ -1,0 +1,214 @@
+import { getSlidePagination } from "../pagination";
+import { SSL_STEPS, VPN_SUMMARY_ROWS } from './constants';
+
+export default function S10VPN() {
+  return (
+    <div className="slide" id="s10">
+      <div className="slide-bar purple"></div>
+      <div className="slide-number">{getSlidePagination("s10")}</div>
+      <div className="slide-body">
+        <div className="slide-tag">Conectividade Segura</div>
+        <div className="slide-title">
+          VPN — <span>Site-to-Site &amp; Acesso Remoto</span>
+        </div>
+        <div className="slide-subtitle">
+          IPsec/IKEv2 · SSL-VPN · Autenticação por certificados digitais
+        </div>
+
+        <div className="vpn-flow" style={{ marginBottom: "16px" }}>
+          <div className="vpn-site-box" style={{ borderColor: "#1a3a6a" }}>
+            <div
+              style={{
+                fontSize: "10px",
+                fontWeight: "700",
+                color: "var(--blue)",
+                marginBottom: "8px",
+              }}
+            >
+              🏢 Firewall Matriz SP
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--yellow)",
+              }}
+            >
+              IP WAN: 200.10.1.1
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--dim)",
+              }}
+            >
+              Túnel local: 10.10.0.1
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--dim)",
+              }}
+            >
+              Rede local: 10.0.1.0/24
+            </div>
+            <hr style={{ borderColor: "#1a3a6a", margin: "8px 0" }} />
+            <div
+              style={{
+                fontSize: "8px",
+                color: "var(--text)",
+                lineHeight: "1.7",
+              }}
+            >
+              Protocolo:{" "}
+              <strong style={{ color: "var(--cyan)" }}>IPsec IKEv2</strong>
+              <br />
+              Cifra:{" "}
+              <strong style={{ color: "var(--yellow)" }}>AES-256-GCM</strong>
+              <br />
+              Auth:{" "}
+              <strong style={{ color: "var(--green)" }}>
+                Certificado X.509
+              </strong>
+              <br />
+              DH Group:{" "}
+              <strong style={{ color: "var(--purple)" }}>
+                Group 14 (2048-bit)
+              </strong>
+            </div>
+          </div>
+          <div className="vpn-arrow-col">
+            <div style={{ fontSize: "18px" }}>↔️</div>
+            <div className="vpn-flow-label">
+              Túnel Criptografado
+              <br />
+              <span style={{ fontFamily: "var(--mono)", fontSize: "7px" }}>
+                10.10.0.0/30
+              </span>
+            </div>
+          </div>
+          <div className="vpn-site-box" style={{ borderColor: "#0f3a22" }}>
+            <div
+              style={{
+                fontSize: "10px",
+                fontWeight: "700",
+                color: "var(--green)",
+                marginBottom: "8px",
+              }}
+            >
+              🏭 Firewall Filial CWB
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--yellow)",
+              }}
+            >
+              IP WAN: 200.20.1.1
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--dim)",
+              }}
+            >
+              Túnel local: 10.10.0.2
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "8.5px",
+                color: "var(--dim)",
+              }}
+            >
+              Rede local: 10.0.2.0/25
+            </div>
+            <hr style={{ borderColor: "#0f3a22", margin: "8px 0" }} />
+            <div
+              style={{
+                fontSize: "8px",
+                color: "var(--text)",
+                lineHeight: "1.7",
+              }}
+            >
+              Protocolo:{" "}
+              <strong style={{ color: "var(--cyan)" }}>IPsec IKEv2</strong>
+              <br />
+              Cifra:{" "}
+              <strong style={{ color: "var(--yellow)" }}>AES-256-GCM</strong>
+              <br />
+              Auth:{" "}
+              <strong style={{ color: "var(--green)" }}>
+                Certificado X.509
+              </strong>
+              <br />
+              DH Group:{" "}
+              <strong style={{ color: "var(--purple)" }}>
+                Group 14 (2048-bit)
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "14px",
+          }}
+        >
+          <div>
+            <div className="section-title st-purple">
+              🔐 SSL-VPN — Acesso Remoto
+            </div>
+            {SSL_STEPS.map((step) => (
+              <div key={step.num} className="vpn-step">
+                <div className="vpn-step-num">{step.num}</div>
+                <div className="vpn-step-text">{step.text}</div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="section-title st-cyan">📊 Resumo das VPNs</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Site-to-Site</th>
+                  <th>SSL Remoto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {VPN_SUMMARY_ROWS.map((row) => (
+                  <tr key={row.item}>
+                    <td className="tc-device">{row.item}</td>
+                    <td
+                      className="tc-ip"
+                      style={
+                        row.highlight ? { color: "var(--green)" } : undefined
+                      }
+                    >
+                      {row.siteToSite}
+                    </td>
+                    <td
+                      className="tc-ip"
+                      style={
+                        row.highlight ? { color: "var(--green)" } : undefined
+                      }
+                    >
+                      {row.sslRemote}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
