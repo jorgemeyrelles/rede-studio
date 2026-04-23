@@ -10,17 +10,24 @@ import {
   CAPACITY_OPTIONS,
   createDefaultVlanDraft,
   formatCompactRange,
+  getSiteVlanCopy,
   getNextVlanId,
   getNodeVisual,
   getSiteRadicalOptions,
   type SiteVlanDraft,
+  type StudioLanguage,
 } from './catalog';
 
-export default function SiteVlanPanel() {
+type SiteVlanPanelProps = {
+  language: StudioLanguage;
+};
+
+export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   const dispatch = useAppDispatch();
   const { sites, nodes, links, siteVlans, ui } = useAppSelector(
     (state) => state.network,
   );
+  const copy = getSiteVlanCopy(language);
   const [vlanDraftBySite, setVlanDraftBySite] = useState<
     Record<string, SiteVlanDraft>
   >({});
@@ -68,7 +75,7 @@ export default function SiteVlanPanel() {
   return (
     <section className="w-full rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">
-        VLAN por Site
+        {copy.title}
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
@@ -78,7 +85,7 @@ export default function SiteVlanPanel() {
         >
           {sites.length === 0 && (
             <div className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-2 text-xs text-slate-300">
-              Crie ao menos um site para cadastrar VLANs.
+              {copy.createSiteFirst}
             </div>
           )}
 
@@ -134,7 +141,7 @@ export default function SiteVlanPanel() {
                         }))
                       }
                       className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-xs text-slate-100 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      placeholder="VLAN"
+                      placeholder={copy.vlanPlaceholder}
                     />
                     <div className="relative">
                       <button
@@ -221,7 +228,7 @@ export default function SiteVlanPanel() {
                         }))
                       }
                       className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-xs text-slate-100"
-                      placeholder="Nome da VLAN (opcional)"
+                      placeholder={copy.vlanNamePlaceholder}
                     />
                     <button
                       onClick={() => {
@@ -254,13 +261,13 @@ export default function SiteVlanPanel() {
                       }}
                       className="rounded-md bg-emerald-300 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-950"
                     >
-                      + VLAN
+                      {copy.addVlan}
                     </button>
                   </div>
 
                   {siteVlanItems.length === 0 && (
                     <div className="rounded border border-dashed border-[#35567f] px-2 py-2 text-xs text-slate-400">
-                      Sem VLAN cadastrada neste site.
+                      {copy.noVlanSite}
                     </div>
                   )}
 
@@ -304,8 +311,8 @@ export default function SiteVlanPanel() {
                             }`}
                           >
                             {isModeActive
-                              ? 'Modo Diagrama ON'
-                              : 'Selecionar no Diagrama'}
+                              ? copy.diagramModeOn
+                              : copy.selectDiagram}
                           </button>
                           <button
                             onClick={() =>
@@ -318,18 +325,18 @@ export default function SiteVlanPanel() {
                             }
                             className="rounded bg-rose-400/80 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-950"
                           >
-                            Remover
+                            {copy.remove}
                           </button>
                         </div>
 
                         <details className="rounded border border-[#2a4565] bg-[#0c1a30]">
                           <summary className="cursor-pointer select-none px-2 py-1 text-[11px] text-slate-200">
-                            Elementos ({selectedCount} selecionados)
+                            {copy.elementsSelected} ({selectedCount} selecionados)
                           </summary>
                           <div className="theme-scrollbar max-h-32 space-y-1 overflow-y-auto px-2 pb-2">
                             {siteNodes.length === 0 && (
                               <div className="text-[11px] text-slate-400">
-                                Nenhum elemento disponivel neste site.
+                                {copy.noElementsSite}
                               </div>
                             )}
 
@@ -372,19 +379,19 @@ export default function SiteVlanPanel() {
 
         <div className="rounded border border-[#35567f] bg-[#0d1a2e] p-2">
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300">
-            Tabela VLAN (Por Site)
+            {copy.vlanTableBySite}
           </div>
           <div className="theme-scrollbar h-[400px] overflow-y-auto overflow-x-auto">
             <table className="w-full border-collapse text-[11px]">
               <thead>
                 <tr className="text-left text-slate-400">
-                  <th className="border-b border-[#35567f] px-2 py-1">Item</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">{copy.item}</th>
                   <th className="border-b border-[#35567f] px-2 py-1">
-                    IP / Range
+                    {copy.ipRange}
                   </th>
-                  <th className="border-b border-[#35567f] px-2 py-1">Tipo</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">{copy.type}</th>
                   <th className="border-b border-[#35567f] px-2 py-1">
-                    Conexoes
+                    {copy.connections}
                   </th>
                 </tr>
               </thead>
@@ -472,7 +479,7 @@ export default function SiteVlanPanel() {
                                   colSpan={4}
                                   className="border-b border-slate-800 px-2 py-1 pl-4 text-slate-500"
                                 >
-                                  Sem elementos associados nesta VLAN.
+                                  {copy.noElementsInVlan}
                                 </td>
                               </tr>,
                             ];
@@ -485,8 +492,7 @@ export default function SiteVlanPanel() {
             </table>
           </div>
           <div className="mt-2 text-[10px] text-slate-500">
-            VLANs agrupadas por site, com range fixo por radical + quantidade de
-            IPs e conexoes ativas por elemento.
+            {copy.footer}
           </div>
         </div>
       </div>

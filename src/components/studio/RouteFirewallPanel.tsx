@@ -7,9 +7,11 @@ import {
 } from '../../features/network/selectors';
 import type { AclAction } from '../../features/network/types';
 import {
+  getRouteFirewallCopy,
   ROUTE_TYPE_CLASS,
   getSiteOtherIps,
   groupRoutesBySite,
+  type StudioLanguage,
 } from './catalog';
 import type { TooltipPosition } from './catalog';
 
@@ -71,64 +73,69 @@ function HeaderInfoTooltip({
   );
 }
 
-export default function RouteFirewallPanel() {
+type RouteFirewallPanelProps = {
+  language: StudioLanguage;
+};
+
+export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps) {
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
   const sites = useAppSelector((state) => state.network.sites);
+  const copy = getRouteFirewallCopy(language);
 
   return (
     <section className="w-full grid gap-3 lg:grid-cols-2">
       <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
-          Tabela de Rotas (gerada)
+          {copy.routeTableTitle}
         </h3>
         <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">Tipo</th>
+                <th className="border-b border-slate-700 px-1 py-1">{copy.type}</th>
                 <th className="border-b border-slate-700 px-1 py-1">VLAN</th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  Rede Destino
+                  {copy.destinationNetwork}
                 </th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  <HeaderInfoTooltip label="Gateway">
+                  <HeaderInfoTooltip label={copy.gateway}>
                     <strong className="mb-1 block text-amber-300">
-                      Gateway por tipo de rota
+                      {copy.routeGatewayByType}
                     </strong>
                     <table className="w-full border-collapse">
                       <tbody>
                         <tr className="border-b border-slate-700">
                           <td className="py-0.5 pr-2 font-semibold text-emerald-400">
-                            Direta
+                            {copy.routeTypeDirect}
                           </td>
                           <td className="py-0.5 text-slate-400">
-                            — pacote entregue diretamente na interface
+                            — {copy.routeHelpDirect}
                           </td>
                         </tr>
                         <tr className="border-b border-slate-700">
                           <td className="py-0.5 pr-2 font-semibold text-orange-400">
-                            Default
+                            {copy.routeTypeDefault}
                           </td>
                           <td className="py-0.5 text-slate-400">
-                            IP do nó WAN (ISP/borda)
+                            {copy.routeHelpDefault}
                           </td>
                         </tr>
                         <tr className="border-b border-slate-700">
                           <td className="py-0.5 pr-2 font-semibold text-cyan-300">
-                            VPN
+                            {copy.routeTypeVpn}
                           </td>
                           <td className="py-0.5 text-slate-400">
-                            IP do endpoint local do túnel
+                            {copy.routeHelpVpn}
                           </td>
                         </tr>
                         <tr>
                           <td className="py-0.5 pr-2 font-semibold text-amber-300">
-                            Estática
+                            {copy.routeTypeStatic}
                           </td>
                           <td className="py-0.5 text-slate-400">
-                            IP do próximo salto lógico (destino)
+                            {copy.routeHelpStatic}
                           </td>
                         </tr>
                       </tbody>
@@ -136,31 +143,14 @@ export default function RouteFirewallPanel() {
                   </HeaderInfoTooltip>
                 </th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  <HeaderInfoTooltip label="Interface">
+                  <HeaderInfoTooltip label={copy.interface}>
                     <strong className="mb-1 block text-amber-300">
-                      Numeração dinâmica de interfaces
+                      {copy.interfaceDynamicNumbering}
                     </strong>
-                    Links{' '}
-                    <span className="font-semibold text-emerald-400">
-                      lan/other
-                    </span>{' '}
-                    e <span className="font-semibold text-orange-400">wan</span>{' '}
-                    incrementam o contador{' '}
-                    <span className="text-slate-200">eth</span> do site &gt;{' '}
-                    <span className="text-slate-200">eth0</span>,{' '}
-                    <span className="text-slate-200">eth1</span>...
+                    {copy.interfaceHelpLine1}
                     <br />
-                    Links{' '}
-                    <span className="font-semibold text-cyan-300">
-                      vpn/ipsec
-                    </span>{' '}
-                    incrementam o contador{' '}
-                    <span className="text-slate-200">tun</span> &gt;{' '}
-                    <span className="text-slate-200">tun0</span>,{' '}
-                    <span className="text-slate-200">tun1</span>...
-                    <br />O resultado e que links diferentes no mesmo no recebem
-                    interfaces numeradas sequencialmente, como em um roteador
-                    real com multiplas placas de rede.
+                    {copy.interfaceHelpLine2}
+                    <br />{copy.interfaceHelpLine3}
                   </HeaderInfoTooltip>
                 </th>
               </tr>
@@ -169,7 +159,7 @@ export default function RouteFirewallPanel() {
               {routes.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-1 py-2 text-slate-500">
-                    Sem rotas ainda. Crie conexões no dashboard.
+                    {copy.emptyRoutes}
                   </td>
                 </tr>
               )}
@@ -214,7 +204,7 @@ export default function RouteFirewallPanel() {
                       colSpan={5}
                       className="border-b border-slate-700 px-2 py-1 text-[11px] text-slate-400"
                     >
-                      Outros IPs:{' '}
+                      {copy.otherIps}:{' '}
                       {getSiteOtherIps(group.siteId, group.rows, sites)}
                     </td>
                   </tr>
@@ -227,18 +217,18 @@ export default function RouteFirewallPanel() {
 
       <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
-          Regras de Segurança/Firewall
+          {copy.firewallTitle}
         </h3>
         <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
                 <th className="border-b border-slate-700 px-1 py-1">ID</th>
-                <th className="border-b border-slate-700 px-1 py-1">Ação</th>
-                <th className="border-b border-slate-700 px-1 py-1">Origem</th>
-                <th className="border-b border-slate-700 px-1 py-1">Destino</th>
+                <th className="border-b border-slate-700 px-1 py-1">{copy.action}</th>
+                <th className="border-b border-slate-700 px-1 py-1">{copy.source}</th>
+                <th className="border-b border-slate-700 px-1 py-1">{copy.destination}</th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  Porta/Serviço
+                  {copy.portService}
                 </th>
               </tr>
             </thead>
@@ -246,7 +236,7 @@ export default function RouteFirewallPanel() {
               {firewallRules.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-1 py-2 text-slate-500">
-                    Sem regras geradas ainda.
+                    {copy.emptyRules}
                   </td>
                 </tr>
               )}

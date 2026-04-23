@@ -3,12 +3,18 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addFloatingNode, addSite } from '../../features/network/networkSlice';
 import type { NodeCategory } from '../../features/network/types';
 import {
+  getStudioToolbarCopy,
   getNodeIconSrc,
   getNodeVisual,
   RELATION_OPTION_CATEGORIES,
+  type StudioLanguage,
 } from './catalog';
 
-export default function StudioToolbar() {
+type StudioToolbarProps = {
+  language: StudioLanguage;
+};
+
+export default function StudioToolbar({ language }: StudioToolbarProps) {
   const dispatch = useAppDispatch();
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;
@@ -16,6 +22,7 @@ export default function StudioToolbar() {
   const [floatingCategory, setFloatingCategory] = useState<NodeCategory>('vpn');
   const [openFloatingPicker, setOpenFloatingPicker] = useState(false);
   const [floatingSearch, setFloatingSearch] = useState('');
+  const copy = getStudioToolbarCopy(language);
 
   return (
     <section className="rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
@@ -26,9 +33,11 @@ export default function StudioToolbar() {
             disabled={isSiteLimitReached}
             className="rounded-md bg-cyan-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
           >
-            Novo Site
+            {copy.newSite}
           </button>
-          <span className="text-xs text-slate-300">Total: {sites.length}</span>
+          <span className="text-xs text-slate-300">
+            {copy.total}: {sites.length}
+          </span>
         </div>
 
         {/* <div className="flex items-end gap-2">
@@ -70,15 +79,15 @@ export default function StudioToolbar() {
           {openFloatingPicker && (
             <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded border border-[#2f4f75] bg-[#081427] p-2 shadow-lg">
               <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
-                <span>Relações Entre Sites</span>
+                <span>{copy.relationsTitle}</span>
                 <span className="text-cyan-300">
-                  Ativo: [{getNodeVisual(floatingCategory).short}]
+                  {copy.active}: [{getNodeVisual(floatingCategory).short}]
                 </span>
               </div>
               <input
                 value={floatingSearch}
                 onChange={(event) => setFloatingSearch(event.target.value)}
-                placeholder="Buscar tipo (vpn, ipsec, mpls...)"
+                placeholder={copy.searchPlaceholder}
                 className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
               />
               <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
@@ -131,7 +140,7 @@ export default function StudioToolbar() {
             }
             className="rounded-md bg-fuchsia-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-950"
           >
-            + Relação Sites
+            {copy.addRelationSite}
           </button>
         </div>
       </div>

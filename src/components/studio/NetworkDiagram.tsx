@@ -23,7 +23,7 @@ import {
   buildGridLayout,
   calculateTooltipPosition,
   colorByCategory,
-  figureByCategory,
+  getNetworkDiagramCopy,
   getLayerFallbackPosition,
   getNodeIconSrc,
   getNodeVisual,
@@ -35,9 +35,14 @@ import {
   resolveLinkVisual,
   type DiagramTooltip,
   type SiteTooltip,
+  type StudioLanguage,
 } from './catalog';
 
-export default function NetworkDiagram() {
+type NetworkDiagramProps = {
+  language: StudioLanguage;
+};
+
+export default function NetworkDiagram({ language }: NetworkDiagramProps) {
   const dispatch = useAppDispatch();
   const diagramDivRef = useRef<HTMLDivElement | null>(null);
   const diagramRef = useRef<go.Diagram | null>(null);
@@ -55,6 +60,7 @@ export default function NetworkDiagram() {
   const { sites, layers, nodes, links, ui } = useAppSelector(
     (state) => state.network,
   );
+  const copy = getNetworkDiagramCopy(language);
 
   const layout = useMemo(
     () => buildGridLayout({ sites, layers, diagramWidth }),
@@ -799,7 +805,7 @@ export default function NetworkDiagram() {
                 <button
                   className="gojs-tooltip-close-btn"
                   onClick={() => setActiveTooltip(null)}
-                  aria-label="Fechar"
+                  aria-label={copy.close}
                 >
                   ✕
                 </button>
@@ -807,12 +813,12 @@ export default function NetworkDiagram() {
 
               <div className="gojs-tooltip-body">
                 <div className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">ID:</span>
+                  <span className="gojs-tooltip-label">{copy.id}:</span>
                   <span className="gojs-tooltip-value">{tooltipNode.id}</span>
                 </div>
 
                 <label className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">Nome:</span>
+                  <span className="gojs-tooltip-label">{copy.name}:</span>
                   <input
                     value={tooltipNode.label}
                     onChange={(event) =>
@@ -865,10 +871,10 @@ export default function NetworkDiagram() {
                     </label>
 
                     <label className="gojs-tooltip-row">
-                      <span className="gojs-tooltip-label">VLANs:</span>
+                      <span className="gojs-tooltip-label">{copy.vlans}:</span>
                       <input
                         value={tooltipNode.vlans.join(',')}
-                        placeholder="Sem VLAN atribuida"
+                        placeholder={copy.noVlanAssigned}
                         onChange={(event) =>
                           dispatch(
                             updateNode({
@@ -888,13 +894,13 @@ export default function NetworkDiagram() {
                 {isWan && (
                   <div className="gojs-tooltip-row">
                     <span className="gojs-tooltip-value">
-                      WAN/Internet nao possui atribuicao de IP local no Studio.
+                      {copy.wanNoLocalIp}
                     </span>
                   </div>
                 )}
 
                 <label className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">Info:</span>
+                  <span className="gojs-tooltip-label">{copy.info}:</span>
                   <textarea
                     value={tooltipNode.description}
                     onChange={(event) =>
@@ -912,7 +918,7 @@ export default function NetworkDiagram() {
                 {techWarnings.length > 0 && (
                   <div className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-[11px] text-amber-200">
                     <div className="mb-1 font-semibold uppercase tracking-wide text-amber-300">
-                      Validacoes
+                      {copy.validations}
                     </div>
                     <div className="space-y-1">
                       {techWarnings.map((warning) => (
@@ -924,7 +930,7 @@ export default function NetworkDiagram() {
 
                 {techFields.length > 0 && (
                   <div className="gojs-tooltip-section">
-                    <div className="gojs-tooltip-label">Perfil Tecnico:</div>
+                    <div className="gojs-tooltip-label">{copy.technicalProfile}:</div>
                     <div className="space-y-2">
                       {techFields.map((field) => {
                         const value = techProfile.fields[field.key];
@@ -948,8 +954,8 @@ export default function NetworkDiagram() {
                                 }
                                 className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
                               >
-                                <option value="true">Sim</option>
-                                <option value="false">Nao</option>
+                                <option value="true">{copy.yes}</option>
+                                <option value="false">{copy.no}</option>
                               </select>
                             </label>
                           );
@@ -1054,12 +1060,12 @@ export default function NetworkDiagram() {
             >
               <div className="gojs-tooltip-header">
                 <div className="gojs-tooltip-head-main">
-                  <div className="gojs-tooltip-title">Detalhes do Site</div>
+                  <div className="gojs-tooltip-title">{copy.siteDetails}</div>
                 </div>
                 <button
                   className="gojs-tooltip-close-btn"
                   onClick={() => setActiveSiteTooltip(null)}
-                  aria-label="Fechar"
+                  aria-label={copy.close}
                 >
                   ✕
                 </button>
@@ -1067,12 +1073,12 @@ export default function NetworkDiagram() {
 
               <div className="gojs-tooltip-body">
                 <div className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">ID:</span>
+                  <span className="gojs-tooltip-label">{copy.id}:</span>
                   <span className="gojs-tooltip-value">{tooltipSite.id}</span>
                 </div>
 
                 <label className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">Nome:</span>
+                  <span className="gojs-tooltip-label">{copy.name}:</span>
                   <input
                     value={tooltipSite.name}
                     onChange={(event) =>
@@ -1088,7 +1094,7 @@ export default function NetworkDiagram() {
                 </label>
 
                 <label className="gojs-tooltip-row">
-                  <span className="gojs-tooltip-label">Octeto:</span>
+                  <span className="gojs-tooltip-label">{copy.octet}:</span>
                   <input
                     type="number"
                     min={1}

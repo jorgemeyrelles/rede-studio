@@ -10,16 +10,23 @@ import {
 import type { NodeCategory } from '../../features/network/types';
 import { selectLegendTree } from '../../features/network/selectors';
 import {
+  getLegendPanelCopy,
   getNodeIconSrc,
   getNodeVisual,
   NODE_OPTION_CATEGORIES,
   RELATION_OPTION_CATEGORIES,
+  type StudioLanguage,
 } from './catalog';
 
-export default function LegendPanel() {
+type LegendPanelProps = {
+  language: StudioLanguage;
+};
+
+export default function LegendPanel({ language }: LegendPanelProps) {
   const dispatch = useAppDispatch();
   const legendTree = useAppSelector(selectLegendTree);
   const { nodes, links } = useAppSelector((state) => state.network);
+  const copy = getLegendPanelCopy(language);
   const [categoryByLayer, setCategoryByLayer] = useState<
     Record<string, NodeCategory>
   >({});
@@ -59,7 +66,7 @@ export default function LegendPanel() {
   return (
     <aside className="theme-scrollbar h-full min-h-0 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-cyan-300">
-        Legenda
+        {copy.title}
       </h2>
 
       <div className="space-y-2">
@@ -69,7 +76,7 @@ export default function LegendPanel() {
             className="rounded border border-indigo-700/70 bg-indigo-950/20"
           >
             <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200">
-              Ligacoes Entre Sites
+              {copy.relationBetweenSites}
             </summary>
             <ul className="space-y-1 px-2 pb-2">
               {relationNodes.map((node) => {
@@ -100,7 +107,7 @@ export default function LegendPanel() {
                         onClick={() => dispatch(removeNode(node.id))}
                         className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
                       >
-                        Excluir
+                        {copy.delete}
                       </button>
                     </div>
                     {relatedLinks.length > 0 && (
@@ -128,7 +135,7 @@ export default function LegendPanel() {
 
         {legendTree.length === 0 && (
           <p className="text-xs text-slate-400">
-            Sem sites ainda. Use a barra superior para criar a rede.
+            {copy.emptySites}
           </p>
         )}
 
@@ -148,7 +155,7 @@ export default function LegendPanel() {
                   }}
                   className="rounded bg-emerald-400 px-2 py-1 text-[10px] font-bold uppercase text-slate-950"
                 >
-                  + Camada
+                  {copy.addLayer}
                 </button>
                 <button
                   onClick={(event) => {
@@ -157,7 +164,7 @@ export default function LegendPanel() {
                   }}
                   className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
                 >
-                  Excluir
+                  {copy.delete}
                 </button>
               </div>
             </summary>
@@ -182,7 +189,7 @@ export default function LegendPanel() {
                         }}
                         className="rounded bg-amber-300 px-2 py-1 text-[10px] font-bold uppercase text-slate-950"
                       >
-                        + Ícone
+                        {copy.addIcon}
                       </button>
                       <button
                         onClick={(event) => {
@@ -192,7 +199,7 @@ export default function LegendPanel() {
                         }}
                         className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
                       >
-                        Excluir
+                        {copy.delete}
                       </button>
                     </div>
                   </summary>
@@ -203,9 +210,9 @@ export default function LegendPanel() {
                       onClick={(event) => event.stopPropagation()}
                     >
                       <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
-                        <span>Adicionar Componente na Camada</span>
+                        <span>{copy.addComponentLayer}</span>
                         <span className="text-cyan-300">
-                          Ultimo: [
+                          {copy.last}: [
                           {getNodeVisual(getCategoryForLayer(layer.id)).short}]
                         </span>
                       </div>
@@ -217,7 +224,7 @@ export default function LegendPanel() {
                             [layer.id]: event.target.value,
                           }))
                         }
-                        placeholder="Buscar tipo (router, firewall, vpn...)"
+                        placeholder={copy.searchTypePlaceholder}
                         className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
                       />
                       <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
@@ -260,7 +267,7 @@ export default function LegendPanel() {
                               </span>
                               {isLast && (
                                 <span className="text-[10px] uppercase">
-                                  Padrão
+                                  {copy.default}
                                 </span>
                               )}
                             </button>
@@ -273,7 +280,7 @@ export default function LegendPanel() {
                   <ul className="space-y-1 px-2 pb-2">
                     {layer.nodes.length === 0 && (
                       <li className="text-[11px] text-slate-500">
-                        Sem componentes
+                        {copy.noComponents}
                       </li>
                     )}
                     {layer.nodes.map((node) => {
@@ -294,7 +301,7 @@ export default function LegendPanel() {
                               onClick={() => dispatch(removeNode(node.id))}
                               className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
                             >
-                              Excluir
+                              {copy.delete}
                             </button>
                           </div>
                           {node.children.length > 0 && (
