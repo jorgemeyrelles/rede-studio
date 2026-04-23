@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap');
 
 :root {
   --bg: #0a0e1a;
@@ -13,8 +13,8 @@
   --purple: #a855f7;
   --dim: #4a6080;
   --text: #c8d8f0;
-  --mono: "Share Tech Mono", monospace;
-  --sans: "Barlow", sans-serif;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'Barlow', sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -710,7 +710,7 @@ h1 {
   gap: 6px;
 }
 .sc-item::before {
-  content: "▸";
+  content: '▸';
   color: var(--cyan);
   flex-shrink: 0;
   margin-top: 1px;
@@ -1179,6 +1179,33 @@ tr:hover td {
   color: var(--text);
   line-height: 1.6;
 }
+
+/* ── THEME SCROLLBAR ── */
+.theme-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #4d7ba8 #0b1728;
+}
+
+.theme-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #0a1525 0%, #0b1b2f 100%);
+  border: 1px solid #1e3654;
+  border-radius: 999px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b6692 0%, #5e8cb6 100%);
+  border: 1px solid #79a6cf;
+  border-radius: 999px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #4a78a3 0%, #74a4ce 100%);
+}
 .vpn-step-text strong {
   color: var(--yellow);
 }
@@ -1351,7 +1378,7 @@ tr:hover td {
   line-height: 1.5;
 }
 .cc-item::before {
-  content: "✔";
+  content: '✔';
   color: var(--green);
   flex-shrink: 0;
 }
@@ -1667,8 +1694,16 @@ hr.slide-hr {
 }
 .gojs-tooltip-body {
   --gojs-tooltip-scroll-track: rgba(20, 42, 66, 0.75);
-  --gojs-tooltip-scroll-thumb: linear-gradient(180deg, #5d90c4 0%, #3d6f9f 100%);
-  --gojs-tooltip-scroll-thumb-hover: linear-gradient(180deg, #76aae0 0%, #4a82b8 100%);
+  --gojs-tooltip-scroll-thumb: linear-gradient(
+    180deg,
+    #5d90c4 0%,
+    #3d6f9f 100%
+  );
+  --gojs-tooltip-scroll-thumb-hover: linear-gradient(
+    180deg,
+    #76aae0 0%,
+    #4a82b8 100%
+  );
   display: flex;
   flex-direction: column;
   gap: 7px;

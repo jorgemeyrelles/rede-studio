@@ -5,11 +5,20 @@ import {
   addLink,
   resizeLayer,
   setZoom,
+  updateNodeTechField,
   updateSite,
   updateNode,
   updateNodePosition,
 } from '../../features/network/networkSlice';
 import type { NodeItem, Site } from '../../features/network/types';
+import {
+  ensureTechProfile,
+  getTechProfileWarnings,
+  getVisibleTechSchema,
+  getTechSchema,
+  type TechFieldSchema,
+  type TechValue,
+} from '../../features/network/techProfiles';
 import { getNodeIconSrc, getNodeVisual } from './catalog';
 
 const BASE_Y = 120;
@@ -45,6 +54,22 @@ function parseVlans(raw: string) {
     .split(',')
     .map((item) => Number(item.trim()))
     .filter((num) => Number.isFinite(num) && num > 0 && num < 4095);
+}
+
+function parseTechValue(schema: TechFieldSchema, raw: string): TechValue {
+  if (schema.type === 'boolean') {
+    return raw === 'true';
+  }
+  if (schema.type === 'number') {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 0;
+    if (typeof schema.min === 'number' && parsed < schema.min)
+      return schema.min;
+    if (typeof schema.max === 'number' && parsed > schema.max)
+      return schema.max;
+    return parsed;
+  }
+  return raw;
 }
 
 function calculateTooltipPosition({
@@ -960,6 +985,40 @@ export default function NetworkDiagram() {
 
           const visual = getNodeVisual(tooltipNode.category);
           const isWan = tooltipNode.category === 'wan';
+          const layerOrder = tooltipNode.layerId
+            ? (layers.find((layer) => layer.id === tooltipNode.layerId)
+                ?.order ?? 1)
+            : 0;
+          const shouldBeGateway =
+            Boolean(tooltipNode.siteId) &&
+            (tooltipNode.category === 'router' ||
+              tooltipNode.category === 'firewall') &&
+            layerOrder === 1;
+          const siteNodeCount = tooltipNode.siteId
+            ? nodes.filter((node) => node.siteId === tooltipNode.siteId).length
+            : 0;
+          const techProfile = ensureTechProfile(
+            tooltipNode.category,
+            tooltipNode.techProfile,
+            {
+              layerOrder,
+              shouldBeGateway,
+              siteNodeCount,
+            },
+          );
+          const techFields = getVisibleTechSchema(
+            techProfile.kind,
+            techProfile.fields,
+          );
+          const techWarnings = getTechProfileWarnings(
+            tooltipNode.category,
+            techProfile,
+            {
+              layerOrder,
+              shouldBeGateway,
+              siteNodeCount,
+            },
+          );
 
           return (
             <div
@@ -1091,6 +1150,121 @@ export default function NetworkDiagram() {
                     className="h-16 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
                   />
                 </label>
+
+                {techWarnings.length > 0 && (
+                  <div className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-[11px] text-amber-200">
+                    <div className="mb-1 font-semibold uppercase tracking-wide text-amber-300">
+                      Validacoes
+                    </div>
+                    <div className="space-y-1">
+                      {techWarnings.map((warning) => (
+                        <div key={warning}>- {warning}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {techFields.length > 0 && (
+                  <div className="gojs-tooltip-section">
+                    <div className="gojs-tooltip-label">Perfil Tecnico:</div>
+                    <div className="space-y-2">
+                      {techFields.map((field) => {
+                        const value = techProfile.fields[field.key];
+
+                        if (field.type === 'boolean') {
+                          return (
+                            <label key={field.key} className="gojs-tooltip-row">
+                              <span className="gojs-tooltip-label">
+                                {field.label}:
+                              </span>
+                              <select
+                                value={String(Boolean(value))}
+                                onChange={(event) =>
+                                  dispatch(
+                                    updateNodeTechField({
+                                      id: tooltipNode.id,
+                                      key: field.key,
+                                      value: event.target.value === 'true',
+                                    }),
+                                  )
+                                }
+                                className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                              >
+                                <option value="true">Sim</option>
+                                <option value="false">Nao</option>
+                              </select>
+                            </label>
+                          );
+                        }
+
+                        if (field.type === 'select') {
+                          const options = field.options ?? [];
+                          const selected =
+                            typeof value === 'string' && value.length > 0
+                              ? value
+                              : (options[0] ?? '');
+                          return (
+                            <label key={field.key} className="gojs-tooltip-row">
+                              <span className="gojs-tooltip-label">
+                                {field.label}:
+                              </span>
+                              <select
+                                value={selected}
+                                onChange={(event) =>
+                                  dispatch(
+                                    updateNodeTechField({
+                                      id: tooltipNode.id,
+                                      key: field.key,
+                                      value: event.target.value,
+                                    }),
+                                  )
+                                }
+                                className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                              >
+                                {options.map((option) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          );
+                        }
+
+                        return (
+                          <label key={field.key} className="gojs-tooltip-row">
+                            <span className="gojs-tooltip-label">
+                              {field.label}:
+                            </span>
+                            <input
+                              type={field.type === 'number' ? 'number' : 'text'}
+                              min={
+                                field.type === 'number' ? field.min : undefined
+                              }
+                              max={
+                                field.type === 'number' ? field.max : undefined
+                              }
+                              value={String(value ?? '')}
+                              onChange={(event) =>
+                                dispatch(
+                                  updateNodeTechField({
+                                    id: tooltipNode.id,
+                                    key: field.key,
+                                    value: parseTechValue(
+                                      field,
+                                      event.target.value,
+                                    ),
+                                  }),
+                                )
+                              }
+                              className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           );

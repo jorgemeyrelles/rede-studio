@@ -33,47 +33,127 @@ export const selectLegendTree = (state: RootState) => {
   });
 };
 
-export const selectRouteTable = (state: RootState) => {
-  const { links, nodes } = state.network;
+export type RouteType = 'Direta' | 'Estática' | 'Default' | 'VPN';
 
-  return links.map((link, index) => {
+export type RouteRow = {
+  siteId: string;
+  siteName: string;
+  tipo: RouteType;
+  redeDest: string;
+  gateway: string;
+  iface: string;
+};
+
+function resolveRouteType(
+  linkKind: string,
+  fromSiteId: string | undefined,
+  toSiteId: string | undefined,
+  toCategory: string | undefined,
+): RouteType {
+  if (linkKind === 'vpn' || linkKind === 'ipsec') return 'VPN';
+  if (toCategory === 'wan') return 'Default';
+  if (fromSiteId && toSiteId && fromSiteId === toSiteId) return 'Direta';
+  return 'Estática';
+}
+
+function resolveGateway(
+  tipo: RouteType,
+  fromIp: string | undefined,
+  toIp: string | undefined,
+  toCategory: string | undefined,
+): string {
+  if (tipo === 'Direta') return '—';
+  if (tipo === 'Default') return toIp && toIp !== '' ? toIp : '—';
+  if (tipo === 'VPN') return fromIp && fromIp !== '' ? fromIp : '—';
+  // Estática: próximo salto = IP do destino
+  return toIp && toIp !== '' ? toIp : '—';
+}
+
+function resolveInterface(
+  tipo: RouteType,
+  linkKind: string,
+  ifaceCounters: { eth: number; tun: number },
+): string {
+  if (tipo === 'VPN' || linkKind === 'vpn' || linkKind === 'ipsec') {
+    const idx = ifaceCounters.tun;
+    ifaceCounters.tun += 1;
+    return `tun${idx} — túnel`;
+  }
+  if (linkKind === 'wan' || tipo === 'Default') {
+    const idx = ifaceCounters.eth;
+    ifaceCounters.eth += 1;
+    return `eth${idx} — WAN`;
+  }
+  const idx = ifaceCounters.eth;
+  ifaceCounters.eth += 1;
+  return `eth${idx} — LAN`;
+}
+
+export const selectRouteTable = (state: RootState) => {
+  const { links, nodes, sites } = state.network;
+
+  // Contador de interface por site para numeração dinâmica
+  const ifaceCountersBySite: Record<string, { eth: number; tun: number }> = {};
+
+  const rows: RouteRow[] = links.map((link) => {
     const from = nodes.find((node) => node.id === link.from);
     const to = nodes.find((node) => node.id === link.to);
 
+    const fromSiteId = from?.siteId;
+    const toSiteId = to?.siteId;
+
+    // Determina o siteId "dono" da rota: prefere o nó de origem; fallback para destino; fallback 'global'
+    const ownerSiteId = fromSiteId ?? toSiteId ?? 'global';
+    const ownerSite = sites.find((s) => s.id === ownerSiteId);
+    const siteName = ownerSite?.name ?? 'Global / Inter-site';
+
+    if (!ifaceCountersBySite[ownerSiteId]) {
+      ifaceCountersBySite[ownerSiteId] = { eth: 0, tun: 0 };
+    }
+    const counters = ifaceCountersBySite[ownerSiteId];
+
+    const tipo = resolveRouteType(
+      link.kind,
+      fromSiteId,
+      toSiteId,
+      to?.category,
+    );
+    const gateway = resolveGateway(tipo, from?.ip, to?.ip, to?.category);
+    const iface = resolveInterface(tipo, link.kind, counters);
+
+    const redeDest =
+      to?.category === 'wan'
+        ? '0.0.0.0/0'
+        : `${to?.ip ?? '0.0.0.0'}/${to?.cidr ?? 0}`;
+
     return {
-      id: `R${index + 1}`,
-      origem: from?.label ?? link.from,
-      destino: to?.label ?? link.to,
-      redeDestino: `${to?.ip ?? '0.0.0.0'}/${to?.cidr ?? 0}`,
-      proximoSalto: from?.ip ?? '-',
-      tipo: link.kind,
+      siteId: ownerSiteId,
+      siteName,
+      tipo,
+      redeDest,
+      gateway,
+      iface,
     };
   });
+
+  return rows;
 };
 
 export const selectFirewallRules = (state: RootState) => {
-  const { links, nodes } = state.network;
+  const { aclRules, nodes } = state.network;
 
-  return links
-    .filter((link) => {
-      const from = nodes.find((node) => node.id === link.from);
-      const to = nodes.find((node) => node.id === link.to);
-      return (
-        from?.category === 'firewall' ||
-        to?.category === 'firewall' ||
-        link.kind === 'vpn' ||
-        link.kind === 'ipsec'
-      );
-    })
-    .map((link, index) => {
-      const from = nodes.find((node) => node.id === link.from);
-      const to = nodes.find((node) => node.id === link.to);
-      return {
-        id: `FW${index + 1}`,
-        acao: 'ALLOW',
-        origem: `${from?.ip ?? '-'} / ${from?.label ?? link.from}`,
-        destino: `${to?.ip ?? '-'} / ${to?.label ?? link.to}`,
-        servico: link.kind === 'ipsec' || link.kind === 'vpn' ? 'VPN' : 'ANY',
-      };
-    });
+  return aclRules.map((rule) => {
+    const from = nodes.find((node) => node.id === rule.sourceNodeId);
+    const to = nodes.find((node) => node.id === rule.destinationNodeId);
+
+    return {
+      id: rule.id,
+      acao: rule.action,
+      origem: `${from?.ip ?? '-'} / ${from?.label ?? rule.sourceNodeId}`,
+      destino: `${to?.ip ?? '-'} / ${to?.label ?? rule.destinationNodeId}`,
+      servico: rule.service,
+      enabled: rule.enabled,
+      managed: rule.managed,
+    };
+  });
 };

@@ -1,7 +1,114 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { Layer, LinkKind, NetworkState, NodeCategory } from './types';
+import type {
+  AclAction,
+  AclRule,
+  Layer,
+  LinkItem,
+  LinkKind,
+  NetworkState,
+  NodeCategory,
+  NodeItem,
+} from './types';
+import {
+  buildDefaultTechProfile,
+  ensureTechProfile,
+  normalizeTechProfile,
+  type TechValue,
+} from './techProfiles';
 
 const SCHEMA_VERSION = 1;
+
+function isAclEligibleLink(nodes: NodeItem[], link: LinkItem) {
+  const from = nodes.find((node) => node.id === link.from);
+  const to = nodes.find((node) => node.id === link.to);
+
+  return (
+    from?.category === 'firewall' ||
+    to?.category === 'firewall' ||
+    link.kind === 'vpn' ||
+    link.kind === 'ipsec'
+  );
+}
+
+function getDefaultAclService(
+  linkKind: LinkKind,
+  fromCategory?: NodeCategory,
+  toCategory?: NodeCategory,
+) {
+  const categories = new Set([fromCategory, toCategory]);
+
+  if (linkKind === 'vpn' || linkKind === 'ipsec') {
+    return 'ICMP, TCP 443/80';
+  }
+
+  if (categories.has('printer')) {
+    return 'TCP 445/80';
+  }
+
+  if (categories.has('server') || categories.has('nas')) {
+    return 'TCP 445/22/80/443';
+  }
+
+  if (
+    categories.has('router') ||
+    categories.has('firewall') ||
+    categories.has('switch')
+  ) {
+    return 'QUALQUER';
+  }
+
+  if (
+    categories.has('pc') ||
+    categories.has('voip') ||
+    categories.has('access-point')
+  ) {
+    return 'TCP 443/80, ICMP';
+  }
+
+  return 'QUALQUER';
+}
+
+function reconcileAclRules(
+  state: Pick<NetworkState, 'aclRules' | 'links' | 'nodes'>,
+) {
+  const existingRules = Array.isArray(state.aclRules) ? state.aclRules : [];
+  const existingManagedByLinkId = new Map(
+    existingRules
+      .filter((rule) => rule.managed && rule.linkId)
+      .map((rule) => [rule.linkId as string, rule]),
+  );
+  const validNodeIds = new Set(state.nodes.map((node) => node.id));
+
+  const managedRules: AclRule[] = state.links
+    .filter((link) => isAclEligibleLink(state.nodes, link))
+    .map((link) => {
+      const previousRule = existingManagedByLinkId.get(link.id);
+      const from = state.nodes.find((node) => node.id === link.from);
+      const to = state.nodes.find((node) => node.id === link.to);
+
+      return {
+        id: previousRule?.id ?? `acl_${link.id}`,
+        linkId: link.id,
+        sourceNodeId: link.from,
+        destinationNodeId: link.to,
+        action: previousRule?.action ?? 'ALLOW',
+        service:
+          previousRule?.service ??
+          getDefaultAclService(link.kind, from?.category, to?.category),
+        enabled: previousRule?.enabled ?? true,
+        managed: true,
+      };
+    });
+
+  const manualRules = existingRules.filter(
+    (rule) =>
+      !rule.managed &&
+      validNodeIds.has(rule.sourceNodeId) &&
+      validNodeIds.has(rule.destinationNodeId),
+  );
+
+  return [...managedRules, ...manualRules];
+}
 
 function makeSiteId(index: number) {
   return `site_${index}`;
@@ -128,9 +235,15 @@ const initialState: NetworkState = {
       x: 680,
       y: 80,
       description: 'Ponto central de conectividade externa.',
+      techProfile: buildDefaultTechProfile('wan', {
+        layerOrder: 0,
+        shouldBeGateway: false,
+        siteNodeCount: 0,
+      }),
     },
   ],
   links: [],
+  aclRules: [],
   counters: {
     site: 1,
     layer: 1,
@@ -170,6 +283,21 @@ type AddLinkPayload = {
   from: string;
   to: string;
   kind?: LinkKind;
+};
+
+type UpdateNodeTechFieldPayload = {
+  id: string;
+  key: string;
+  value: TechValue;
+};
+
+type UpdateAclRulePayload = {
+  id: string;
+  changes: Partial<{
+    action: AclAction;
+    service: string;
+    enabled: boolean;
+  }>;
 };
 
 type UpdateSitePayload = {
@@ -223,6 +351,60 @@ function getInitialNodePosition(
   };
 }
 
+function shouldNodeBeGateway(
+  state: NetworkState,
+  siteId: string,
+  layerOrder: number,
+  category: NodeCategory,
+) {
+  if (layerOrder !== 1) return false;
+  if (category !== 'router' && category !== 'firewall') return false;
+
+  const hasGatewayInSite = state.nodes.some(
+    (node) =>
+      node.siteId === siteId &&
+      (node.techProfile?.fields?.gatewayDefault === true ||
+        ((node.category === 'router' || node.category === 'firewall') &&
+          node.layerId &&
+          state.layers.find((layer) => layer.id === node.layerId)?.order ===
+            1)),
+  );
+
+  return !hasGatewayInSite;
+}
+
+function normalizeState(input: NetworkState): NetworkState {
+  const normalizedNodes = input.nodes.map((node) => {
+    const layerOrder = node.layerId
+      ? (input.layers.find((layer) => layer.id === node.layerId)?.order ?? 1)
+      : 0;
+    const shouldBeGateway =
+      node.siteId &&
+      (node.category === 'router' || node.category === 'firewall') &&
+      layerOrder === 1;
+    return {
+      ...node,
+      techProfile: ensureTechProfile(node.category, node.techProfile, {
+        layerOrder,
+        shouldBeGateway: Boolean(shouldBeGateway),
+        siteNodeCount: node.siteId
+          ? input.nodes.filter((item) => item.siteId === node.siteId).length
+          : 0,
+      }),
+    };
+  });
+
+  return {
+    ...input,
+    nodes: normalizedNodes,
+    aclRules: reconcileAclRules({
+      aclRules: input.aclRules ?? [],
+      links: input.links,
+      nodes: normalizedNodes,
+    }),
+  };
+}
+
 export const networkSlice = createSlice({
   name: 'network',
   initialState,
@@ -232,13 +414,14 @@ export const networkSlice = createSlice({
       sites: [],
       layers: [],
       links: [],
+      aclRules: [],
       nodes: [...initialState.nodes],
       counters: { ...initialState.counters },
       ui: { ...initialState.ui },
       meta: { ...initialState.meta },
     }),
     hydrateNetworkState: (_state, action: PayloadAction<NetworkState>) => {
-      return action.payload;
+      return normalizeState(action.payload);
     },
     addSite: (state) => {
       if (state.sites.length >= 4) {
@@ -273,6 +456,7 @@ export const networkSlice = createSlice({
           !nodesToDelete.includes(link.from) &&
           !nodesToDelete.includes(link.to),
       );
+      state.aclRules = reconcileAclRules(state);
       if (
         state.ui.inspectorNodeId &&
         nodesToDelete.includes(state.ui.inspectorNodeId)
@@ -335,6 +519,7 @@ export const networkSlice = createSlice({
           !nodesToDelete.includes(link.from) &&
           !nodesToDelete.includes(link.to),
       );
+      state.aclRules = reconcileAclRules(state);
       if (
         state.ui.inspectorNodeId &&
         nodesToDelete.includes(state.ui.inspectorNodeId)
@@ -392,6 +577,17 @@ export const networkSlice = createSlice({
         x: position.x,
         y: position.y,
         description: 'Componente criado no Studio.',
+        techProfile: buildDefaultTechProfile(category, {
+          layerOrder: layer.order,
+          shouldBeGateway: shouldNodeBeGateway(
+            state,
+            siteId,
+            layer.order,
+            category,
+          ),
+          siteNodeCount: state.nodes.filter((node) => node.siteId === siteId)
+            .length,
+        }),
       });
       state.counters.node += 1;
     },
@@ -416,6 +612,11 @@ export const networkSlice = createSlice({
         x: 860,
         y: 120,
         description: 'Componente de comunicação no quadro principal.',
+        techProfile: buildDefaultTechProfile(category, {
+          layerOrder: 0,
+          shouldBeGateway: false,
+          siteNodeCount: 0,
+        }),
       });
       state.counters.node += 1;
     },
@@ -425,6 +626,7 @@ export const networkSlice = createSlice({
       state.links = state.links.filter(
         (link) => link.from !== nodeId && link.to !== nodeId,
       );
+      state.aclRules = reconcileAclRules(state);
       if (state.ui.inspectorNodeId === nodeId) {
         state.ui.inspectorNodeId = null;
       }
@@ -458,6 +660,58 @@ export const networkSlice = createSlice({
         node.description = action.payload.changes.description;
       }
     },
+    updateNodeTechField: (
+      state,
+      action: PayloadAction<UpdateNodeTechFieldPayload>,
+    ) => {
+      const node = state.nodes.find((item) => item.id === action.payload.id);
+      if (!node) return;
+
+      const layerOrder = node.layerId
+        ? (state.layers.find((layer) => layer.id === node.layerId)?.order ?? 1)
+        : 0;
+      const shouldBeGateway =
+        node.siteId &&
+        (node.category === 'router' || node.category === 'firewall') &&
+        layerOrder === 1;
+
+      const profile = ensureTechProfile(node.category, node.techProfile, {
+        layerOrder,
+        shouldBeGateway: Boolean(shouldBeGateway),
+        siteNodeCount: node.siteId
+          ? state.nodes.filter((item) => item.siteId === node.siteId).length
+          : 0,
+      });
+
+      profile.fields[action.payload.key] = action.payload.value;
+      node.techProfile = normalizeTechProfile(node.category, profile, {
+        layerOrder,
+        shouldBeGateway: Boolean(shouldBeGateway),
+        siteNodeCount: node.siteId
+          ? state.nodes.filter((item) => item.siteId === node.siteId).length
+          : 0,
+      });
+
+      if (
+        action.payload.key === 'gatewayDefault' &&
+        action.payload.value === true &&
+        node.siteId
+      ) {
+        state.nodes.forEach((item) => {
+          if (item.id === node.id || item.siteId !== node.siteId) return;
+          if (item.category !== 'router' && item.category !== 'firewall')
+            return;
+          if (!item.techProfile) return;
+          item.techProfile = {
+            ...item.techProfile,
+            fields: {
+              ...item.techProfile.fields,
+              gatewayDefault: false,
+            },
+          };
+        });
+      }
+    },
     addLink: (state, action: PayloadAction<AddLinkPayload>) => {
       const { from, to } = action.payload;
       if (from === to) return;
@@ -475,9 +729,25 @@ export const networkSlice = createSlice({
         kind: action.payload.kind ?? 'other',
       });
       state.counters.link += 1;
+      state.aclRules = reconcileAclRules(state);
     },
     removeLink: (state, action: PayloadAction<string>) => {
       state.links = state.links.filter((link) => link.id !== action.payload);
+      state.aclRules = reconcileAclRules(state);
+    },
+    updateAclRule: (state, action: PayloadAction<UpdateAclRulePayload>) => {
+      const rule = state.aclRules.find((item) => item.id === action.payload.id);
+      if (!rule) return;
+
+      if (typeof action.payload.changes.action === 'string') {
+        rule.action = action.payload.changes.action;
+      }
+      if (typeof action.payload.changes.service === 'string') {
+        rule.service = action.payload.changes.service;
+      }
+      if (typeof action.payload.changes.enabled === 'boolean') {
+        rule.enabled = action.payload.changes.enabled;
+      }
     },
     setInspectorNodeId: (state, action: PayloadAction<string | null>) => {
       state.ui.inspectorNodeId = action.payload;
@@ -508,8 +778,10 @@ export const {
   removeNode,
   updateNodePosition,
   updateNode,
+  updateNodeTechField,
   addLink,
   removeLink,
+  updateAclRule,
   setInspectorNodeId,
   setZoom,
   setPersistWarning,

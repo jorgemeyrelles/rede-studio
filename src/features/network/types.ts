@@ -57,6 +57,11 @@ export type NodeItem = {
   x: number;
   y: number;
   description: string;
+  techProfile?: {
+    kind: string;
+    version: number;
+    fields: Record<string, string | number | boolean>;
+  };
 };
 
 export type LinkItem = {
@@ -66,11 +71,25 @@ export type LinkItem = {
   kind: LinkKind;
 };
 
+export type AclAction = 'ALLOW' | 'DENY';
+
+export type AclRule = {
+  id: string;
+  linkId?: string;
+  sourceNodeId: string;
+  destinationNodeId: string;
+  action: AclAction;
+  service: string;
+  enabled: boolean;
+  managed: boolean;
+};
+
 export type NetworkState = {
   sites: Site[];
   layers: Layer[];
   nodes: NodeItem[];
   links: LinkItem[];
+  aclRules: AclRule[];
   counters: {
     site: number;
     layer: number;

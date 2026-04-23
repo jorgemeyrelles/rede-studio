@@ -57,7 +57,7 @@ export default function LegendPanel() {
   );
 
   return (
-    <aside className="h-full overflow-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+    <aside className="theme-scrollbar h-full min-h-0 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-cyan-300">
         Legenda
       </h2>
@@ -220,7 +220,7 @@ export default function LegendPanel() {
                         placeholder="Buscar tipo (router, firewall, vpn...)"
                         className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
                       />
-                      <div className="grid max-h-36 grid-cols-1 gap-1 overflow-auto">
+                      <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
                         {NODE_OPTION_CATEGORIES.filter((category) => {
                           const visual = getNodeVisual(category);
                           const query = getLayerSearch(layer.id)
