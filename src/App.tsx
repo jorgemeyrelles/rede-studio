@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import {
   getStudioAppCopy,
   STUDIO_LANGUAGE_OPTIONS,
@@ -79,7 +85,10 @@ export default function App() {
 
       <Routes>
         <Route path="/slides" element={<SlidesPage />} />
-        <Route path="/studio" element={<StudioPage language={studioLanguage} />} />
+        <Route
+          path="/studio"
+          element={<StudioPage language={studioLanguage} />}
+        />
         <Route path="*" element={<Navigate to="/slides" replace />} />
       </Routes>
     </div>

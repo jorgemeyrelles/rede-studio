@@ -134,9 +134,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
         )}
 
         {legendTree.length === 0 && (
-          <p className="text-xs text-slate-400">
-            {copy.emptySites}
-          </p>
+          <p className="text-xs text-slate-400">{copy.emptySites}</p>
         )}
 
         {legendTree.map((site) => (

@@ -26,6 +26,9 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
     "gojs": "^3.1.9",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-redux": "^9.2.0",

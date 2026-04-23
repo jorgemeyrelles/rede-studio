@@ -14,6 +14,7 @@ import {
   type StudioLanguage,
 } from './catalog';
 import type { TooltipPosition } from './catalog';
+import type { RouteType } from '../../features/network/types';
 
 function HeaderInfoTooltip({
   label,
@@ -77,12 +78,20 @@ type RouteFirewallPanelProps = {
   language: StudioLanguage;
 };
 
-export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps) {
+export default function RouteFirewallPanel({
+  language,
+}: RouteFirewallPanelProps) {
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
   const sites = useAppSelector((state) => state.network.sites);
   const copy = getRouteFirewallCopy(language);
+  const routeTypeLabels: Record<RouteType, string> = {
+    Direta: copy.routeTypeDirect,
+    Estática: copy.routeTypeStatic,
+    Default: copy.routeTypeDefault,
+    VPN: copy.routeTypeVpn,
+  };
 
   return (
     <section className="w-full grid gap-3 lg:grid-cols-2">
@@ -94,7 +103,9 @@ export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">{copy.type}</th>
+                <th className="border-b border-slate-700 px-1 py-1">
+                  {copy.type}
+                </th>
                 <th className="border-b border-slate-700 px-1 py-1">VLAN</th>
                 <th className="border-b border-slate-700 px-1 py-1">
                   {copy.destinationNetwork}
@@ -150,7 +161,8 @@ export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps
                     {copy.interfaceHelpLine1}
                     <br />
                     {copy.interfaceHelpLine2}
-                    <br />{copy.interfaceHelpLine3}
+                    <br />
+                    {copy.interfaceHelpLine3}
                   </HeaderInfoTooltip>
                 </th>
               </tr>
@@ -182,7 +194,7 @@ export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps
                         <span
                           className={`font-medium ${ROUTE_TYPE_CLASS[route.tipo] ?? 'text-slate-300'}`}
                         >
-                          {route.tipo}
+                          {routeTypeLabels[route.tipo] ?? route.tipo}
                         </span>
                       </td>
                       <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-300">
@@ -224,9 +236,15 @@ export default function RouteFirewallPanel({ language }: RouteFirewallPanelProps
             <thead>
               <tr className="text-left text-slate-400">
                 <th className="border-b border-slate-700 px-1 py-1">ID</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.action}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.source}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.destination}</th>
+                <th className="border-b border-slate-700 px-1 py-1">
+                  {copy.action}
+                </th>
+                <th className="border-b border-slate-700 px-1 py-1">
+                  {copy.source}
+                </th>
+                <th className="border-b border-slate-700 px-1 py-1">
+                  {copy.destination}
+                </th>
                 <th className="border-b border-slate-700 px-1 py-1">
                   {copy.portService}
                 </th>

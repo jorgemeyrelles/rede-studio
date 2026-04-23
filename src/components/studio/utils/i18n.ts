@@ -1,6 +1,7 @@
 import {
   LEGEND_PANEL_COPY,
   NETWORK_DIAGRAM_COPY,
+  PDF_REPORT_COPY,
   ROUTE_FIREWALL_COPY,
   SITE_VLAN_COPY,
   STUDIO_APP_COPY,
@@ -37,7 +38,13 @@ export function getNetworkDiagramCopy(language: StudioLanguage) {
   return NETWORK_DIAGRAM_COPY[language];
 }
 
-export function getNextStudioLanguage(language: StudioLanguage): StudioLanguage {
+export function getPdfReportCopy(language: StudioLanguage) {
+  return PDF_REPORT_COPY[language];
+}
+
+export function getNextStudioLanguage(
+  language: StudioLanguage,
+): StudioLanguage {
   if (language === 'pt') return 'en';
   if (language === 'en') return 'es';
   return 'pt';

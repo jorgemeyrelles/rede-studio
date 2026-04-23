@@ -331,7 +331,8 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
 
                         <details className="rounded border border-[#2a4565] bg-[#0c1a30]">
                           <summary className="cursor-pointer select-none px-2 py-1 text-[11px] text-slate-200">
-                            {copy.elementsSelected} ({selectedCount} selecionados)
+                            {copy.elementsSelected} ({selectedCount}{' '}
+                            selecionados)
                           </summary>
                           <div className="theme-scrollbar max-h-32 space-y-1 overflow-y-auto px-2 pb-2">
                             {siteNodes.length === 0 && (
@@ -385,11 +386,15 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
             <table className="w-full border-collapse text-[11px]">
               <thead>
                 <tr className="text-left text-slate-400">
-                  <th className="border-b border-[#35567f] px-2 py-1">{copy.item}</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">
+                    {copy.item}
+                  </th>
                   <th className="border-b border-[#35567f] px-2 py-1">
                     {copy.ipRange}
                   </th>
-                  <th className="border-b border-[#35567f] px-2 py-1">{copy.type}</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">
+                    {copy.type}
+                  </th>
                   <th className="border-b border-[#35567f] px-2 py-1">
                     {copy.connections}
                   </th>
@@ -491,9 +496,7 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
               </tbody>
             </table>
           </div>
-          <div className="mt-2 text-[10px] text-slate-500">
-            {copy.footer}
-          </div>
+          <div className="mt-2 text-[10px] text-slate-500">{copy.footer}</div>
         </div>
       </div>
     </section>
