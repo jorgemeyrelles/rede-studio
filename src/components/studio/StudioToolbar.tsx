@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
   addFloatingNode,
-  addLayer,
   addSite,
 } from '../../features/network/networkSlice';
 import type { NodeCategory } from '../../features/network/types';
@@ -13,13 +12,12 @@ export default function StudioToolbar() {
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;
 
-  const [selectedSite, setSelectedSite] = useState<string>('');
   const [floatingCategory, setFloatingCategory] = useState<NodeCategory>('vpn');
 
   return (
     <section className="rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
-      <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-end">
-        <div className="flex items-end gap-2">
+      <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => dispatch(addSite())}
             disabled={isSiteLimitReached}
@@ -30,7 +28,7 @@ export default function StudioToolbar() {
           <span className="text-xs text-slate-300">Total: {sites.length}</span>
         </div>
 
-        <div className="flex items-end gap-2">
+        {/* <div className="flex items-end gap-2">
           <select
             value={selectedSite}
             onChange={(event) => {
@@ -54,9 +52,9 @@ export default function StudioToolbar() {
           >
             Nova Camada
           </button>
-        </div>
+        </div> */}
 
-        <div className="flex items-end gap-2 justify-self-end">
+        <div className="flex items-center gap-2 justify-self-end">
           <select
             value={floatingCategory}
             onChange={(event) =>

@@ -1,3 +1,4 @@
+import { Fragment, useState, type ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { updateAclRule } from '../../features/network/networkSlice';
 import {
@@ -13,6 +14,69 @@ const ROUTE_TYPE_CLASS: Record<string, string> = {
   Default: 'text-orange-400',
   VPN: 'text-cyan-300',
 };
+
+type TooltipPosition = {
+  top: number;
+  left: number;
+};
+
+function HeaderInfoTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  const [position, setPosition] = useState<TooltipPosition | null>(null);
+
+  const setTooltipPosition = (button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    setPosition({
+      top: rect.top + rect.height / 2,
+      left: rect.right,
+    });
+  };
+
+  const openTooltipOnMouse = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setTooltipPosition(event.currentTarget);
+  };
+
+  const openTooltipOnFocus = (event: React.FocusEvent<HTMLButtonElement>) => {
+    setTooltipPosition(event.currentTarget);
+  };
+
+  const closeTooltip = () => {
+    setPosition(null);
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={`Informacoes sobre ${label}`}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-slate-500 transition hover:text-slate-200 focus:outline-none"
+        onMouseEnter={openTooltipOnMouse}
+        onMouseLeave={closeTooltip}
+        onFocus={openTooltipOnFocus}
+        onBlur={closeTooltip}
+      >
+        ⓘ
+      </button>
+      {position && (
+        <div
+          className="fixed z-[1000] w-72 -translate-y-1/2 rounded border border-slate-600 bg-slate-900 p-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl"
+          style={{
+            top: position.top,
+            left: position.left,
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </span>
+  );
+}
 
 function groupRoutesBySite(
   rows: RouteRow[],
@@ -40,6 +104,22 @@ export default function RouteFirewallPanel() {
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
+  const sites = useAppSelector((state) => state.network.sites);
+
+  const getSiteOtherIps = (siteId: string, siteRoutes: RouteRow[]) => {
+    const site = sites.find((item) => item.id === siteId);
+    if (!site) return '-';
+
+    const networkIp = `200.${site.ipOctet}.0.0`;
+    const broadcastIp = `200.${site.ipOctet}.255.255`;
+    const firstHostIp = `200.${site.ipOctet}.0.1`;
+    const lastHostIp = `200.${site.ipOctet}.255.254`;
+    const defaultRoute = '0.0.0.0/0';
+    const defaultGateway =
+      siteRoutes.find((route) => route.tipo === 'Default')?.gateway ?? '-';
+
+    return `Rede: ${networkIp} | Broadcast: ${broadcastIp} | Host inicial: ${firstHostIp} | Host final: ${lastHostIp} | Default: ${defaultRoute} via ${defaultGateway}`;
+  };
 
   return (
     <section className="w-full grid gap-3 lg:grid-cols-2">
@@ -47,77 +127,101 @@ export default function RouteFirewallPanel() {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
           Tabela de Rotas (gerada)
         </h3>
-        <div className="theme-scrollbar max-h-48 overflow-auto text-xs">
+        <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
                 <th className="border-b border-slate-700 px-1 py-1">Tipo</th>
+                <th className="border-b border-slate-700 px-1 py-1">VLAN</th>
                 <th className="border-b border-slate-700 px-1 py-1">
                   Rede Destino
                 </th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  <span className="group relative inline-flex cursor-help items-center gap-1">
-                    Gateway
-                    <span className="text-slate-500">ⓘ</span>
-                    <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1 hidden w-72 rounded border border-slate-600 bg-slate-900 p-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block">
-                      <strong className="mb-1 block text-amber-300">Gateway por tipo de rota</strong>
-                      <table className="w-full border-collapse">
-                        <tbody>
-                          <tr className="border-b border-slate-700">
-                            <td className="py-0.5 pr-2 font-semibold text-emerald-400">Direta</td>
-                            <td className="py-0.5 text-slate-400">— pacote entregue diretamente na interface</td>
-                          </tr>
-                          <tr className="border-b border-slate-700">
-                            <td className="py-0.5 pr-2 font-semibold text-orange-400">Default</td>
-                            <td className="py-0.5 text-slate-400">IP do nó WAN (ISP/borda)</td>
-                          </tr>
-                          <tr className="border-b border-slate-700">
-                            <td className="py-0.5 pr-2 font-semibold text-cyan-300">VPN</td>
-                            <td className="py-0.5 text-slate-400">IP do endpoint local do túnel</td>
-                          </tr>
-                          <tr>
-                            <td className="py-0.5 pr-2 font-semibold text-amber-300">Estática</td>
-                            <td className="py-0.5 text-slate-400">IP do próximo salto lógico (destino)</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </span>
-                  </span>
+                  <HeaderInfoTooltip label="Gateway">
+                    <strong className="mb-1 block text-amber-300">
+                      Gateway por tipo de rota
+                    </strong>
+                    <table className="w-full border-collapse">
+                      <tbody>
+                        <tr className="border-b border-slate-700">
+                          <td className="py-0.5 pr-2 font-semibold text-emerald-400">
+                            Direta
+                          </td>
+                          <td className="py-0.5 text-slate-400">
+                            — pacote entregue diretamente na interface
+                          </td>
+                        </tr>
+                        <tr className="border-b border-slate-700">
+                          <td className="py-0.5 pr-2 font-semibold text-orange-400">
+                            Default
+                          </td>
+                          <td className="py-0.5 text-slate-400">
+                            IP do nó WAN (ISP/borda)
+                          </td>
+                        </tr>
+                        <tr className="border-b border-slate-700">
+                          <td className="py-0.5 pr-2 font-semibold text-cyan-300">
+                            VPN
+                          </td>
+                          <td className="py-0.5 text-slate-400">
+                            IP do endpoint local do túnel
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-0.5 pr-2 font-semibold text-amber-300">
+                            Estática
+                          </td>
+                          <td className="py-0.5 text-slate-400">
+                            IP do próximo salto lógico (destino)
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </HeaderInfoTooltip>
                 </th>
                 <th className="border-b border-slate-700 px-1 py-1">
-                  <span className="group relative inline-flex cursor-help items-center gap-1">
-                    Interface
-                    <span className="text-slate-500">ⓘ</span>
-                    <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1 hidden w-72 rounded border border-slate-600 bg-slate-900 p-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block">
-                      <strong className="mb-1 block text-amber-300">Numeração dinâmica de interfaces</strong>
-                      Links <span className="text-emerald-400 font-semibold">lan/other</span> e{' '}
-                      <span className="text-orange-400 font-semibold">wan</span> incrementam o contador{' '}
-                      <code className="text-slate-200">eth</code> do site →{' '}
-                      <code className="text-slate-200">eth0</code>, <code className="text-slate-200">eth1</code>…
-                      <br />
-                      Links <span className="text-cyan-300 font-semibold">vpn/ipsec</span> incrementam o contador{' '}
-                      <code className="text-slate-200">tun</code> →{' '}
-                      <code className="text-slate-200">tun0</code>, <code className="text-slate-200">tun1</code>…
-                      <br />
-                      Cada nó ganha interfaces numeradas sequencialmente por site, como em um roteador real com múltiplas placas de rede.
-                    </span>
-                  </span>
+                  <HeaderInfoTooltip label="Interface">
+                    <strong className="mb-1 block text-amber-300">
+                      Numeração dinâmica de interfaces
+                    </strong>
+                    Links{' '}
+                    <span className="font-semibold text-emerald-400">
+                      lan/other
+                    </span>{' '}
+                    e <span className="font-semibold text-orange-400">wan</span>{' '}
+                    incrementam o contador{' '}
+                    <span className="text-slate-200">eth</span> do site &gt;{' '}
+                    <span className="text-slate-200">eth0</span>,{' '}
+                    <span className="text-slate-200">eth1</span>...
+                    <br />
+                    Links{' '}
+                    <span className="font-semibold text-cyan-300">
+                      vpn/ipsec
+                    </span>{' '}
+                    incrementam o contador{' '}
+                    <span className="text-slate-200">tun</span> &gt;{' '}
+                    <span className="text-slate-200">tun0</span>,{' '}
+                    <span className="text-slate-200">tun1</span>...
+                    <br />O resultado e que links diferentes no mesmo no recebem
+                    interfaces numeradas sequencialmente, como em um roteador
+                    real com multiplas placas de rede.
+                  </HeaderInfoTooltip>
                 </th>
               </tr>
             </thead>
             <tbody>
               {routes.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-1 py-2 text-slate-500">
+                  <td colSpan={5} className="px-1 py-2 text-slate-500">
                     Sem rotas ainda. Crie conexões no dashboard.
                   </td>
                 </tr>
               )}
               {groupRoutesBySite(routes).map((group) => (
-                <>
-                  <tr key={`group-${group.siteId}`}>
+                <Fragment key={`group-${group.siteId}`}>
+                  <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="bg-slate-800/70 px-2 py-1 font-semibold text-sky-300 border-b border-slate-600 border-t border-slate-600"
                     >
                       📍 {group.siteName}
@@ -135,6 +239,9 @@ export default function RouteFirewallPanel() {
                           {route.tipo}
                         </span>
                       </td>
+                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-300">
+                        {route.vlan}
+                      </td>
                       <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-200">
                         {route.redeDest}
                       </td>
@@ -146,7 +253,15 @@ export default function RouteFirewallPanel() {
                       </td>
                     </tr>
                   ))}
-                </>
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="border-b border-slate-700 px-2 py-1 text-[11px] text-slate-400"
+                    >
+                      Outros IPs: {getSiteOtherIps(group.siteId, group.rows)}
+                    </td>
+                  </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -157,7 +272,7 @@ export default function RouteFirewallPanel() {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
           Regras de Segurança/Firewall
         </h3>
-        <div className="theme-scrollbar max-h-48 overflow-auto text-xs">
+        <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">

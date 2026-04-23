@@ -108,6 +108,7 @@ export default function NodeInspector() {
               <span className="mb-1 block text-slate-400">VLANs (csv)</span>
               <input
                 value={node.vlans.join(',')}
+                placeholder="Sem VLAN atribuida"
                 onChange={(event) =>
                   dispatch(
                     updateNode({
@@ -118,6 +119,11 @@ export default function NodeInspector() {
                 }
                 className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-slate-100"
               />
+              {node.vlans.length === 0 && (
+                <span className="mt-1 block text-[11px] text-slate-400">
+                  Sem VLAN atribuida ao objeto.
+                </span>
+              )}
             </label>
           </>
         )}

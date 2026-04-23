@@ -5,6 +5,7 @@ import {
   addLink,
   resizeLayer,
   setZoom,
+  toggleNodeVlanAssignment,
   updateNodeTechField,
   updateSite,
   updateNode,
@@ -15,7 +16,6 @@ import {
   ensureTechProfile,
   getTechProfileWarnings,
   getVisibleTechSchema,
-  getTechSchema,
   type TechFieldSchema,
   type TechValue,
 } from '../../features/network/techProfiles';
@@ -391,6 +391,55 @@ function colorByCategory(category: string) {
   return '#94a3b8';
 }
 
+function resolveLinkVisual(
+  kind: string,
+  fromCategory?: string,
+  toCategory?: string,
+) {
+  const edge = [fromCategory, toCategory].filter(Boolean);
+  const hasSecurity = edge.some((cat) =>
+    ['firewall', 'ids', 'ips', 'proxy'].includes(String(cat)),
+  );
+  const hasVpnEdge = edge.some((cat) =>
+    ['vpn', 'ipsec', 'wireguard', 'mpls', 'gre', 'sdwan'].includes(
+      String(cat),
+    ),
+  );
+
+  if (kind === 'vpn' || kind === 'ipsec' || hasVpnEdge) {
+    return { stroke: '#22d3ee', dash: [9, 5], width: 2.2 };
+  }
+  if (kind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
+    return { stroke: '#fb923c', dash: undefined, width: 2.6 };
+  }
+  if (hasSecurity) {
+    return { stroke: '#f97316', dash: [2, 4], width: 2.1 };
+  }
+  if (kind === 'lan') {
+    return { stroke: '#60a5fa', dash: undefined, width: 1.8 };
+  }
+  return { stroke: '#94a3b8', dash: [6, 4], width: 1.7 };
+}
+
+function resolveLinkDescription(
+  kind: string,
+  fromLabel: string,
+  toLabel: string,
+  fromCategory?: string,
+  toCategory?: string,
+) {
+  if (kind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
+    return `WAN uplink: ${fromLabel} -> ${toLabel}`;
+  }
+  if (kind === 'vpn' || kind === 'ipsec') {
+    return `Tunel seguro: ${fromLabel} -> ${toLabel}`;
+  }
+  if (kind === 'lan') {
+    return `LAN interna: ${fromLabel} -> ${toLabel}`;
+  }
+  return `Conexao: ${fromLabel} -> ${toLabel}`;
+}
+
 function isInsideLayerBounds(
   x: number,
   y: number,
@@ -430,6 +479,10 @@ export default function NetworkDiagram() {
   const dispatch = useAppDispatch();
   const diagramDivRef = useRef<HTMLDivElement | null>(null);
   const diagramRef = useRef<go.Diagram | null>(null);
+  const nodesByIdRef = useRef<Map<string, NodeItem>>(new Map());
+  const vlanAssignmentRef = useRef<
+    { siteId: string; vlanId: number } | null
+  >(null);
   const [diagramWidth, setDiagramWidth] = useState(DEFAULT_DIAGRAM_WIDTH);
   const [activeTooltip, setActiveTooltip] = useState<DiagramTooltip | null>(
     null,
@@ -437,7 +490,7 @@ export default function NetworkDiagram() {
   const [activeSiteTooltip, setActiveSiteTooltip] =
     useState<SiteTooltip | null>(null);
 
-  const { sites, layers, nodes, links } = useAppSelector(
+  const { sites, layers, nodes, links, ui } = useAppSelector(
     (state) => state.network,
   );
 
@@ -565,15 +618,44 @@ export default function NetworkDiagram() {
     sites,
   ]);
 
-  const linkData = useMemo(
-    () =>
-      links.map((link) => ({
+  const linkData = useMemo(() => {
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+    return links.map((link) => {
+      const fromNode = nodeById.get(link.from);
+      const toNode = nodeById.get(link.to);
+      const visual = resolveLinkVisual(
+        link.kind,
+        fromNode?.category,
+        toNode?.category,
+      );
+      const description = resolveLinkDescription(
+        link.kind,
+        fromNode?.label ?? link.from,
+        toNode?.label ?? link.to,
+        fromNode?.category,
+        toNode?.category,
+      );
+
+      return {
         key: link.id,
         from: link.from,
         to: link.to,
-      })),
-    [links],
-  );
+        label: description,
+        stroke: visual.stroke,
+        dash: visual.dash,
+        baseWidth: visual.width,
+      };
+    });
+  }, [links, nodes]);
+
+  useEffect(() => {
+    nodesByIdRef.current = new Map(nodes.map((node) => [node.id, node]));
+  }, [nodes]);
+
+  useEffect(() => {
+    vlanAssignmentRef.current = ui.vlanAssignment;
+  }, [ui.vlanAssignment]);
 
   useEffect(() => {
     const node = diagramDivRef.current;
@@ -609,6 +691,11 @@ export default function NetworkDiagram() {
     if (!diagramDivRef.current || diagramRef.current) return;
 
     const $ = go.GraphObject.make;
+
+    const existingDiagram = go.Diagram.fromDiv(diagramDivRef.current);
+    if (existingDiagram) {
+      existingDiagram.div = null;
+    }
 
     const diagram = $(go.Diagram, diagramDivRef.current, {
       'undoManager.isEnabled': true,
@@ -770,8 +857,39 @@ export default function NetworkDiagram() {
       {
         locationSpot: go.Spot.Center,
         movable: true,
+        mouseEnter: (_event, obj) => {
+          const node = obj as go.Node;
+          node.isHighlighted = true;
+          node.findLinksConnected().each((link) => {
+            link.isHighlighted = true;
+          });
+        },
+        mouseLeave: (_event, obj) => {
+          const node = obj as go.Node;
+          node.isHighlighted = false;
+          node.findLinksConnected().each((link) => {
+            link.isHighlighted = false;
+          });
+        },
         click: (_event, obj) => {
           const node = obj as go.Node;
+
+          const activeAssignment = vlanAssignmentRef.current;
+          if (activeAssignment) {
+            const nodeId = String(node.data?.nodeId ?? '');
+            const nodeState = nodesByIdRef.current.get(nodeId);
+            if (nodeState && nodeState.siteId === activeAssignment.siteId) {
+              dispatch(
+                toggleNodeVlanAssignment({
+                  nodeId,
+                  siteId: activeAssignment.siteId,
+                  vlanId: activeAssignment.vlanId,
+                }),
+              );
+              return;
+            }
+          }
+
           openTooltipForNode(node);
         },
       },
@@ -798,10 +916,16 @@ export default function NetworkDiagram() {
             cursor: 'pointer',
           },
           new go.Binding('stroke', 'category', colorByCategory),
+          new go.Binding('strokeWidth', 'isHighlighted', (h) =>
+            h ? 2.4 : 1,
+          ).ofObject(),
+          new go.Binding('width', 'isHighlighted', (h) => (h ? 108 : 98)).ofObject(),
+          new go.Binding('height', 'isHighlighted', (h) => (h ? 92 : 84)).ofObject(),
         ),
         $(
           go.Picture,
           {
+            name: 'ICON',
             width: 38,
             height: 38,
             alignment: new go.Spot(0.5, 0.27, 0, 0),
@@ -809,6 +933,8 @@ export default function NetworkDiagram() {
             background: 'transparent',
           },
           new go.Binding('source', 'iconSrc'),
+          new go.Binding('width', 'isHighlighted', (h) => (h ? 44 : 38)).ofObject(),
+          new go.Binding('height', 'isHighlighted', (h) => (h ? 44 : 38)).ofObject(),
         ),
         $(
           go.TextBlock,
@@ -869,9 +995,68 @@ export default function NetworkDiagram() {
         routing: go.Routing.AvoidsNodes,
         curve: go.Curve.JumpGap,
         corner: 8,
+        fromSpot: go.Spot.AllSides,
+        toSpot: go.Spot.AllSides,
+        fromEndSegmentLength: 14,
+        toEndSegmentLength: 14,
       },
-      $(go.Shape, { stroke: '#38bdf8', strokeWidth: 1.8 }),
-      $(go.Shape, { toArrow: 'Standard', fill: '#38bdf8', stroke: null }),
+      new go.Binding('layerName', 'isHighlighted', (h) =>
+        h ? 'Foreground' : '',
+      ).ofObject(),
+      $(
+        go.Shape,
+        {
+          isPanelMain: true,
+          strokeWidth: 0,
+          stroke: '#38bdf8',
+          opacity: 0,
+        },
+        new go.Binding('stroke', 'stroke'),
+        new go.Binding('strokeDashArray', 'dash'),
+        new go.Binding('strokeWidth', 'isHighlighted', (h) =>
+          h ? 9 : 0,
+        ).ofObject(),
+        new go.Binding('opacity', 'isHighlighted', (h) =>
+          h ? 0.28 : 0,
+        ).ofObject(),
+      ),
+      $(
+        go.Shape,
+        {
+          isPanelMain: true,
+          stroke: '#38bdf8',
+          strokeWidth: 1.8,
+        },
+        new go.Binding('stroke', 'stroke'),
+        new go.Binding('strokeDashArray', 'dash'),
+        new go.Binding('strokeWidth', 'baseWidth'),
+        new go.Binding('strokeWidth', 'isHighlighted', (h, obj) => {
+          const base = Number((obj.part as go.Link).data?.baseWidth ?? 1.8);
+          return h ? base + 2.2 : base;
+        }).ofObject(),
+      ),
+      $(
+        go.Panel,
+        'Auto',
+        { segmentFraction: 0.5, visible: false },
+        new go.Binding('visible', 'isHighlighted', (h) => Boolean(h)).ofObject(),
+        $(go.Shape, 'RoundedRectangle', {
+          fill: '#060d19',
+          stroke: '#1d3353',
+        }),
+        $(
+          go.TextBlock,
+          {
+            margin: new go.Margin(2, 5, 2, 5),
+            stroke: '#b9d6f6',
+            font: '700 7px "Share Tech Mono"',
+          },
+          new go.Binding('text', 'label'),
+          new go.Binding('font', 'isHighlighted', (h) =>
+            h ? '700 15px "Share Tech Mono"' : '700 7px "Share Tech Mono"',
+          ).ofObject(),
+        ),
+      ),
     );
 
     diagram.addDiagramListener('LinkDrawn', (event) => {
@@ -1111,6 +1296,7 @@ export default function NetworkDiagram() {
                       <span className="gojs-tooltip-label">VLANs:</span>
                       <input
                         value={tooltipNode.vlans.join(',')}
+                        placeholder="Sem VLAN atribuida"
                         onChange={(event) =>
                           dispatch(
                             updateNode({

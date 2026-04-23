@@ -2,6 +2,7 @@ import { useState } from 'react';
 import NetworkDiagram from '../components/studio/NetworkDiagram';
 import LegendPanel from '../components/studio/LegendPanel';
 import RouteFirewallPanel from '../components/studio/RouteFirewallPanel';
+import SiteVlanPanel from '../components/studio/SiteVlanPanel';
 import StudioToolbar from '../components/studio/StudioToolbar';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { resetNetworkState } from '../features/network/networkSlice';
@@ -36,9 +37,9 @@ export default function StudioPage() {
             </div>
             <h2 className="mt-1 text-lg font-semibold text-slate-100">
               Diagrama lógico interativo
-              <span className="ml-2 text-sm font-medium text-cyan-300">
+              {/* <span className="ml-2 text-sm font-medium text-cyan-300">
                 Matriz | Tunelamento | Filial
-              </span>
+              </span> */}
             </h2>
             <p className="mt-1 text-xs text-slate-300">
               Clique no botão de informação de cada componente para abrir o
@@ -63,11 +64,26 @@ export default function StudioPage() {
 
       <RouteFirewallPanel />
 
+      <SiteVlanPanel />
+
       <div className="w-full rounded-lg border border-[#315072] bg-[#0b172a]/75 px-3 py-2 text-xs text-slate-300">
         <div className="flex items-center justify-between gap-3">
-          <div>
+          <div className="space-y-1">
+            <div>
             Persistência local:{' '}
             <span className="font-semibold text-emerald-300">JSON</span>
+            </div>
+            <div>
+              Último salvamento:{' '}
+              <span className="font-semibold text-cyan-300">
+                {meta.lastSavedAt
+                  ? new Date(meta.lastSavedAt).toLocaleString()
+                  : 'ainda nao salvo'}
+              </span>
+            </div>
+            {meta.persistWarning && (
+              <div className="text-amber-300">Aviso: {meta.persistWarning}</div>
+            )}
           </div>
           <button
             onClick={handleReset}
@@ -76,19 +92,6 @@ export default function StudioPage() {
             Resetar Dados
           </button>
         </div>
-        <div>
-          Último salvamento:{' '}
-          <span className="font-semibold text-cyan-300">
-            {meta.lastSavedAt
-              ? new Date(meta.lastSavedAt).toLocaleString()
-              : 'ainda nao salvo'}
-          </span>
-        </div>
-        {meta.persistWarning && (
-          <div className="mt-1 text-amber-300">
-            Aviso: {meta.persistWarning}
-          </div>
-        )}
       </div>
 
       {isResetModalOpen && (

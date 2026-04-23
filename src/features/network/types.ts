@@ -45,6 +45,17 @@ export type Layer = {
   maxHeight: number;
 };
 
+export type SiteVlan = {
+  id: string;
+  siteId: string;
+  vlanId: number;
+  name: string;
+  capacity: number;
+  startRadical: string;
+  startIp: string;
+  endIp: string;
+};
+
 export type NodeItem = {
   id: string;
   siteId?: string;
@@ -52,6 +63,7 @@ export type NodeItem = {
   label: string;
   category: NodeCategory;
   ip: string;
+  originalIp?: string;
   cidr: number;
   vlans: number[];
   x: number;
@@ -90,6 +102,7 @@ export type NetworkState = {
   nodes: NodeItem[];
   links: LinkItem[];
   aclRules: AclRule[];
+  siteVlans: SiteVlan[];
   counters: {
     site: number;
     layer: number;
@@ -99,6 +112,10 @@ export type NetworkState = {
   ui: {
     inspectorNodeId: string | null;
     zoom: number;
+    vlanAssignment: {
+      siteId: string;
+      vlanId: number;
+    } | null;
   };
   meta: {
     schemaVersion: number;

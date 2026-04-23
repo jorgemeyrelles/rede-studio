@@ -8,7 +8,7 @@ export default function App() {
       <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
           <h1 className="text-sm font-semibold tracking-[0.2em] text-cyan-300">
-            REDE SP-CWB STUDIO
+            REDE - STUDIO
           </h1>
           <nav className="flex items-center gap-2">
             <NavLink
