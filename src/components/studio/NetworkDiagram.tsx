@@ -10,6 +10,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
   addLink,
+  removeLink,
   resizeLayer,
   setZoom,
   toggleNodeVlanAssignment,
@@ -436,6 +437,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         'Spot',
         {
           locationSpot: go.Spot.Center,
+          avoidable: true,
+          avoidableMargin: new go.Margin(14, 18, 14, 18),
           movable: true,
           mouseEnter: (_event, obj) => {
             const node = obj as go.Node;
@@ -657,6 +660,22 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         if (!from || !to) return;
         dispatch(addLink({ from, to }));
       });
+
+      const modelChangedListener = (evt: go.ChangedEvent) => {
+        if (
+          evt.change === go.ChangeType.Remove &&
+          evt.modelChange === 'linkDataArray'
+        ) {
+          const oldLink = evt.oldValue as any;
+          if (oldLink && oldLink.key) {
+            dispatch(removeLink(String(oldLink.key)));
+          }
+        }
+      };
+
+      if (diagram.model) {
+        diagram.model.addChangedListener(modelChangedListener);
+      }
 
       diagram.addDiagramListener('SelectionMoved', (event) => {
         event.subject.each((part: go.Part) => {

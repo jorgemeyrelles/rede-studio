@@ -9,6 +9,19 @@ import './styles/global.css';
 
 const rootEl = document.getElementById('root') as HTMLElement;
 
+if (
+  import.meta.env.DEV &&
+  !window.location.hash &&
+  (window.location.pathname === '/studio' ||
+    window.location.pathname === '/slides')
+) {
+  window.history.replaceState(
+    null,
+    '',
+    `/#${window.location.pathname}${window.location.search}`,
+  );
+}
+
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <Provider store={store}>

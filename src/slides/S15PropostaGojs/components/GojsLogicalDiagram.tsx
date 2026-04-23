@@ -24,6 +24,10 @@ import {
 import type { TooltipData } from '../types';
 import { calculateTooltipPosition } from '../utils';
 
+function getPublicAssetPath(path: string) {
+  return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+}
+
 type GojsLogicalDiagramProps = {
   cardTitle: string;
   cardSubtitle: string;
@@ -178,10 +182,8 @@ function buildLogicalDiagram(container: HTMLDivElement) {
               });
             },
           },
-          new go.Binding(
-            'source',
-            'type',
-            (t) => `/images/network/${String(t).toLowerCase()}.svg`,
+          new go.Binding('source', 'type', (t) =>
+            getPublicAssetPath(`images/network/${String(t).toLowerCase()}.svg`),
           ),
         ),
         $(
@@ -536,7 +538,9 @@ export function GojsLogicalDiagram({
         vlan: nodeData.vlan || '-',
         vlanInfo: nodeData.vlanInfo || '-',
         title: nodeData.text || 'Ativo de Rede',
-        iconSrc: `/images/network/${String(nodeData.type || 'router').toLowerCase()}.svg`,
+        iconSrc: getPublicAssetPath(
+          `images/network/${String(nodeData.type || 'router').toLowerCase()}.svg`,
+        ),
         x: viewPt.x,
         y: viewPt.y,
         preferredPlacement: isWAN ? 'bottom' : undefined,

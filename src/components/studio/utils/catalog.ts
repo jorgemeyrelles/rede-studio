@@ -1,6 +1,10 @@
 import type { NodeCategory } from '../../../features/network/types';
 import { NODE_VISUALS } from '../constants';
 
+function getPublicAssetPath(path: string) {
+  return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+}
+
 export function getNodeVisual(category: NodeCategory) {
   return (
     NODE_VISUALS.find((item) => item.category === category) ?? {
@@ -35,5 +39,5 @@ export function getNodeIconName(category: NodeCategory): string {
 }
 
 export function getNodeIconSrc(category: NodeCategory): string {
-  return `/images/network/${getNodeIconName(category)}.svg`;
+  return getPublicAssetPath(`images/network/${getNodeIconName(category)}.svg`);
 }
