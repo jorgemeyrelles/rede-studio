@@ -1,4 +1,4 @@
-# Rede SP-CWB
+# Rede Studio
 
 Aplicação web em React para documentação e modelagem visual de uma rede corporativa. O projeto reúne dois produtos no mesmo frontend:
 
