@@ -1,0 +1,11 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#0a1020"/>
+  <g transform="translate(200, 150)">
+    <rect x="-55" y="-50" width="110" height="100" rx="6" fill="#1a0d00" stroke="#ff7b2d" stroke-width="2"/>
+    <circle cx="-25" cy="-28" r="6" fill="#ff7b2d"/>
+    <circle cx="0" cy="-28" r="6" fill="#ff7b2d"/>
+    <circle cx="25" cy="-28" r="6" fill="#ff7b2d"/>
+    <rect x="-45" y="-5" width="90" height="25" fill="#0a1020" stroke="#ff7b2d" stroke-width="1"/>
+    <text x="0" y="40" font-size="13" fill="#ff7b2d" text-anchor="middle" font-family="Arial">FortiGate 40F</text>
+  </g>
+</svg>

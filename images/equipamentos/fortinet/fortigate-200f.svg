@@ -1,0 +1,12 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#0a1020"/>
+  <g transform="translate(200, 150)">
+    <rect x="-75" y="-60" width="150" height="120" rx="8" fill="#1a0d00" stroke="#ff7b2d" stroke-width="2"/>
+    <circle cx="-45" cy="-35" r="7" fill="#ff7b2d"/>
+    <circle cx="-15" cy="-35" r="7" fill="#ff7b2d"/>
+    <circle cx="15" cy="-35" r="7" fill="#ff7b2d"/>
+    <circle cx="45" cy="-35" r="7" fill="#ff7b2d"/>
+    <rect x="-65" y="-10" width="130" height="30" fill="#0a1020" stroke="#ff7b2d" stroke-width="1"/>
+    <text x="0" y="45" font-size="14" fill="#ff7b2d" text-anchor="middle" font-family="Arial">FortiGate 200F</text>
+  </g>
+</svg>
