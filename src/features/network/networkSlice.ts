@@ -1,413 +1,44 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
-  AclAction,
-  AclRule,
+  AddLinkPayload,
+  AddNodePayload,
+  AddSiteVlanPayload,
   Layer,
-  LinkItem,
-  LinkKind,
   NetworkState,
   NodeCategory,
-  NodeItem,
-  SiteVlan,
+  RemoveSiteVlanPayload,
+  SetVlanAssignmentPayload,
+  ToggleNodeVlanPayload,
+  UpdateAclRulePayload,
+  UpdateNodePayload,
+  UpdateNodeTechFieldPayload,
+  UpdateSitePayload,
 } from './types';
+import { SCHEMA_VERSION } from './constants';
 import {
   buildDefaultTechProfile,
   ensureTechProfile,
   normalizeTechProfile,
-  type TechValue,
 } from './techProfiles';
-
-const SCHEMA_VERSION = 3;
-
-function toValidVlanId(value: number) {
-  return Math.max(1, Math.min(4094, Math.trunc(value)));
-}
-
-function siteOwnsVlan(siteVlans: SiteVlan[], siteId: string, vlanId: number) {
-  return siteVlans.some(
-    (item) => item.siteId === siteId && item.vlanId === vlanId,
-  );
-}
-
-function normalizeNodeVlansForCatalog(nodes: NodeItem[], siteVlans: SiteVlan[]) {
-  return nodes.map((node) => {
-    if (!node.siteId || node.category === 'wan') {
-      return { ...node, vlans: [] };
-    }
-
-    const cleaned = Array.from(
-      new Set(
-        (node.vlans ?? [])
-          .map((value) => toValidVlanId(Number(value)))
-          .filter((value) => siteOwnsVlan(siteVlans, node.siteId as string, value)),
-      ),
-    ).sort((a, b) => a - b);
-
-    return {
-      ...node,
-      vlans: cleaned,
-    };
-  });
-}
-
-function isAclEligibleLink(nodes: NodeItem[], link: LinkItem) {
-  const from = nodes.find((node) => node.id === link.from);
-  const to = nodes.find((node) => node.id === link.to);
-
-  return (
-    from?.category === 'firewall' ||
-    to?.category === 'firewall' ||
-    link.kind === 'vpn' ||
-    link.kind === 'ipsec'
-  );
-}
-
-function getDefaultAclService(
-  linkKind: LinkKind,
-  fromCategory?: NodeCategory,
-  toCategory?: NodeCategory,
-) {
-  const categories = new Set([fromCategory, toCategory]);
-
-  if (linkKind === 'vpn' || linkKind === 'ipsec') {
-    return 'ICMP, TCP 443/80';
-  }
-
-  if (categories.has('printer')) {
-    return 'TCP 445/80';
-  }
-
-  if (categories.has('server') || categories.has('nas')) {
-    return 'TCP 445/22/80/443';
-  }
-
-  if (
-    categories.has('router') ||
-    categories.has('firewall') ||
-    categories.has('switch')
-  ) {
-    return 'QUALQUER';
-  }
-
-  if (
-    categories.has('pc') ||
-    categories.has('voip') ||
-    categories.has('access-point')
-  ) {
-    return 'TCP 443/80, ICMP';
-  }
-
-  return 'QUALQUER';
-}
-
-function reconcileAclRules(
-  state: Pick<NetworkState, 'aclRules' | 'links' | 'nodes'>,
-) {
-  const existingRules = Array.isArray(state.aclRules) ? state.aclRules : [];
-  const existingManagedByLinkId = new Map(
-    existingRules
-      .filter((rule) => rule.managed && rule.linkId)
-      .map((rule) => [rule.linkId as string, rule]),
-  );
-  const validNodeIds = new Set(state.nodes.map((node) => node.id));
-
-  const managedRules: AclRule[] = state.links
-    .filter((link) => isAclEligibleLink(state.nodes, link))
-    .map((link) => {
-      const previousRule = existingManagedByLinkId.get(link.id);
-      const from = state.nodes.find((node) => node.id === link.from);
-      const to = state.nodes.find((node) => node.id === link.to);
-
-      return {
-        id: previousRule?.id ?? `acl_${link.id}`,
-        linkId: link.id,
-        sourceNodeId: link.from,
-        destinationNodeId: link.to,
-        action: previousRule?.action ?? 'ALLOW',
-        service:
-          previousRule?.service ??
-          getDefaultAclService(link.kind, from?.category, to?.category),
-        enabled: previousRule?.enabled ?? true,
-        managed: true,
-      };
-    });
-
-  const manualRules = existingRules.filter(
-    (rule) =>
-      !rule.managed &&
-      validNodeIds.has(rule.sourceNodeId) &&
-      validNodeIds.has(rule.destinationNodeId),
-  );
-
-  return [...managedRules, ...manualRules];
-}
-
-function makeSiteId(index: number) {
-  return `site_${index}`;
-}
-
-function makeLayerId(index: number) {
-  return `camada_${index}`;
-}
-
-function makeNodeId(
-  category: NodeCategory,
-  index: number,
-  siteId?: string,
-  layerId?: string,
-) {
-  if (siteId && layerId) {
-    return `${siteId}.${layerId}.${category}_${index}`;
-  }
-  return `${category}_${index}`;
-}
-
-function getCategoryCode(category: NodeCategory) {
-  const table: Record<NodeCategory, string> = {
-    wan: 'WAN',
-    router: 'RTR',
-    firewall: 'FW',
-    switch: 'SW',
-    'load-balancer': 'LB',
-    'access-point': 'AP',
-    ids: 'IDS',
-    ips: 'IPS',
-    proxy: 'PX',
-    modem: 'MDM',
-    dns: 'DNS',
-    dhcp: 'DHCP',
-    nas: 'NAS',
-    printer: 'PRN',
-    voip: 'VOIP',
-    pc: 'PC',
-    server: 'SRV',
-    sdwan: 'SDW',
-    vpn: 'VPN',
-    ipsec: 'IPSEC',
-    wireguard: 'WG',
-    mpls: 'MPLS',
-    gre: 'GRE',
-  };
-  return table[category] ?? category.toUpperCase();
-}
-
-function parseTrailingNumber(value: string, fallback = 1) {
-  const match = value.match(/(\d+)$/);
-  if (!match) return fallback;
-  const parsed = Number(match[1]);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return parsed;
-}
-
-function buildNodeLabel(
-  category: NodeCategory,
-  siteId: string,
-  layerOrder: number,
-  categoryCount: number,
-) {
-  const categoryCode = getCategoryCode(category);
-  const siteNumber = parseTrailingNumber(siteId, 1);
-  const safeLayer = Math.max(1, layerOrder);
-  const seq = String(Math.max(1, categoryCount)).padStart(2, '0');
-  return `${categoryCode}-S${siteNumber}-C${safeLayer}-${seq}`;
-}
-
-function getCategoryHostBase(category: NodeCategory) {
-  const table: Record<NodeCategory, number> = {
-    wan: 1,
-    router: 10,
-    firewall: 20,
-    switch: 30,
-    'load-balancer': 40,
-    'access-point': 50,
-    ids: 60,
-    ips: 70,
-    proxy: 80,
-    modem: 90,
-    dns: 100,
-    dhcp: 110,
-    nas: 120,
-    printer: 130,
-    voip: 140,
-    pc: 150,
-    server: 160,
-    sdwan: 170,
-    vpn: 180,
-    ipsec: 190,
-    wireguard: 200,
-    mpls: 210,
-    gre: 220,
-  };
-  return table[category] ?? 230;
-}
-
-function buildNodeIp(
-  siteOctet: number,
-  layerOrder: number,
-  category: NodeCategory,
-  categoryCount: number,
-) {
-  const third = Math.max(1, Math.min(254, layerOrder));
-  const hostBase = getCategoryHostBase(category);
-  const fourth = Math.max(1, Math.min(254, hostBase + categoryCount - 1));
-  return `200.${siteOctet}.${third}.${fourth}`;
-}
-
-function ipToNumber(ip: string) {
-  const parts = ip.split('.').map((item) => Number(item));
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return null;
-  }
-
-  return (
-    parts[0] * 256 * 256 * 256 +
-    parts[1] * 256 * 256 +
-    parts[2] * 256 +
-    parts[3]
-  );
-}
-
-function numberToIp(value: number) {
-  const a = Math.floor(value / (256 * 256 * 256));
-  const b = Math.floor((value % (256 * 256 * 256)) / (256 * 256));
-  const c = Math.floor((value % (256 * 256)) / 256);
-  const d = value % 256;
-  return `${a}.${b}.${c}.${d}`;
-}
-
-function parseRadical(value: string) {
-  const [thirdRaw, fourthRaw] = value.split('.');
-  const third = Number(thirdRaw);
-  const fourth = Number(fourthRaw);
-  if (
-    !Number.isInteger(third) ||
-    !Number.isInteger(fourth) ||
-    third < 0 ||
-    third > 255 ||
-    fourth < 0 ||
-    fourth > 255
-  ) {
-    return null;
-  }
-  return { third, fourth };
-}
-
-function buildIpFromSiteAndRadical(siteOctet: number, startRadical: string) {
-  const parsed = parseRadical(startRadical);
-  if (!parsed) return null;
-  return `200.${siteOctet}.${parsed.third}.${parsed.fourth}`;
-}
-
-function siteRangeBounds(siteOctet: number) {
-  const min = ipToNumber(`200.${siteOctet}.0.0`) ?? 0;
-  const max = ipToNumber(`200.${siteOctet}.255.255`) ?? 0;
-  return { min, max };
-}
-
-function getSiteVlans(state: NetworkState, siteId: string) {
-  return state.siteVlans.filter((item) => item.siteId === siteId);
-}
-
-function getVlanRange(vlan: SiteVlan) {
-  const start = ipToNumber(vlan.startIp);
-  const end = ipToNumber(vlan.endIp);
-  if (start === null || end === null) return null;
-  return {
-    start: Math.min(start, end),
-    end: Math.max(start, end),
-  };
-}
-
-function isIpInVlan(ip: string, vlan: SiteVlan) {
-  const value = ipToNumber(ip);
-  const range = getVlanRange(vlan);
-  if (value === null || !range) return false;
-  return value >= range.start && value <= range.end;
-}
-
-function isIpInAnyVlan(ip: string, vlans: SiteVlan[]) {
-  return vlans.some((vlan) => isIpInVlan(ip, vlan));
-}
-
-function findNextFreeIp(
-  state: NetworkState,
-  siteId: string,
-  excludeNodeId: string | null,
-  predicate: (ipNumber: number) => boolean,
-) {
-  const site = state.sites.find((item) => item.id === siteId);
-  if (!site) return null;
-
-  const used = new Set(
-    state.nodes
-      .filter(
-        (node) =>
-          node.siteId === siteId &&
-          node.id !== excludeNodeId &&
-          node.category !== 'wan',
-      )
-      .map((node) => ipToNumber(node.ip))
-      .filter((value): value is number => value !== null),
-  );
-
-  const { min, max } = siteRangeBounds(site.ipOctet);
-  for (let third = 1; third <= 254; third += 1) {
-    for (let fourth = 1; fourth <= 254; fourth += 1) {
-      const ipNumber = ipToNumber(`200.${site.ipOctet}.${third}.${fourth}`);
-      if (ipNumber === null) continue;
-      if (ipNumber < min || ipNumber > max) continue;
-      if (!predicate(ipNumber)) continue;
-      if (used.has(ipNumber)) continue;
-      return numberToIp(ipNumber);
-    }
-  }
-
-  return null;
-}
-
-function assignNodeIpOutsideVlans(state: NetworkState, node: NodeItem) {
-  if (!node.siteId || node.category === 'wan') return;
-  const siteVlans = getSiteVlans(state, node.siteId);
-  const originalIp = node.originalIp ?? null;
-
-  if (
-    originalIp &&
-    !isIpInAnyVlan(originalIp, siteVlans) &&
-    !state.nodes.some(
-      (item) =>
-        item.id !== node.id && item.siteId === node.siteId && item.ip === originalIp,
-    )
-  ) {
-    node.ip = originalIp;
-    return;
-  }
-
-  const nextIp = findNextFreeIp(state, node.siteId, node.id, (candidate) => {
-    const candidateIp = numberToIp(candidate);
-    return !isIpInAnyVlan(candidateIp, siteVlans);
-  });
-
-  if (nextIp) {
-    node.ip = nextIp;
-  }
-}
-
-function assignNodeIpInsideVlan(state: NetworkState, node: NodeItem, vlan: SiteVlan) {
-  if (!node.siteId || node.category === 'wan') return false;
-  const range = getVlanRange(vlan);
-  if (!range) return false;
-
-  const nextIp = findNextFreeIp(state, node.siteId, node.id, (candidate) => {
-    return candidate >= range.start && candidate <= range.end;
-  });
-
-  if (!nextIp) return false;
-  node.ip = nextIp;
-  return true;
-}
+import {
+  assignNodeIpInsideVlan,
+  assignNodeIpOutsideVlans,
+  buildIpFromSiteAndRadical,
+  buildNodeIp,
+  buildNodeLabel,
+  ipToNumber,
+  isIpInVlan,
+  makeLayerId,
+  makeNodeId,
+  makeSiteId,
+  reconcileAclRules,
+  siteOwnsVlan,
+  siteRangeBounds,
+  toValidVlanId,
+  getCategoryHostBase,
+  normalizeNodeVlansForCatalog,
+  numberToIp,
+} from './utils';
 
 const initialState: NetworkState = {
   sites: [],
@@ -450,77 +81,6 @@ const initialState: NetworkState = {
     persistWarning: null,
     lastSavedAt: null,
   },
-};
-
-type AddNodePayload = {
-  siteId: string;
-  layerId: string;
-  category: NodeCategory;
-};
-
-type UpdateNodePayload = {
-  id: string;
-  changes: Partial<{
-    label: string;
-    ip: string;
-    cidr: number;
-    vlans: number[];
-    description: string;
-  }>;
-};
-
-type AddLinkPayload = {
-  from: string;
-  to: string;
-  kind?: LinkKind;
-};
-
-type UpdateNodeTechFieldPayload = {
-  id: string;
-  key: string;
-  value: TechValue;
-};
-
-type UpdateAclRulePayload = {
-  id: string;
-  changes: Partial<{
-    action: AclAction;
-    service: string;
-    enabled: boolean;
-  }>;
-};
-
-type UpdateSitePayload = {
-  id: string;
-  changes: Partial<{
-    name: string;
-    ipOctet: number;
-    cidr: number;
-  }>;
-};
-
-type AddSiteVlanPayload = {
-  siteId: string;
-  vlanId: number;
-  name?: string;
-  capacity: number;
-  startRadical: string;
-};
-
-type RemoveSiteVlanPayload = {
-  siteId: string;
-  vlanId: number;
-};
-
-type SetVlanAssignmentPayload = {
-  siteId: string;
-  vlanId: number;
-} | null;
-
-type ToggleNodeVlanPayload = {
-  nodeId: string;
-  siteId: string;
-  vlanId: number;
 };
 
 function getLayerOrder(layers: Layer[], siteId: string) {
@@ -593,12 +153,14 @@ function normalizeState(input: NetworkState): NetworkState {
         .filter((item) =>
           Boolean(
             item &&
-              item.siteId &&
-              input.sites.some((site) => site.id === item.siteId),
+            item.siteId &&
+            input.sites.some((site) => site.id === item.siteId),
           ),
         )
         .map((item) => {
-          const site = input.sites.find((siteItem) => siteItem.id === item.siteId);
+          const site = input.sites.find(
+            (siteItem) => siteItem.id === item.siteId,
+          );
           const vlanId = toValidVlanId(Number(item.vlanId));
 
           const vlanNodes = input.nodes.filter(
@@ -616,7 +178,8 @@ function normalizeState(input: NetworkState): NetworkState {
             Math.min(254, vlanId),
           )}`;
           const rawStartIp =
-            typeof item.startIp === 'string' && ipToNumber(item.startIp) !== null
+            typeof item.startIp === 'string' &&
+            ipToNumber(item.startIp) !== null
               ? item.startIp
               : ipNumbers.length > 0
                 ? numberToIp(ipNumbers[0])
@@ -641,7 +204,8 @@ function normalizeState(input: NetworkState): NetworkState {
 
           const startParts = rawStartIp.split('.');
           const startRadical =
-            typeof item.startRadical === 'string' && item.startRadical.includes('.')
+            typeof item.startRadical === 'string' &&
+            item.startRadical.includes('.')
               ? item.startRadical
               : `${startParts[2] ?? '1'}.${startParts[3] ?? '1'}`;
 
@@ -762,7 +326,9 @@ export const networkSlice = createSlice({
 
       state.sites = state.sites.filter((site) => site.id !== siteId);
       state.layers = state.layers.filter((layer) => layer.siteId !== siteId);
-      state.siteVlans = state.siteVlans.filter((item) => item.siteId !== siteId);
+      state.siteVlans = state.siteVlans.filter(
+        (item) => item.siteId !== siteId,
+      );
       state.nodes = state.nodes.filter((node) => node.siteId !== siteId);
       state.links = state.links.filter(
         (link) =>
@@ -822,13 +388,15 @@ export const networkSlice = createSlice({
         action.payload.startRadical,
       );
       if (!startIp) {
-        state.meta.persistWarning = 'Radical inicial invalido para o range da VLAN.';
+        state.meta.persistWarning =
+          'Radical inicial invalido para o range da VLAN.';
         return;
       }
 
       const startNumber = ipToNumber(startIp);
       if (startNumber === null) {
-        state.meta.persistWarning = 'Nao foi possivel calcular IP inicial da VLAN.';
+        state.meta.persistWarning =
+          'Nao foi possivel calcular IP inicial da VLAN.';
         return;
       }
 
@@ -872,7 +440,8 @@ export const networkSlice = createSlice({
         if (node.siteId !== siteId || node.category === 'wan') return;
         const inNewVlan = (node.vlans ?? []).includes(vlanId);
         if (inNewVlan) return;
-        if (!isIpInVlan(node.ip, state.siteVlans[state.siteVlans.length - 1])) return;
+        if (!isIpInVlan(node.ip, state.siteVlans[state.siteVlans.length - 1]))
+          return;
         assignNodeIpOutsideVlans(state, node);
       });
     },
@@ -892,7 +461,9 @@ export const networkSlice = createSlice({
 
         if ((node.vlans ?? []).length > 0) {
           const fallbackVlan = state.siteVlans.find(
-            (item) => item.siteId === siteId && (node.vlans ?? []).includes(item.vlanId),
+            (item) =>
+              item.siteId === siteId &&
+              (node.vlans ?? []).includes(item.vlanId),
           );
           if (fallbackVlan) {
             assignNodeIpInsideVlan(state, node, fallbackVlan);
@@ -922,7 +493,8 @@ export const networkSlice = createSlice({
 
       const vlanId = toValidVlanId(action.payload.vlanId);
       const exists = state.siteVlans.some(
-        (item) => item.siteId === action.payload.siteId && item.vlanId === vlanId,
+        (item) =>
+          item.siteId === action.payload.siteId && item.vlanId === vlanId,
       );
       state.ui.vlanAssignment = exists
         ? { siteId: action.payload.siteId, vlanId }
@@ -932,7 +504,9 @@ export const networkSlice = createSlice({
       state,
       action: PayloadAction<ToggleNodeVlanPayload>,
     ) => {
-      const node = state.nodes.find((item) => item.id === action.payload.nodeId);
+      const node = state.nodes.find(
+        (item) => item.id === action.payload.nodeId,
+      );
       if (!node || node.category === 'wan') return;
 
       const vlanId = toValidVlanId(action.payload.vlanId);
@@ -946,7 +520,8 @@ export const networkSlice = createSlice({
 
       if (!hasVlan) {
         const vlan = state.siteVlans.find(
-          (item) => item.siteId === action.payload.siteId && item.vlanId === vlanId,
+          (item) =>
+            item.siteId === action.payload.siteId && item.vlanId === vlanId,
         );
         if (!vlan) return;
         if (!node.originalIp && node.ip) {
@@ -954,8 +529,7 @@ export const networkSlice = createSlice({
         }
         const moved = assignNodeIpInsideVlan(state, node, vlan);
         if (!moved) {
-          state.meta.persistWarning =
-            `VLAN ${vlanId} sem IP livre para o elemento ${node.label}.`;
+          state.meta.persistWarning = `VLAN ${vlanId} sem IP livre para o elemento ${node.label}.`;
         }
         return;
       }
@@ -1061,7 +635,12 @@ export const networkSlice = createSlice({
         category,
         label: buildNodeLabel(category, siteId, layer.order, categoryCount),
         ip: buildNodeIp(site.ipOctet, layer.order, category, categoryCount),
-        originalIp: buildNodeIp(site.ipOctet, layer.order, category, categoryCount),
+        originalIp: buildNodeIp(
+          site.ipOctet,
+          layer.order,
+          category,
+          categoryCount,
+        ),
         cidr: site.cidr,
         vlans: [],
         x: position.x,
@@ -1158,7 +737,9 @@ export const networkSlice = createSlice({
 
         const siteId = node.siteId;
         const allowedVlans = siteId
-          ? nextVlans.filter((vlanId) => siteOwnsVlan(state.siteVlans, siteId, vlanId))
+          ? nextVlans.filter((vlanId) =>
+              siteOwnsVlan(state.siteVlans, siteId, vlanId),
+            )
           : [];
 
         const previousVlans = node.vlans ?? [];
@@ -1176,15 +757,15 @@ export const networkSlice = createSlice({
           const targetVlan =
             (siteId
               ? state.siteVlans.find(
-                  (item) => item.siteId === siteId && item.vlanId === node.vlans[0],
+                  (item) =>
+                    item.siteId === siteId && item.vlanId === node.vlans[0],
                 )
               : null) ?? null;
 
           if (targetVlan) {
             const moved = assignNodeIpInsideVlan(state, node, targetVlan);
             if (!moved) {
-              state.meta.persistWarning =
-                `VLAN ${targetVlan.vlanId} sem IP livre para o elemento ${node.label}.`;
+              state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para o elemento ${node.label}.`;
             }
           }
         }

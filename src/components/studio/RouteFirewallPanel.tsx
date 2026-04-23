@@ -4,21 +4,14 @@ import { updateAclRule } from '../../features/network/networkSlice';
 import {
   selectFirewallRules,
   selectRouteTable,
-  type RouteRow,
 } from '../../features/network/selectors';
 import type { AclAction } from '../../features/network/types';
-
-const ROUTE_TYPE_CLASS: Record<string, string> = {
-  Direta: 'text-emerald-400',
-  Estática: 'text-amber-300',
-  Default: 'text-orange-400',
-  VPN: 'text-cyan-300',
-};
-
-type TooltipPosition = {
-  top: number;
-  left: number;
-};
+import {
+  ROUTE_TYPE_CLASS,
+  getSiteOtherIps,
+  groupRoutesBySite,
+} from './catalog';
+import type { TooltipPosition } from './catalog';
 
 function HeaderInfoTooltip({
   label,
@@ -78,48 +71,11 @@ function HeaderInfoTooltip({
   );
 }
 
-function groupRoutesBySite(
-  rows: RouteRow[],
-): { siteId: string; siteName: string; rows: RouteRow[] }[] {
-  const order: string[] = [];
-  const map: Record<
-    string,
-    { siteId: string; siteName: string; rows: RouteRow[] }
-  > = {};
-  for (const row of rows) {
-    if (!map[row.siteId]) {
-      order.push(row.siteId);
-      map[row.siteId] = {
-        siteId: row.siteId,
-        siteName: row.siteName,
-        rows: [],
-      };
-    }
-    map[row.siteId].rows.push(row);
-  }
-  return order.map((id) => map[id]);
-}
-
 export default function RouteFirewallPanel() {
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
   const sites = useAppSelector((state) => state.network.sites);
-
-  const getSiteOtherIps = (siteId: string, siteRoutes: RouteRow[]) => {
-    const site = sites.find((item) => item.id === siteId);
-    if (!site) return '-';
-
-    const networkIp = `200.${site.ipOctet}.0.0`;
-    const broadcastIp = `200.${site.ipOctet}.255.255`;
-    const firstHostIp = `200.${site.ipOctet}.0.1`;
-    const lastHostIp = `200.${site.ipOctet}.255.254`;
-    const defaultRoute = '0.0.0.0/0';
-    const defaultGateway =
-      siteRoutes.find((route) => route.tipo === 'Default')?.gateway ?? '-';
-
-    return `Rede: ${networkIp} | Broadcast: ${broadcastIp} | Host inicial: ${firstHostIp} | Host final: ${lastHostIp} | Default: ${defaultRoute} via ${defaultGateway}`;
-  };
 
   return (
     <section className="w-full grid gap-3 lg:grid-cols-2">
@@ -258,7 +214,8 @@ export default function RouteFirewallPanel() {
                       colSpan={5}
                       className="border-b border-slate-700 px-2 py-1 text-[11px] text-slate-400"
                     >
-                      Outros IPs: {getSiteOtherIps(group.siteId, group.rows)}
+                      Outros IPs:{' '}
+                      {getSiteOtherIps(group.siteId, group.rows, sites)}
                     </td>
                   </tr>
                 </Fragment>

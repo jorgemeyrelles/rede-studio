@@ -70,8 +70,8 @@ export default function StudioPage() {
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
             <div>
-            Persistência local:{' '}
-            <span className="font-semibold text-emerald-300">JSON</span>
+              Persistência local:{' '}
+              <span className="font-semibold text-emerald-300">JSON</span>
             </div>
             <div>
               Último salvamento:{' '}

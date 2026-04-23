@@ -4,14 +4,7 @@ import {
   setInspectorNodeId,
   updateNode,
 } from '../../features/network/networkSlice';
-import { getNodeVisual } from './catalog';
-
-function parseVlans(raw: string) {
-  return raw
-    .split(',')
-    .map((item) => Number(item.trim()))
-    .filter((num) => Number.isFinite(num) && num > 0 && num < 4095);
-}
+import { getNodeVisual, parseVlans } from './catalog';
 
 export default function NodeInspector() {
   const dispatch = useAppDispatch();

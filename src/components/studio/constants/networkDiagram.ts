@@ -1,0 +1,12 @@
+export const BASE_Y = 120;
+export const SITE_CONTAINER_WIDTH = 360;
+export const DEFAULT_DIAGRAM_WIDTH = 1240;
+export const WAN_Y = 46;
+export const DIAGRAM_SIDE_PADDING = 16;
+export const GRID_COLUMN_GAP = 26;
+export const GRID_ROW_GAP = 34;
+export const LAYER_TOP_OFFSET = 62;
+export const LAYER_VERTICAL_GAP = 22;
+export const SITE_BOTTOM_PADDING = 24;
+export const CENTER_CHANNEL_WIDTH = 140;
+export const EMPTY_SITE_HEIGHT = 190;

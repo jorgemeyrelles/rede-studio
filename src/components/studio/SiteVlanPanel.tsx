@@ -6,7 +6,15 @@ import {
   setVlanAssignmentMode,
   toggleNodeVlanAssignment,
 } from '../../features/network/networkSlice';
-import { getNodeVisual } from './catalog';
+import {
+  CAPACITY_OPTIONS,
+  createDefaultVlanDraft,
+  formatCompactRange,
+  getNextVlanId,
+  getNodeVisual,
+  getSiteRadicalOptions,
+  type SiteVlanDraft,
+} from './catalog';
 
 export default function SiteVlanPanel() {
   const dispatch = useAppDispatch();
@@ -14,15 +22,7 @@ export default function SiteVlanPanel() {
     (state) => state.network,
   );
   const [vlanDraftBySite, setVlanDraftBySite] = useState<
-    Record<
-      string,
-      {
-        vlanId: string;
-        capacity: string;
-        startRadical: string;
-        name: string;
-      }
-    >
+    Record<string, SiteVlanDraft>
   >({});
   const [openRadicalSiteId, setOpenRadicalSiteId] = useState<string | null>(
     null,
@@ -31,8 +31,6 @@ export default function SiteVlanPanel() {
     null,
   );
   const dropdownAreaRef = useRef<HTMLDivElement | null>(null);
-  const capacityOptions = [8, 16, 32, 64, 128, 256, 512, 1024];
-
   useEffect(() => {
     const handleDocumentPointerDown = (event: MouseEvent) => {
       const container = dropdownAreaRef.current;
@@ -51,91 +49,20 @@ export default function SiteVlanPanel() {
     };
   }, []);
 
-  const getNextVlanId = (siteId: string) => {
-    const used = new Set(
-      siteVlans
-        .filter((item) => item.siteId === siteId)
-        .map((item) => item.vlanId),
-    );
-    let cursor = 10;
-    while (used.has(cursor) && cursor < 4094) cursor += 10;
-    return Math.min(4094, cursor);
-  };
-
-  const getSiteRadicalOptions = (siteId: string, siteOctet: number) => {
-    const existingFromNodes = nodes
-      .filter((node) => node.siteId === siteId && node.category !== 'wan')
-      .map((node) => node.ip.split('.'))
-      .filter((parts) => parts.length === 4 && Number(parts[1]) === siteOctet)
-      .map((parts) => `${parts[2]}.${parts[3]}`);
-
-    const presetOptions: string[] = [];
-    for (let third = 1; third <= 10; third += 1) {
-      for (let fourth = 10; fourth <= 250; fourth += 20) {
-        presetOptions.push(`${third}.${fourth}`);
-      }
-    }
-
-    const sortRadical = (value: string) => {
-      const [thirdRaw, fourthRaw] = value.split('.');
-      const third = Number(thirdRaw);
-      const fourth = Number(fourthRaw);
-      return third * 1000 + fourth;
-    };
-
-    return Array.from(new Set([...existingFromNodes, ...presetOptions])).sort(
-      (a, b) => sortRadical(a) - sortRadical(b),
-    );
-  };
-
   const setVlanDraft = (
     siteId: string,
     siteOctet: number,
-    updater: (current: {
-      vlanId: string;
-      capacity: string;
-      startRadical: string;
-      name: string;
-    }) => {
-      vlanId: string;
-      capacity: string;
-      startRadical: string;
-      name: string;
-    },
+    updater: (current: SiteVlanDraft) => SiteVlanDraft,
   ) => {
     setVlanDraftBySite((prev) => {
-      const radicalOptions = getSiteRadicalOptions(siteId, siteOctet);
-      const current = prev[siteId] ?? {
-        vlanId: String(getNextVlanId(siteId)),
-        capacity: String(capacityOptions[3]),
-        startRadical: radicalOptions[0] ?? '1.10',
-        name: '',
-      };
+      const current =
+        prev[siteId] ??
+        createDefaultVlanDraft(siteId, siteOctet, siteVlans, nodes);
       return {
         ...prev,
         [siteId]: updater(current),
       };
     });
-  };
-
-  const formatCompactRange = (startIp: string, endIp: string) => {
-    if (startIp === endIp) return startIp;
-
-    const start = startIp.split('.');
-    const end = endIp.split('.');
-    if (start.length !== 4 || end.length !== 4) {
-      return `${startIp} - ${endIp}`;
-    }
-
-    if (start[0] === end[0] && start[1] === end[1]) {
-      return `${startIp} - .${end[2]}.${end[3]}`;
-    }
-
-    if (start[0] === end[0]) {
-      return `${startIp} - .${end[1]}.${end[2]}.${end[3]}`;
-    }
-
-    return `${startIp} - ${endIp}`;
   };
 
   return (
@@ -162,13 +89,14 @@ export default function SiteVlanPanel() {
             const siteVlanItems = siteVlans
               .filter((item) => item.siteId === site.id)
               .sort((a, b) => a.vlanId - b.vlanId);
-            const radicalOptions = getSiteRadicalOptions(site.id, site.ipOctet);
-            const draft = vlanDraftBySite[site.id] ?? {
-              vlanId: String(getNextVlanId(site.id)),
-              capacity: String(capacityOptions[3]),
-              startRadical: radicalOptions[0] ?? '1.10',
-              name: '',
-            };
+            const radicalOptions = getSiteRadicalOptions(
+              site.id,
+              site.ipOctet,
+              nodes,
+            );
+            const draft =
+              vlanDraftBySite[site.id] ??
+              createDefaultVlanDraft(site.id, site.ipOctet, siteVlans, nodes);
 
             const draftRadicalOptions = draft.startRadical
               ? Array.from(new Set([draft.startRadical, ...radicalOptions]))
@@ -192,7 +120,10 @@ export default function SiteVlanPanel() {
                       max={4094}
                       value={draft.vlanId}
                       onKeyDown={(event) => {
-                        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                        if (
+                          event.key === 'ArrowUp' ||
+                          event.key === 'ArrowDown'
+                        ) {
                           event.preventDefault();
                         }
                       }}
@@ -220,15 +151,19 @@ export default function SiteVlanPanel() {
                       </button>
                       {openCapacitySiteId === site.id && (
                         <div className="theme-scrollbar absolute z-20 mt-1 max-h-[150px] w-full overflow-y-auto rounded border border-[#35567f] bg-[#0d1a2e] shadow-lg">
-                          {capacityOptions.map((option) => (
+                          {CAPACITY_OPTIONS.map((option) => (
                             <button
                               key={`${site.id}-cap-${option}`}
                               type="button"
                               onClick={() => {
-                                setVlanDraft(site.id, site.ipOctet, (current) => ({
-                                  ...current,
-                                  capacity: String(option),
-                                }));
+                                setVlanDraft(
+                                  site.id,
+                                  site.ipOctet,
+                                  (current) => ({
+                                    ...current,
+                                    capacity: String(option),
+                                  }),
+                                );
                                 setOpenCapacitySiteId(null);
                               }}
                               className="block w-full px-2 py-1 text-left text-xs text-slate-100 hover:bg-[#16304f]"
@@ -244,7 +179,7 @@ export default function SiteVlanPanel() {
                         type="button"
                         onClick={() => {
                           setOpenRadicalSiteId((current) =>
-                            current === site.id ? null : site.id
+                            current === site.id ? null : site.id,
                           );
                           setOpenCapacitySiteId(null);
                         }}
@@ -259,10 +194,14 @@ export default function SiteVlanPanel() {
                               key={`${site.id}-rad-${option}`}
                               type="button"
                               onClick={() => {
-                                setVlanDraft(site.id, site.ipOctet, (current) => ({
-                                  ...current,
-                                  startRadical: option,
-                                }));
+                                setVlanDraft(
+                                  site.id,
+                                  site.ipOctet,
+                                  (current) => ({
+                                    ...current,
+                                    startRadical: option,
+                                  }),
+                                );
                                 setOpenRadicalSiteId(null);
                               }}
                               className="block w-full px-2 py-1 text-left text-xs text-slate-100 hover:bg-[#16304f]"
@@ -299,10 +238,14 @@ export default function SiteVlanPanel() {
                             name: draft.name,
                           }),
                         );
-                        const resetRadicals = getSiteRadicalOptions(site.id, site.ipOctet);
+                        const resetRadicals = getSiteRadicalOptions(
+                          site.id,
+                          site.ipOctet,
+                          nodes,
+                        );
                         setVlanDraft(site.id, site.ipOctet, () => ({
-                          vlanId: String(getNextVlanId(site.id)),
-                          capacity: String(capacityOptions[3]),
+                          vlanId: String(getNextVlanId(site.id, siteVlans)),
+                          capacity: String(CAPACITY_OPTIONS[3]),
                           startRadical: resetRadicals[0] ?? '1.10',
                           name: '',
                         }));
@@ -338,7 +281,9 @@ export default function SiteVlanPanel() {
                           <span className="rounded bg-sky-300/20 px-2 py-0.5 font-mono text-[11px] text-sky-200">
                             VLAN {vlan.vlanId}
                           </span>
-                          <span className="text-xs text-slate-200">{vlan.name}</span>
+                          <span className="text-xs text-slate-200">
+                            {vlan.name}
+                          </span>
                           <button
                             onClick={() =>
                               dispatch(
@@ -358,7 +303,9 @@ export default function SiteVlanPanel() {
                                 : 'bg-slate-700 text-slate-200'
                             }`}
                           >
-                            {isModeActive ? 'Modo Diagrama ON' : 'Selecionar no Diagrama'}
+                            {isModeActive
+                              ? 'Modo Diagrama ON'
+                              : 'Selecionar no Diagrama'}
                           </button>
                           <button
                             onClick={() =>
@@ -387,7 +334,9 @@ export default function SiteVlanPanel() {
                             )}
 
                             {siteNodes.map((node) => {
-                              const checked = (node.vlans ?? []).includes(vlan.vlanId);
+                              const checked = (node.vlans ?? []).includes(
+                                vlan.vlanId,
+                              );
                               return (
                                 <label
                                   key={`${vlan.id}-${node.id}`}
@@ -430,9 +379,13 @@ export default function SiteVlanPanel() {
               <thead>
                 <tr className="text-left text-slate-400">
                   <th className="border-b border-[#35567f] px-2 py-1">Item</th>
-                  <th className="border-b border-[#35567f] px-2 py-1">IP / Range</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">
+                    IP / Range
+                  </th>
                   <th className="border-b border-[#35567f] px-2 py-1">Tipo</th>
-                  <th className="border-b border-[#35567f] px-2 py-1">Conexoes</th>
+                  <th className="border-b border-[#35567f] px-2 py-1">
+                    Conexoes
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -459,7 +412,10 @@ export default function SiteVlanPanel() {
                           node.category !== 'wan' &&
                           (node.vlans ?? []).includes(vlan.vlanId),
                       );
-                      const ipRange = formatCompactRange(vlan.startIp, vlan.endIp);
+                      const ipRange = formatCompactRange(
+                        vlan.startIp,
+                        vlan.endIp,
+                      );
                       const vlanTotalPossibleIps = vlan.capacity;
 
                       const vlanHeaderRow = (
@@ -486,7 +442,8 @@ export default function SiteVlanPanel() {
                         vlanNodes.length > 0
                           ? vlanNodes.map((node) => {
                               const nodeConnectionCount = links.filter(
-                                (link) => link.from === node.id || link.to === node.id,
+                                (link) =>
+                                  link.from === node.id || link.to === node.id,
                               ).length;
 
                               return (
@@ -528,7 +485,8 @@ export default function SiteVlanPanel() {
             </table>
           </div>
           <div className="mt-2 text-[10px] text-slate-500">
-            VLANs agrupadas por site, com range fixo por radical + quantidade de IPs e conexoes ativas por elemento.
+            VLANs agrupadas por site, com range fixo por radical + quantidade de
+            IPs e conexoes ativas por elemento.
           </div>
         </div>
       </div>
