@@ -1,43 +1,49 @@
-import NavBar from './components/NavBar';
-import SlideArrows from './components/SlideArrows';
-import S01Capa from './slides/S01Capa';
-import S02Agenda from './slides/S02Agenda';
-import S03Escopo from './slides/S03Escopo';
-import S04TopologiaLogica from './slides/S04TopologiaLogica';
-import S05TopologiaFisica from './slides/S05TopologiaFisica';
-import S06Enderecamento from './slides/S06Enderecamento';
-import S07VLANs from './slides/S07VLANs';
-import S08Diagramas from './slides/S08Diagramas';
-import S09Rotas from './slides/S09Rotas';
-import S10VPN from './slides/S10VPN';
-import S11Firewall from './slides/S11Firewall';
-import S12Seguranca from './slides/S12Seguranca';
-import S13SOW from './slides/S13SOW';
-import S14Encerramento from './slides/S14Encerramento';
-import S15PropostaGojs from './slides/S15PropostaGojs';
-import S16EquipamentosRecomendados from './slides/S16EquipamentosRecomendados';
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import SlidesPage from './pages/SlidesPage';
+import StudioPage from './pages/StudioPage';
 
 export default function App() {
   return (
-    <>
-      <NavBar />
-      <SlideArrows />
-      <S01Capa />
-      <S02Agenda />
-      <S03Escopo />
-      <S04TopologiaLogica />
-      <S05TopologiaFisica />
-      <S06Enderecamento />
-      <S07VLANs />
-      <S08Diagramas />
-      <S09Rotas />
-      <S10VPN />
-      <S11Firewall />
-      <S12Seguranca />
-      <S13SOW />
-      <S14Encerramento />
-      <S15PropostaGojs />
-      <S16EquipamentosRecomendados />
-    </>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
+          <h1 className="text-sm font-semibold tracking-[0.2em] text-cyan-300">
+            REDE SP-CWB STUDIO
+          </h1>
+          <nav className="flex items-center gap-2">
+            <NavLink
+              to="/slides"
+              className={({ isActive }) =>
+                `rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                  isActive
+                    ? 'bg-cyan-500 text-slate-950'
+                    : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                }`
+              }
+            >
+              Slides
+            </NavLink>
+            <NavLink
+              to="/studio"
+              className={({ isActive }) =>
+                `rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                  isActive
+                    ? 'bg-emerald-400 text-slate-950'
+                    : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                }`
+              }
+            >
+              Studio
+            </NavLink>
+          </nav>
+        </div>
+      </header>
+
+      <Routes>
+        <Route path="/slides" element={<SlidesPage />} />
+        <Route path="/studio" element={<StudioPage />} />
+        <Route path="*" element={<Navigate to="/slides" replace />} />
+      </Routes>
+    </div>
   );
 }
