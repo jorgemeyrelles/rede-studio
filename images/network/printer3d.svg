@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect x="1" y="1" width="62" height="62" rx="12" fill="#1c2431" stroke="#5f7b9e"/>
+  <!-- Frame vertical beams -->
+  <rect x="12" y="10" width="4" height="40" rx="2" fill="#6b8db0"/>
+  <rect x="48" y="10" width="4" height="40" rx="2" fill="#6b8db0"/>
+  <!-- Frame top beam -->
+  <rect x="12" y="10" width="40" height="4" rx="2" fill="#6b8db0"/>
+  <!-- Print platform -->
+  <rect x="15" y="44" width="34" height="5" rx="2" fill="#dcecff"/>
+  <!-- Carriage / hotend rail -->
+  <rect x="14" y="22" width="36" height="3" rx="1" fill="#9fc0de"/>
+  <!-- Hotend assembly -->
+  <rect x="28" y="20" width="8" height="8" rx="2" fill="#4a8fc1"/>
+  <!-- Nozzle tip -->
+  <polygon points="31,28 33,28 32,34" fill="#c9ecff"/>
+  <!-- Printed object layers on platform -->
+  <rect x="25" y="37" width="14" height="3" rx="1" fill="#76b5e0"/>
+  <rect x="26" y="34" width="12" height="3" rx="1" fill="#5aa0d4"/>
+  <rect x="28" y="31" width="8" height="3" rx="1" fill="#4a8fc1"/>
+</svg>
