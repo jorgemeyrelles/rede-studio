@@ -8,4 +8,7 @@ export type RouteRow = {
   redeDest: string;
   gateway: string;
   iface: string;
+  reservedSiteRange?: string;
+  reservedSiteCount?: number;
+  reserveMarginPercent?: number;
 };

@@ -28,6 +28,8 @@ export function resolveTechKind(category: NodeCategory): TechKind {
   if (category === 'ids' || category === 'ips') return 'ids';
   if (category === 'access-point') return 'access-point';
   if (category === 'printer') return 'printer';
+  if (category === 'printer-3d') return 'printer';
+  if (category === 'smartphone') return 'generic';
   return 'generic';
 }
 

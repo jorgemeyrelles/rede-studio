@@ -89,7 +89,7 @@ export default function App() {
           path="/studio"
           element={<StudioPage language={studioLanguage} />}
         />
-        <Route path="*" element={<Navigate to="/slides" replace />} />
+        <Route path="*" element={<Navigate to="/studio" replace />} />
       </Routes>
     </div>
   );

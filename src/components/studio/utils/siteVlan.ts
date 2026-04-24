@@ -16,6 +16,7 @@ export function getNextVlanId(siteId: string, siteVlans: SiteVlan[]) {
 export function getSiteRadicalOptions(
   siteId: string,
   siteOctet: number,
+  siteVlans: SiteVlan[],
   nodes: NodeItem[],
 ) {
   const existingFromNodes = nodes
@@ -23,6 +24,13 @@ export function getSiteRadicalOptions(
     .map((node) => node.ip.split('.'))
     .filter((parts) => parts.length === 4 && Number(parts[1]) === siteOctet)
     .map((parts) => `${parts[2]}.${parts[3]}`);
+
+  const existingFromVlans = siteVlans
+    .filter((item) => item.siteId === siteId)
+    .map((item) => item.startRadical)
+    .filter(
+      (value): value is string => typeof value === 'string' && value.length > 0,
+    );
 
   const presetOptions: string[] = [];
   for (let third = 1; third <= 10; third += 1) {
@@ -38,9 +46,9 @@ export function getSiteRadicalOptions(
     return third * 1000 + fourth;
   };
 
-  return Array.from(new Set([...existingFromNodes, ...presetOptions])).sort(
-    (a, b) => sortRadical(a) - sortRadical(b),
-  );
+  return Array.from(
+    new Set([...existingFromNodes, ...existingFromVlans, ...presetOptions]),
+  ).sort((a, b) => sortRadical(a) - sortRadical(b));
 }
 
 export function createDefaultVlanDraft(
@@ -49,7 +57,12 @@ export function createDefaultVlanDraft(
   siteVlans: SiteVlan[],
   nodes: NodeItem[],
 ): SiteVlanDraft {
-  const radicalOptions = getSiteRadicalOptions(siteId, siteOctet, nodes);
+  const radicalOptions = getSiteRadicalOptions(
+    siteId,
+    siteOctet,
+    siteVlans,
+    nodes,
+  );
 
   return {
     vlanId: String(getNextVlanId(siteId, siteVlans)),

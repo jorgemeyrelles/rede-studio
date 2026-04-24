@@ -5,7 +5,7 @@ import {
   selectFirewallRules,
   selectRouteTable,
 } from '../../features/network/selectors';
-import type { AclAction } from '../../features/network/types';
+import type { AclAction, AclEndpointScope } from '../../features/network/types';
 import {
   getRouteFirewallCopy,
   ROUTE_TYPE_CLASS,
@@ -74,6 +74,57 @@ function HeaderInfoTooltip({
   );
 }
 
+function TruncatedValueTooltip({
+  value,
+  maxWidthClass = 'max-w-[130px]',
+  className = '',
+}: {
+  value: string;
+  maxWidthClass?: string;
+  className?: string;
+}) {
+  const [position, setPosition] = useState<TooltipPosition | null>(null);
+
+  const openTooltip = (element: HTMLDivElement) => {
+    const rect = element.getBoundingClientRect();
+    setPosition({
+      top: rect.top + rect.height / 2,
+      left: rect.right + 8,
+    });
+  };
+
+  const closeTooltip = () => {
+    setPosition(null);
+  };
+
+  return (
+    <>
+      <div
+        tabIndex={0}
+        className={`${maxWidthClass} cursor-help overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-slate-300 outline-none ${className}`}
+        onMouseEnter={(event) => openTooltip(event.currentTarget)}
+        onMouseLeave={closeTooltip}
+        onFocus={(event) => openTooltip(event.currentTarget)}
+        onBlur={closeTooltip}
+      >
+        {value}
+      </div>
+
+      {position && (
+        <div
+          className="fixed z-[1000] max-w-[360px] -translate-y-1/2 rounded border border-slate-600 bg-slate-900 px-3 py-2 text-left text-[11px] leading-relaxed text-slate-200 shadow-xl"
+          style={{
+            top: position.top,
+            left: position.left,
+          }}
+        >
+          {value}
+        </div>
+      )}
+    </>
+  );
+}
+
 type RouteFirewallPanelProps = {
   language: StudioLanguage;
 };
@@ -84,6 +135,7 @@ export default function RouteFirewallPanel({
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
+  const siteVlans = useAppSelector((state) => state.network.siteVlans);
   const sites = useAppSelector((state) => state.network.sites);
   const copy = getRouteFirewallCopy(language);
   const routeTypeLabels: Record<RouteType, string> = {
@@ -91,6 +143,35 @@ export default function RouteFirewallPanel({
     Estática: copy.routeTypeStatic,
     Default: copy.routeTypeDefault,
     VPN: copy.routeTypeVpn,
+  };
+
+  const getVlanOptions = (siteId?: string) => {
+    if (!siteId) return [];
+    return siteVlans
+      .filter((vlan) => vlan.siteId === siteId)
+      .sort((a, b) => a.vlanId - b.vlanId);
+  };
+
+  const handleScopeChange = (
+    ruleId: string,
+    side: 'source' | 'destination',
+    scope: AclEndpointScope,
+    defaultVlanId?: number,
+  ) => {
+    const isSource = side === 'source';
+
+    dispatch(
+      updateAclRule({
+        id: ruleId,
+        changes: {
+          [isSource ? 'sourceScope' : 'destinationScope']: scope,
+          [isSource ? 'sourceVlanId' : 'destinationVlanId']:
+            scope === 'vlan' ? defaultVlanId : undefined,
+          [isSource ? 'sourceIp' : 'destinationIp']:
+            scope === 'ip' ? '' : undefined,
+        },
+      }),
+    );
   };
 
   return (
@@ -218,6 +299,12 @@ export default function RouteFirewallPanel({
                     >
                       {copy.otherIps}:{' '}
                       {getSiteOtherIps(group.siteId, group.rows, sites)}
+                      {' | '}
+                      {copy.reserveSummary}:{' '}
+                      {group.rows[0]?.reserveMarginPercent ?? 0}%
+                      {group.rows[0]?.reservedSiteRange
+                        ? ` (${copy.reserveRange}: ${group.rows[0].reservedSiteRange}, ${group.rows[0].reservedSiteCount})`
+                        : ''}
                     </td>
                   </tr>
                 </Fragment>
@@ -235,17 +322,25 @@ export default function RouteFirewallPanel({
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">ID</th>
-                <th className="border-b border-slate-700 px-1 py-1">
+                <th className="w-[40px] border-b border-slate-700 px-1 py-1">
+                  ID
+                </th>
+                <th className="w-[180px] border-b border-slate-700 px-1 py-1">
                   {copy.action}
                 </th>
-                <th className="border-b border-slate-700 px-1 py-1">
+                <th className="w-[115px] border-b border-slate-700 px-1 py-1">
                   {copy.source}
                 </th>
-                <th className="border-b border-slate-700 px-1 py-1">
+                <th className="w-[138px] border-b border-slate-700 px-1 py-1">
+                  {copy.endpointType} ({copy.source})
+                </th>
+                <th className="w-[115px] border-b border-slate-700 px-1 py-1">
                   {copy.destination}
                 </th>
-                <th className="border-b border-slate-700 px-1 py-1">
+                <th className="w-[138px] border-b border-slate-700 px-1 py-1">
+                  {copy.endpointType} ({copy.destination})
+                </th>
+                <th className="w-[160px] border-b border-slate-700 px-1 py-1">
                   {copy.portService}
                 </th>
               </tr>
@@ -253,7 +348,7 @@ export default function RouteFirewallPanel({
             <tbody>
               {firewallRules.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-1 py-2 text-slate-500">
+                  <td colSpan={7} className="px-1 py-2 text-slate-500">
                     {copy.emptyRules}
                   </td>
                 </tr>
@@ -261,7 +356,11 @@ export default function RouteFirewallPanel({
               {firewallRules.map((rule) => (
                 <tr key={rule.id}>
                   <td className="border-b border-slate-800 px-1 py-1">
-                    {rule.id}
+                    <TruncatedValueTooltip
+                      value={rule.id}
+                      maxWidthClass="max-w-[26px]"
+                      className="text-[10px] text-slate-400"
+                    />
                   </td>
                   <td className="border-b border-slate-800 px-1 py-1">
                     <select
@@ -269,7 +368,7 @@ export default function RouteFirewallPanel({
                       onChange={(event) => {
                         dispatch(
                           updateAclRule({
-                            id: rule.id,
+                            id: rule.aclRuleId,
                             changes: {
                               action: event.target.value as AclAction,
                             },
@@ -283,10 +382,168 @@ export default function RouteFirewallPanel({
                     </select>
                   </td>
                   <td className="border-b border-slate-800 px-1 py-1">
-                    {rule.origem}
+                    <TruncatedValueTooltip
+                      value={rule.origem}
+                      maxWidthClass="max-w-[115px]"
+                    />
                   </td>
                   <td className="border-b border-slate-800 px-1 py-1">
-                    {rule.destino}
+                    <div className="mt-1 space-y-1">
+                      <select
+                        value={rule.sourceScope}
+                        onChange={(event) => {
+                          const scope = event.target.value as AclEndpointScope;
+                          const vlanOptions = getVlanOptions(
+                            rule.sourceNodeSiteId,
+                          );
+                          handleScopeChange(
+                            rule.aclRuleId,
+                            'source',
+                            scope,
+                            vlanOptions[0]?.vlanId,
+                          );
+                        }}
+                        disabled={rule.isDerivedAllocation}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="node">{copy.endpointNode}</option>
+                        <option value="vlan">{copy.endpointVlan}</option>
+                        <option value="ip">{copy.endpointIp}</option>
+                      </select>
+
+                      {rule.sourceScope === 'vlan' && (
+                        <select
+                          value={rule.sourceVlanId ?? ''}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            dispatch(
+                              updateAclRule({
+                                id: rule.aclRuleId,
+                                changes: {
+                                  sourceVlanId: Number.isFinite(value)
+                                    ? value
+                                    : undefined,
+                                },
+                              }),
+                            );
+                          }}
+                          disabled={rule.isDerivedAllocation}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <option value="">{copy.selectVlan}</option>
+                          {getVlanOptions(rule.sourceNodeSiteId).map((vlan) => (
+                            <option
+                              key={`source-${rule.aclRuleId}-${vlan.vlanId}`}
+                              value={vlan.vlanId}
+                            >
+                              VLAN {vlan.vlanId} ({vlan.name})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {rule.sourceScope === 'ip' && (
+                        <input
+                          value={rule.sourceIp ?? ''}
+                          onChange={(event) => {
+                            dispatch(
+                              updateAclRule({
+                                id: rule.aclRuleId,
+                                changes: {
+                                  sourceIp: event.target.value,
+                                },
+                              }),
+                            );
+                          }}
+                          disabled={rule.isDerivedAllocation}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          placeholder={copy.ipAddress}
+                        />
+                      )}
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 px-1 py-1">
+                    <TruncatedValueTooltip
+                      value={rule.destino}
+                      maxWidthClass="max-w-[115px]"
+                    />
+                  </td>
+                  <td className="border-b border-slate-800 px-1 py-1">
+                    <div className="mt-1 space-y-1">
+                      <select
+                        value={rule.destinationScope}
+                        onChange={(event) => {
+                          const scope = event.target.value as AclEndpointScope;
+                          const vlanOptions = getVlanOptions(
+                            rule.destinationNodeSiteId,
+                          );
+                          handleScopeChange(
+                            rule.aclRuleId,
+                            'destination',
+                            scope,
+                            vlanOptions[0]?.vlanId,
+                          );
+                        }}
+                        disabled={rule.isDerivedAllocation}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="node">{copy.endpointNode}</option>
+                        <option value="vlan">{copy.endpointVlan}</option>
+                        <option value="ip">{copy.endpointIp}</option>
+                      </select>
+
+                      {rule.destinationScope === 'vlan' && (
+                        <select
+                          value={rule.destinationVlanId ?? ''}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            dispatch(
+                              updateAclRule({
+                                id: rule.aclRuleId,
+                                changes: {
+                                  destinationVlanId: Number.isFinite(value)
+                                    ? value
+                                    : undefined,
+                                },
+                              }),
+                            );
+                          }}
+                          disabled={rule.isDerivedAllocation}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <option value="">{copy.selectVlan}</option>
+                          {getVlanOptions(rule.destinationNodeSiteId).map(
+                            (vlan) => (
+                              <option
+                                key={`destination-${rule.aclRuleId}-${vlan.vlanId}`}
+                                value={vlan.vlanId}
+                              >
+                                VLAN {vlan.vlanId} ({vlan.name})
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      )}
+
+                      {rule.destinationScope === 'ip' && (
+                        <input
+                          value={rule.destinationIp ?? ''}
+                          onChange={(event) => {
+                            dispatch(
+                              updateAclRule({
+                                id: rule.aclRuleId,
+                                changes: {
+                                  destinationIp: event.target.value,
+                                },
+                              }),
+                            );
+                          }}
+                          disabled={rule.isDerivedAllocation}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          placeholder={copy.ipAddress}
+                        />
+                      )}
+                    </div>
                   </td>
                   <td className="border-b border-slate-800 px-1 py-1">
                     <input
@@ -294,14 +551,14 @@ export default function RouteFirewallPanel({
                       onChange={(event) => {
                         dispatch(
                           updateAclRule({
-                            id: rule.id,
+                            id: rule.aclRuleId,
                             changes: {
                               service: event.target.value,
                             },
                           }),
                         );
                       }}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[10px] text-slate-100"
                       placeholder="ANY, VPN, HTTPS:443"
                     />
                   </td>

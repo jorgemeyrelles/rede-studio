@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
   addSiteVlan,
   removeSiteVlan,
+  setPersistWarning,
   setVlanAssignmentMode,
   toggleNodeVlanAssignment,
 } from '../../features/network/networkSlice';
@@ -11,7 +12,6 @@ import {
   createDefaultVlanDraft,
   formatCompactRange,
   getSiteVlanCopy,
-  getNextVlanId,
   getNodeVisual,
   getSiteRadicalOptions,
   type SiteVlanDraft,
@@ -24,7 +24,7 @@ type SiteVlanPanelProps = {
 
 export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   const dispatch = useAppDispatch();
-  const { sites, nodes, links, siteVlans, ui } = useAppSelector(
+  const { sites, nodes, links, siteVlans, ui, meta } = useAppSelector(
     (state) => state.network,
   );
   const copy = getSiteVlanCopy(language);
@@ -37,7 +37,13 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   const [openCapacitySiteId, setOpenCapacitySiteId] = useState<string | null>(
     null,
   );
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({
+    open: false,
+    message: '',
+  });
   const dropdownAreaRef = useRef<HTMLDivElement | null>(null);
+  const previousVlanCountBySiteRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
     const handleDocumentPointerDown = (event: MouseEvent) => {
       const container = dropdownAreaRef.current;
@@ -55,6 +61,62 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
       document.removeEventListener('mousedown', handleDocumentPointerDown);
     };
   }, []);
+
+  useEffect(() => {
+    const nextCounts = sites.reduce<Record<string, number>>((acc, site) => {
+      acc[site.id] = siteVlans.filter((item) => item.siteId === site.id).length;
+      return acc;
+    }, {});
+
+    const previousCounts = previousVlanCountBySiteRef.current;
+    const changedSiteIds = sites
+      .map((site) => site.id)
+      .filter((siteId) => previousCounts[siteId] !== nextCounts[siteId]);
+
+    if (changedSiteIds.length > 0) {
+      setVlanDraftBySite((prev) => {
+        const updated = { ...prev };
+
+        changedSiteIds.forEach((siteId) => {
+          const site = sites.find((item) => item.id === siteId);
+          if (!site) return;
+
+          updated[siteId] = createDefaultVlanDraft(
+            siteId,
+            site.ipOctet,
+            siteVlans,
+            nodes,
+          );
+        });
+
+        return updated;
+      });
+    }
+
+    previousVlanCountBySiteRef.current = nextCounts;
+  }, [nodes, siteVlans, sites]);
+
+  useEffect(() => {
+    if (!meta.persistWarning) {
+      return;
+    }
+
+    setSnackbar({
+      open: true,
+      message: meta.persistWarning,
+    });
+    dispatch(setPersistWarning(null));
+  }, [dispatch, meta.persistWarning]);
+
+  useEffect(() => {
+    if (!snackbar.open) return;
+
+    const timer = window.setTimeout(() => {
+      setSnackbar((prev) => ({ ...prev, open: false }));
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [snackbar.open]);
 
   const setVlanDraft = (
     siteId: string,
@@ -99,6 +161,7 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
             const radicalOptions = getSiteRadicalOptions(
               site.id,
               site.ipOctet,
+              siteVlans,
               nodes,
             );
             const draft =
@@ -245,17 +308,6 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
                             name: draft.name,
                           }),
                         );
-                        const resetRadicals = getSiteRadicalOptions(
-                          site.id,
-                          site.ipOctet,
-                          nodes,
-                        );
-                        setVlanDraft(site.id, site.ipOctet, () => ({
-                          vlanId: String(getNextVlanId(site.id, siteVlans)),
-                          capacity: String(CAPACITY_OPTIONS[3]),
-                          startRadical: resetRadicals[0] ?? '1.10',
-                          name: '',
-                        }));
                         setOpenRadicalSiteId(null);
                         setOpenCapacitySiteId(null);
                       }}
@@ -497,6 +549,28 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
             </table>
           </div>
           <div className="mt-2 text-[10px] text-slate-500">{copy.footer}</div>
+        </div>
+      </div>
+
+      <div
+        className={`pointer-events-none fixed bottom-5 right-5 z-[1200] transition-all duration-300 ${
+          snackbar.open
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-2 opacity-0'
+        }`}
+      >
+        <div className="pointer-events-auto flex min-w-[320px] max-w-[440px] items-start gap-3 rounded-md border border-amber-400/35 bg-slate-900 px-3 py-2 shadow-[0_12px_28px_rgba(0,0,0,0.45)]">
+          <div className="mt-0.5 text-amber-300">!</div>
+          <div className="flex-1 text-xs leading-relaxed text-slate-100">
+            {snackbar.message}
+          </div>
+          <button
+            type="button"
+            onClick={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            className="rounded px-1 py-0.5 text-[11px] font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-slate-100"
+          >
+            Fechar
+          </button>
         </div>
       </div>
     </section>

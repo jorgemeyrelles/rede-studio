@@ -26,6 +26,11 @@ import {
   getVisibleTechSchema,
 } from '../../features/network/techProfiles';
 import {
+  getAvailableVlanCapacityForNode,
+  getNodeReservedRange,
+  getSiteReserveRange,
+} from '../../features/network/utils';
+import {
   BASE_Y,
   DEFAULT_DIAGRAM_WIDTH,
   buildGridLayout,
@@ -59,6 +64,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     const dispatch = useAppDispatch();
     const diagramDivRef = useRef<HTMLDivElement | null>(null);
     const diagramRef = useRef<go.Diagram | null>(null);
+    const hasInitialFitDoneRef = useRef(false);
+    const lastFitCenterRequestHandledRef = useRef(0);
     const nodesByIdRef = useRef<Map<string, NodeItem>>(new Map());
     const vlanAssignmentRef = useRef<{ siteId: string; vlanId: number } | null>(
       null,
@@ -69,8 +76,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     );
     const [activeSiteTooltip, setActiveSiteTooltip] =
       useState<SiteTooltip | null>(null);
+    const [fitCenterRequest, setFitCenterRequest] = useState(0);
 
-    const { sites, layers, nodes, links, ui } = useAppSelector(
+    const { sites, layers, nodes, links, siteVlans, ui } = useAppSelector(
       (state) => state.network,
     );
     const copy = getNetworkDiagramCopy(language);
@@ -93,10 +101,24 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     const nodeData = useMemo(() => {
       const items: Array<Record<string, unknown>> = [];
       const limitedSites = sites.slice(0, 4);
+      const sitePalette = ['#38bdf8', '#22c55e', '#f59e0b', '#f43f5e'];
+      const siteVisualById = new Map<
+        string,
+        { stroke: string; siteFill: string; layerFill: string }
+      >();
       const layerRectById = new Map<
         string,
         { x: number; y: number; w: number; h: number }
       >();
+
+      limitedSites.forEach((site, index) => {
+        const stroke = sitePalette[index % sitePalette.length];
+        siteVisualById.set(site.id, {
+          stroke,
+          siteFill: `${stroke}22`,
+          layerFill: `${stroke}12`,
+        });
+      });
 
       for (const layer of layers) {
         const pos = layout.layerPositions.get(layer.id);
@@ -118,11 +140,19 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       }
 
       for (const site of limitedSites) {
+        const visual = siteVisualById.get(site.id) ?? {
+          stroke: '#38bdf8',
+          siteFill: '#38bdf822',
+          layerFill: '#38bdf812',
+        };
+
         items.push({
           key: site.id,
           text: `${site.name} (${getSiteHeaderIp(site, nodes)})`,
           isGroup: true,
           category: 'site',
+          siteStroke: visual.stroke,
+          siteFill: visual.siteFill,
           loc: `${layout.sitePositions.get(site.id)?.x ?? 16} ${layout.sitePositions.get(site.id)?.y ?? BASE_Y}`,
         });
 
@@ -138,6 +168,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             group: site.id,
             isGroup: true,
             category: 'layer',
+            layerStroke: visual.stroke,
+            layerFill: visual.layerFill,
             size: `${layer.width} ${layer.height}`,
             loc: `${layerPos?.x ?? 20} ${layerPos?.y ?? BASE_Y + 62}`,
             layerId: layer.id,
@@ -280,8 +312,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
       const diagram = $(go.Diagram, diagramDivRef.current, {
         'undoManager.isEnabled': true,
-        initialAutoScale: go.AutoScale.Uniform,
-        contentAlignment: go.Spot.Center,
+        initialAutoScale: go.AutoScale.None,
+        contentAlignment: go.Spot.Default,
         allowZoom: true,
         'linkingTool.isEnabled': true,
         'relinkingTool.isEnabled': true,
@@ -382,11 +414,17 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           $(
             go.Panel,
             'Auto',
-            $(go.Shape, 'RoundedRectangle', {
-              fill: 'rgba(15, 23, 42, 0.35)',
-              stroke: '#334155',
-              strokeWidth: 1.5,
-            }),
+            $(
+              go.Shape,
+              'RoundedRectangle',
+              {
+                fill: 'rgba(15, 23, 42, 0.35)',
+                stroke: '#334155',
+                strokeWidth: 1.5,
+              },
+              new go.Binding('fill', 'siteFill'),
+              new go.Binding('stroke', 'siteStroke'),
+            ),
             $(go.Placeholder, { padding: 14 }),
           ),
         ),
@@ -424,6 +462,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 strokeDashArray: [5, 4],
                 minSize: new go.Size(220, 140),
               },
+              new go.Binding('fill', 'layerFill'),
+              new go.Binding('stroke', 'layerStroke'),
               new go.Binding('desiredSize', 'size', go.Size.parse).makeTwoWay(
                 go.Size.stringify,
               ),
@@ -489,8 +529,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               fill: '#060d19',
               stroke: '#1d3353',
               strokeWidth: 1,
-              width: 98,
-              height: 84,
+              width: 112,
+              height: 96,
               portId: '',
               fromLinkable: true,
               toLinkable: true,
@@ -503,47 +543,47 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               h ? 2.4 : 1,
             ).ofObject(),
             new go.Binding('width', 'isHighlighted', (h) =>
-              h ? 108 : 98,
+              h ? 122 : 112,
             ).ofObject(),
             new go.Binding('height', 'isHighlighted', (h) =>
-              h ? 92 : 84,
+              h ? 106 : 96,
             ).ofObject(),
           ),
           $(
             go.Picture,
             {
               name: 'ICON',
-              width: 38,
-              height: 38,
-              alignment: new go.Spot(0.5, 0.27, 0, 0),
+              width: 44,
+              height: 44,
+              alignment: new go.Spot(0.5, 0.28, 0, 0),
               imageStretch: go.ImageStretch.Uniform,
               background: 'transparent',
             },
             new go.Binding('source', 'iconSrc'),
             new go.Binding('width', 'isHighlighted', (h) =>
-              h ? 44 : 38,
+              h ? 52 : 44,
             ).ofObject(),
             new go.Binding('height', 'isHighlighted', (h) =>
-              h ? 44 : 38,
+              h ? 52 : 44,
             ).ofObject(),
           ),
           $(
             go.TextBlock,
             {
-              margin: new go.Margin(42, 6, 13, 6),
+              margin: new go.Margin(52, 6, 14, 6),
               stroke: '#d8e7fb',
-              font: '700 10px Barlow',
+              font: '700 12px Barlow',
               textAlign: 'center',
-              maxSize: new go.Size(90, NaN),
+              maxSize: new go.Size(104, NaN),
             },
             new go.Binding('text', 'text'),
           ),
           $(
             go.TextBlock,
             {
-              alignment: new go.Spot(0.5, 1, 0, -4),
+              alignment: new go.Spot(0.5, 1, 0, -5),
               stroke: '#9ec9f2',
-              font: '700 9px "Share Tech Mono"',
+              font: '700 11px "Share Tech Mono"',
             },
             new go.Binding('text', 'marker', (marker) => `[${String(marker)}]`),
           ),
@@ -583,6 +623,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       diagram.linkTemplate = $(
         go.Link,
         {
+          layerName: 'Background',
           routing: go.Routing.AvoidsNodes,
           curve: go.Curve.JumpGap,
           corner: 8,
@@ -592,7 +633,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           toEndSegmentLength: 14,
         },
         new go.Binding('layerName', 'isHighlighted', (h) =>
-          h ? 'Foreground' : '',
+          h ? 'Foreground' : 'Background',
         ).ofObject(),
         $(
           go.Shape,
@@ -661,22 +702,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         dispatch(addLink({ from, to }));
       });
 
-      const modelChangedListener = (evt: go.ChangedEvent) => {
-        if (
-          evt.change === go.ChangeType.Remove &&
-          evt.modelChange === 'linkDataArray'
-        ) {
-          const oldLink = evt.oldValue as any;
-          if (oldLink && oldLink.key) {
-            dispatch(removeLink(String(oldLink.key)));
-          }
-        }
-      };
-
-      if (diagram.model) {
-        diagram.model.addChangedListener(modelChangedListener);
-      }
-
       diagram.addDiagramListener('SelectionMoved', (event) => {
         event.subject.each((part: go.Part) => {
           if (!(part instanceof go.Node)) return;
@@ -729,17 +754,50 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       const diagram = diagramRef.current;
       if (!diagram) return;
 
+      const previousScale = diagram.scale;
+      const previousPosition = diagram.position.copy();
+
       const model = new go.GraphLinksModel(nodeData, linkData);
       model.linkKeyProperty = 'key';
+      model.addChangedListener((evt: go.ChangedEvent) => {
+        if (
+          evt.change === go.ChangeType.Remove &&
+          evt.modelChange === 'linkDataArray'
+        ) {
+          const oldLink = evt.oldValue as { key?: string } | null;
+          const linkId = String(oldLink?.key ?? '');
+          if (linkId) {
+            dispatch(removeLink(linkId));
+          }
+        }
+      });
 
       diagram.model = model;
-    }, [linkData, nodeData]);
 
-    useEffect(() => {
-      const diagram = diagramRef.current;
-      if (!diagram) return;
-      diagram.zoomToFit();
-    }, [diagramWidth, layers, sites]);
+      const fitAndCenter = () => {
+        diagram.zoomToFit();
+        const bounds = diagram.documentBounds;
+        const viewport = diagram.viewportBounds;
+        diagram.position = new go.Point(
+          bounds.centerX - viewport.width / 2,
+          bounds.centerY - viewport.height / 2,
+        );
+      };
+
+      const shouldApplyFitCenter =
+        !hasInitialFitDoneRef.current ||
+        fitCenterRequest !== lastFitCenterRequestHandledRef.current;
+
+      if (shouldApplyFitCenter) {
+        fitAndCenter();
+        hasInitialFitDoneRef.current = true;
+        lastFitCenterRequestHandledRef.current = fitCenterRequest;
+      } else {
+        // Keep the user's current viewport when data updates recreate the model.
+        diagram.scale = previousScale;
+        diagram.position = previousPosition;
+      }
+    }, [dispatch, fitCenterRequest, linkData, nodeData]);
 
     useEffect(() => {
       if (!activeTooltip) return;
@@ -818,6 +876,22 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       },
     }));
 
+    const fitDiagram = () => {
+      setFitCenterRequest((prev) => prev + 1);
+    };
+
+    const centerDiagram = () => {
+      const diagram = diagramRef.current;
+      if (!diagram) return;
+
+      const bounds = diagram.documentBounds;
+      const viewport = diagram.viewportBounds;
+
+      const targetX = bounds.centerX - viewport.width / 2;
+      const targetY = bounds.centerY - viewport.height / 2;
+      diagram.position = new go.Point(targetX, targetY);
+    };
+
     return (
       <div className="relative h-[660px] rounded-lg border border-slate-700 bg-slate-950/70">
         <div
@@ -825,6 +899,52 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           className="h-full w-full"
           aria-label="Network Studio"
         />
+
+        {/* Botão Enquadrar */}
+        <button
+          onClick={fitDiagram}
+          title="Enquadrar diagrama"
+          className="absolute bottom-3 right-12 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/40 text-slate-400 opacity-30 transition-all duration-200 hover:border-slate-400 hover:bg-slate-800/80 hover:text-slate-100 hover:opacity-100"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
+            <path d="M3 3h4v2H5v2H3V3zm14 0v4h-2V5h-2V3h4zM3 17v-4h2v2h2v2H3zm12 0v-2h2v-2h2v4h-4z" />
+          </svg>
+        </button>
+
+        {/* Botão Centralizar */}
+        <button
+          onClick={centerDiagram}
+          title="Centralizar diagrama"
+          className="absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/40 text-slate-400 opacity-30 transition-all duration-200 hover:border-slate-400 hover:bg-slate-800/80 hover:text-slate-100 hover:opacity-100"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
+            <circle cx="10" cy="10" r="2" />
+            <path
+              d="M10 3v2M10 15v2M3 10h2M15 10h2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+            <circle
+              cx="10"
+              cy="10"
+              r="5.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              fill="none"
+            />
+          </svg>
+        </button>
 
         {activeTooltip &&
           tooltipNode &&
@@ -869,6 +989,22 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               techProfile.kind,
               techProfile.fields,
             );
+            const primaryVlan =
+              tooltipNode.siteId && tooltipNode.vlans.length > 0
+                ? (siteVlans.find(
+                    (item) =>
+                      item.siteId === tooltipNode.siteId &&
+                      item.vlanId === tooltipNode.vlans[0],
+                  ) ?? null)
+                : null;
+            const hostCapacity = primaryVlan
+              ? getAvailableVlanCapacityForNode(
+                  { nodes, siteVlans },
+                  tooltipNode,
+                  primaryVlan,
+                )
+              : 1;
+            const reservedRange = getNodeReservedRange(tooltipNode);
             const techWarnings = getTechProfileWarnings(
               tooltipNode.category,
               techProfile,
@@ -988,6 +1124,53 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
                         />
                       </label>
+
+                      {primaryVlan && (
+                        <>
+                          <label className="gojs-tooltip-row">
+                            <span className="gojs-tooltip-label">
+                              {copy.quantity}:
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={hostCapacity}
+                              value={tooltipNode.hostCount}
+                              onChange={(event) =>
+                                dispatch(
+                                  updateNode({
+                                    id: tooltipNode.id,
+                                    changes: {
+                                      hostCount: Number(event.target.value),
+                                    },
+                                  }),
+                                )
+                              }
+                              className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                            />
+                          </label>
+
+                          <div className="gojs-tooltip-row">
+                            <span className="gojs-tooltip-label">
+                              {copy.maxHostsInVlan}:
+                            </span>
+                            <span className="gojs-tooltip-value">
+                              {hostCapacity}
+                            </span>
+                          </div>
+
+                          {reservedRange && tooltipNode.hostCount > 1 && (
+                            <div className="gojs-tooltip-row">
+                              <span className="gojs-tooltip-label">
+                                {copy.reservedRange}:
+                              </span>
+                              <span className="gojs-tooltip-value">
+                                {reservedRange.startIp} - {reservedRange.endIp}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
 
@@ -1036,6 +1219,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                       <div className="space-y-2">
                         {techFields.map((field) => {
                           const value = techProfile.fields[field.key];
+                          const fieldLabel =
+                            field.labels?.[language] ?? field.label;
 
                           if (field.type === 'boolean') {
                             return (
@@ -1044,7 +1229,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                 className="gojs-tooltip-row"
                               >
                                 <span className="gojs-tooltip-label">
-                                  {field.label}:
+                                  {fieldLabel}:
                                 </span>
                                 <select
                                   value={String(Boolean(value))}
@@ -1078,7 +1263,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                 className="gojs-tooltip-row"
                               >
                                 <span className="gojs-tooltip-label">
-                                  {field.label}:
+                                  {fieldLabel}:
                                 </span>
                                 <select
                                   value={selected}
@@ -1106,7 +1291,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           return (
                             <label key={field.key} className="gojs-tooltip-row">
                               <span className="gojs-tooltip-label">
-                                {field.label}:
+                                {fieldLabel}:
                               </span>
                               <input
                                 type={
@@ -1159,8 +1344,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               containerWidth: rect.width,
               containerHeight: rect.height,
               tooltipWidth: 320,
-              tooltipHeight: 250,
+              tooltipHeight: 310,
             });
+            const siteReserveRange = getSiteReserveRange(tooltipSite);
 
             return (
               <div
@@ -1244,6 +1430,40 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                       className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
                     />
                   </label>
+
+                  <label className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">
+                      {copy.reserveMargin}:
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={tooltipSite.reserveMarginPercent}
+                      onChange={(event) =>
+                        dispatch(
+                          updateSite({
+                            id: tooltipSite.id,
+                            changes: {
+                              reserveMarginPercent: Number(event.target.value),
+                            },
+                          }),
+                        )
+                      }
+                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                    />
+                  </label>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">
+                      {copy.reserveRange}:
+                    </span>
+                    <span className="gojs-tooltip-value">
+                      {siteReserveRange.count > 0
+                        ? `${siteReserveRange.startIp} - ${siteReserveRange.endIp} (${siteReserveRange.count})`
+                        : '0'}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

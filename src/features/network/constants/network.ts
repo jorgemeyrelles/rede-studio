@@ -1,6 +1,6 @@
 import type { NodeCategory } from '../types';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CATEGORY_CODE_MAP: Record<NodeCategory, string> = {
   wan: 'WAN',

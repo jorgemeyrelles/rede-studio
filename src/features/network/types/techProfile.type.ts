@@ -11,6 +11,7 @@ export type NodeTechProfile = {
 export type TechFieldSchema = {
   key: string;
   label: string;
+  labels?: Record<string, string>;
   type: 'text' | 'number' | 'boolean' | 'select';
   options?: string[];
   min?: number;

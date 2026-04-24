@@ -1,4 +1,4 @@
-import type { SiteVlan } from '../types';
+import type { Site, SiteVlan } from '../types';
 
 export function ipToNumber(ip: string) {
   const parts = ip.split('.').map((item) => Number(item));
@@ -55,6 +55,59 @@ export function siteRangeBounds(siteOctet: number) {
   const min = ipToNumber(`200.${siteOctet}.0.0`) ?? 0;
   const max = ipToNumber(`200.${siteOctet}.255.255`) ?? 0;
   return { min, max };
+}
+
+export function getSiteSubnetBounds(site: Pick<Site, 'ipOctet' | 'cidr'>) {
+  const anchor = ipToNumber(`200.${site.ipOctet}.0.0`) ?? 0;
+  const safeCidr = Math.max(1, Math.min(32, Math.trunc(site.cidr)));
+  const blockSize = 2 ** (32 - safeCidr);
+  const networkStart = Math.floor(anchor / blockSize) * blockSize;
+  const networkEnd = networkStart + blockSize - 1;
+
+  if (safeCidr >= 31) {
+    return {
+      networkStart,
+      networkEnd,
+      usableStart: networkStart,
+      usableEnd: networkEnd,
+      usableCount: Math.max(1, networkEnd - networkStart + 1),
+    };
+  }
+
+  return {
+    networkStart,
+    networkEnd,
+    usableStart: networkStart + 1,
+    usableEnd: networkEnd - 1,
+    usableCount: Math.max(1, networkEnd - networkStart - 1),
+  };
+}
+
+export function getSiteReserveRange(
+  site: Pick<Site, 'ipOctet' | 'cidr' | 'reserveMarginPercent'>,
+) {
+  const bounds = getSiteSubnetBounds(site);
+  const safePercent = Math.max(
+    0,
+    Math.min(100, Math.trunc(site.reserveMarginPercent)),
+  );
+  const reservedCount = Math.floor((bounds.usableCount * safePercent) / 100);
+
+  if (reservedCount <= 0) {
+    return {
+      count: 0,
+      startIp: null,
+      endIp: null,
+    };
+  }
+
+  const start = bounds.usableEnd - reservedCount + 1;
+
+  return {
+    count: reservedCount,
+    startIp: numberToIp(start),
+    endIp: numberToIp(bounds.usableEnd),
+  };
 }
 
 export function getVlanRange(vlan: SiteVlan) {

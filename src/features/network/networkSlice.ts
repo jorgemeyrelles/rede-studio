@@ -21,21 +21,27 @@ import {
   normalizeTechProfile,
 } from './techProfiles';
 import {
+  normalizeAclRule,
   assignNodeIpInsideVlan,
   assignNodeIpOutsideVlans,
+  buildNodeHostAllocations,
   buildIpFromSiteAndRadical,
   buildNodeIp,
   buildNodeLabel,
+  getCategoryCode,
+  getNextNodeSequence,
   ipToNumber,
   isIpInVlan,
   makeLayerId,
   makeNodeId,
   makeSiteId,
+  parseTrailingNumber,
   reconcileAclRules,
   siteOwnsVlan,
   siteRangeBounds,
   toValidVlanId,
   getCategoryHostBase,
+  getVlanRange,
   normalizeNodeVlansForCatalog,
   numberToIp,
 } from './utils';
@@ -45,10 +51,12 @@ const initialState: NetworkState = {
   layers: [],
   nodes: [
     {
-      id: 'wan_1',
+      id: 'WAN1',
       label: 'WAN/Internet',
       category: 'wan',
       ip: '',
+      hostCount: 1,
+      hostAllocations: [{ id: 'WAN1', ip: '' }],
       cidr: 0,
       vlans: [],
       x: 680,
@@ -147,25 +155,89 @@ function shouldNodeBeGateway(
   return !hasGatewayInSite;
 }
 
+function inferLinkKind(
+  state: NetworkState,
+  fromNodeId: string,
+  toNodeId: string,
+  providedKind?: AddLinkPayload['kind'],
+) {
+  if (providedKind) return providedKind;
+
+  const fromNode = state.nodes.find((node) => node.id === fromNodeId);
+  const toNode = state.nodes.find((node) => node.id === toNodeId);
+  const categories = new Set([fromNode?.category, toNode?.category]);
+
+  if (categories.has('ipsec')) return 'ipsec';
+  if (categories.has('vpn') || categories.has('wireguard')) return 'vpn';
+  if (categories.has('wan')) return 'wan';
+  if (fromNode?.siteId && toNode?.siteId && fromNode.siteId === toNode.siteId) {
+    return 'lan';
+  }
+
+  return 'other';
+}
+
 function normalizeState(input: NetworkState): NetworkState {
+  const siteIdMap = new Map<string, string>();
+  const normalizedSites = (input.sites ?? []).map((site, index) => {
+    const compactId = /^S\d+$/.test(site.id)
+      ? site.id
+      : makeSiteId(parseTrailingNumber(site.id, index + 1));
+    siteIdMap.set(site.id, compactId);
+
+    return {
+      ...site,
+      id: compactId,
+      reserveMarginPercent: Math.max(
+        0,
+        Math.min(100, Math.trunc(Number(site.reserveMarginPercent ?? 10))),
+      ),
+    };
+  });
+
+  const layerIdMap = new Map<string, string>();
+  const normalizedLayers = (input.layers ?? []).map((layer, index) => {
+    const mappedSiteId = siteIdMap.get(layer.siteId) ?? layer.siteId;
+    const layerIndex = Math.max(
+      1,
+      Math.trunc(
+        Number(layer.order ?? parseTrailingNumber(layer.id, index + 1)),
+      ),
+    );
+    const compactId = /^S\d+\.C\d+$/.test(layer.id)
+      ? `${mappedSiteId}.C${parseTrailingNumber(layer.id, layerIndex)}`
+      : makeLayerId(mappedSiteId, layerIndex);
+    layerIdMap.set(layer.id, compactId);
+
+    return {
+      ...layer,
+      id: compactId,
+      siteId: mappedSiteId,
+    };
+  });
+
   const normalizedSiteVlans = Array.isArray(input.siteVlans)
     ? input.siteVlans
         .filter((item) =>
           Boolean(
             item &&
             item.siteId &&
-            input.sites.some((site) => site.id === item.siteId),
+            normalizedSites.some(
+              (site) => site.id === (siteIdMap.get(item.siteId) ?? item.siteId),
+            ),
           ),
         )
         .map((item) => {
-          const site = input.sites.find(
-            (siteItem) => siteItem.id === item.siteId,
+          const mappedSiteId = siteIdMap.get(item.siteId) ?? item.siteId;
+          const site = normalizedSites.find(
+            (siteItem) => siteItem.id === mappedSiteId,
           );
           const vlanId = toValidVlanId(Number(item.vlanId));
 
           const vlanNodes = input.nodes.filter(
             (node) =>
-              node.siteId === item.siteId &&
+              (siteIdMap.get(node.siteId ?? '') ?? node.siteId) ===
+                mappedSiteId &&
               (node.vlans ?? []).map((value) => Number(value)).includes(vlanId),
           );
           const ipNumbers = vlanNodes
@@ -210,8 +282,8 @@ function normalizeState(input: NetworkState): NetworkState {
               : `${startParts[2] ?? '1'}.${startParts[3] ?? '1'}`;
 
           return {
-            id: item.id || `${item.siteId}-vlan-${vlanId}`,
-            siteId: item.siteId,
+            id: item.id || `${mappedSiteId}-vlan-${vlanId}`,
+            siteId: mappedSiteId,
             vlanId,
             name: item.name || `VLAN ${vlanId}`,
             capacity: rawCapacity,
@@ -222,17 +294,56 @@ function normalizeState(input: NetworkState): NetworkState {
         })
     : [];
 
+  const nodeIdMap = new Map<string, string>();
   const normalizedNodes = normalizeNodeVlansForCatalog(
-    input.nodes.map((node) => {
-      const layerOrder = node.layerId
-        ? (input.layers.find((layer) => layer.id === node.layerId)?.order ?? 1)
+    input.nodes.map((node, index) => {
+      const mappedSiteId = node.siteId
+        ? (siteIdMap.get(node.siteId) ?? node.siteId)
+        : undefined;
+      const mappedLayerId = node.layerId
+        ? (layerIdMap.get(node.layerId) ?? node.layerId)
+        : undefined;
+      const layerOrder = mappedLayerId
+        ? (normalizedLayers.find((layer) => layer.id === mappedLayerId)
+            ?.order ?? 1)
         : 0;
       const shouldBeGateway =
-        node.siteId &&
+        mappedSiteId &&
         (node.category === 'router' || node.category === 'firewall') &&
         layerOrder === 1;
+      const compactId = (() => {
+        if (node.category === 'wan') {
+          return /^WAN\d+$/.test(node.id)
+            ? node.id
+            : `WAN${parseTrailingNumber(node.id, 1)}`;
+        }
+
+        const seq = parseTrailingNumber(node.id, index + 1);
+        if (mappedSiteId && mappedLayerId) {
+          return `${mappedLayerId}.${getCategoryCode(node.category)}${seq}`;
+        }
+
+        return `${getCategoryCode(node.category)}${seq}`;
+      })();
+      nodeIdMap.set(node.id, compactId);
+
       return {
         ...node,
+        id: compactId,
+        siteId: mappedSiteId,
+        layerId: mappedLayerId,
+        hostCount:
+          node.category === 'wan'
+            ? 1
+            : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
+        hostAllocations: buildNodeHostAllocations({
+          id: node.id,
+          ip: node.ip,
+          hostCount:
+            node.category === 'wan'
+              ? 1
+              : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
+        }),
         originalIp:
           node.category === 'wan'
             ? undefined
@@ -242,8 +353,12 @@ function normalizeState(input: NetworkState): NetworkState {
         techProfile: ensureTechProfile(node.category, node.techProfile, {
           layerOrder,
           shouldBeGateway: Boolean(shouldBeGateway),
-          siteNodeCount: node.siteId
-            ? input.nodes.filter((item) => item.siteId === node.siteId).length
+          siteNodeCount: mappedSiteId
+            ? input.nodes.filter(
+                (item) =>
+                  (siteIdMap.get(item.siteId ?? '') ?? item.siteId) ===
+                  mappedSiteId,
+              ).length
             : 0,
         }),
       };
@@ -251,31 +366,55 @@ function normalizeState(input: NetworkState): NetworkState {
     normalizedSiteVlans,
   );
 
+  const normalizedLinks = (input.links ?? []).map((link) => ({
+    ...link,
+    from: nodeIdMap.get(link.from) ?? link.from,
+    to: nodeIdMap.get(link.to) ?? link.to,
+  }));
+
+  const remappedAclRules = (input.aclRules ?? []).map((rule) => ({
+    ...rule,
+    sourceNodeId: nodeIdMap.get(rule.sourceNodeId) ?? rule.sourceNodeId,
+    destinationNodeId:
+      nodeIdMap.get(rule.destinationNodeId) ?? rule.destinationNodeId,
+  }));
+
   const fallbackUi = input.ui ?? { inspectorNodeId: null, zoom: 1 };
 
   return {
     ...input,
+    sites: normalizedSites,
+    layers: normalizedLayers,
     siteVlans: normalizedSiteVlans,
     nodes: normalizedNodes,
+    links: normalizedLinks,
     ui: {
       ...fallbackUi,
+      inspectorNodeId: fallbackUi.inspectorNodeId
+        ? (nodeIdMap.get(fallbackUi.inspectorNodeId) ??
+          fallbackUi.inspectorNodeId)
+        : null,
       vlanAssignment:
         fallbackUi.vlanAssignment &&
         siteOwnsVlan(
           normalizedSiteVlans,
-          fallbackUi.vlanAssignment.siteId,
+          siteIdMap.get(fallbackUi.vlanAssignment.siteId) ??
+            fallbackUi.vlanAssignment.siteId,
           toValidVlanId(Number(fallbackUi.vlanAssignment.vlanId)),
         )
           ? {
-              siteId: fallbackUi.vlanAssignment.siteId,
+              siteId:
+                siteIdMap.get(fallbackUi.vlanAssignment.siteId) ??
+                fallbackUi.vlanAssignment.siteId,
               vlanId: toValidVlanId(Number(fallbackUi.vlanAssignment.vlanId)),
             }
           : null,
     },
     aclRules: reconcileAclRules({
-      aclRules: input.aclRules ?? [],
-      links: input.links,
+      aclRules: remappedAclRules,
+      links: normalizedLinks,
       nodes: normalizedNodes,
+      siteVlans: normalizedSiteVlans,
     }),
   };
 }
@@ -312,6 +451,7 @@ export const networkSlice = createSlice({
         name: `Site ${siteNumber}`,
         ipOctet: Math.min(240, siteNumber * 10),
         cidr: 30,
+        reserveMarginPercent: 10,
       });
       state.counters.site += 1;
     },
@@ -366,6 +506,15 @@ export const networkSlice = createSlice({
       }
       if (typeof action.payload.changes.cidr === 'number') {
         site.cidr = Math.max(1, Math.min(32, action.payload.changes.cidr));
+      }
+      if (typeof action.payload.changes.reserveMarginPercent === 'number') {
+        site.reserveMarginPercent = Math.max(
+          0,
+          Math.min(
+            100,
+            Math.trunc(action.payload.changes.reserveMarginPercent),
+          ),
+        );
       }
     },
     addSiteVlan: (state, action: PayloadAction<AddSiteVlanPayload>) => {
@@ -553,8 +702,8 @@ export const networkSlice = createSlice({
       const siteExists = state.sites.some((site) => site.id === siteId);
       if (!siteExists) return;
 
-      const layerId = makeLayerId(state.counters.layer);
       const order = getLayerOrder(state.layers, siteId);
+      const layerId = makeLayerId(siteId, order);
       state.layers.push({
         id: layerId,
         siteId,
@@ -613,14 +762,19 @@ export const networkSlice = createSlice({
       const layer = state.layers.find((item) => item.id === layerId);
       if (!site || !layer) return;
 
-      const categoryCount =
-        state.nodes.filter(
-          (node) =>
-            node.siteId === siteId &&
-            node.layerId === layerId &&
-            node.category === category,
-        ).length + 1;
+      const categoryCount = getNextNodeSequence(
+        state.nodes,
+        category,
+        siteId,
+        layerId,
+      );
       const nodeId = makeNodeId(category, categoryCount, siteId, layerId);
+      const nodeIp = buildNodeIp(
+        site.ipOctet,
+        layer.order,
+        category,
+        categoryCount,
+      );
       const position = getInitialNodePosition(
         state,
         siteId,
@@ -634,13 +788,15 @@ export const networkSlice = createSlice({
         layerId,
         category,
         label: buildNodeLabel(category, siteId, layer.order, categoryCount),
-        ip: buildNodeIp(site.ipOctet, layer.order, category, categoryCount),
+        ip: nodeIp,
         originalIp: buildNodeIp(
           site.ipOctet,
           layer.order,
           category,
           categoryCount,
         ),
+        hostCount: 1,
+        hostAllocations: [{ id: nodeId, ip: nodeIp }],
         cidr: site.cidr,
         vlans: [],
         x: position.x,
@@ -665,18 +821,18 @@ export const networkSlice = createSlice({
       action: PayloadAction<{ category: NodeCategory }>,
     ) => {
       const category = action.payload.category;
-      const categoryCount =
-        state.nodes.filter(
-          (node) => !node.siteId && !node.layerId && node.category === category,
-        ).length + 1;
+      const categoryCount = getNextNodeSequence(state.nodes, category);
       const nodeId = makeNodeId(category, categoryCount);
       const nodeOrder = state.counters.node;
+      const floatingIp = `200.200.1.${Math.max(1, Math.min(254, nodeOrder))}`;
       state.nodes.push({
         id: nodeId,
         category,
         label: `${category.toUpperCase()} ${categoryCount}`,
-        ip: `200.200.1.${Math.max(1, Math.min(254, nodeOrder))}`,
-        originalIp: `200.200.1.${Math.max(1, Math.min(254, nodeOrder))}`,
+        ip: floatingIp,
+        originalIp: floatingIp,
+        hostCount: 1,
+        hostAllocations: [{ id: nodeId, ip: floatingIp }],
         cidr: 30,
         vlans: [],
         x: 860,
@@ -714,14 +870,27 @@ export const networkSlice = createSlice({
       const node = state.nodes.find((item) => item.id === action.payload.id);
       if (!node) return;
       const isWan = node.category === 'wan';
+      let requestedIp: string | undefined;
+      let needsAddressRefresh = false;
+
       if (typeof action.payload.changes.label === 'string') {
         node.label = action.payload.changes.label;
       }
       if (!isWan && typeof action.payload.changes.ip === 'string') {
-        node.ip = action.payload.changes.ip;
+        requestedIp = action.payload.changes.ip;
         if ((node.vlans ?? []).length === 0) {
-          node.originalIp = action.payload.changes.ip;
+          node.ip = requestedIp;
+          node.originalIp = requestedIp;
+        } else {
+          needsAddressRefresh = true;
         }
+      }
+      if (!isWan && typeof action.payload.changes.hostCount === 'number') {
+        node.hostCount = Math.max(
+          1,
+          Math.trunc(action.payload.changes.hostCount || 1),
+        );
+        needsAddressRefresh = true;
       }
       if (!isWan && typeof action.payload.changes.cidr === 'number') {
         node.cidr = action.payload.changes.cidr;
@@ -749,30 +918,47 @@ export const networkSlice = createSlice({
         const hadVlansBefore = previousVlans.length > 0;
 
         if (!hasNowVlans) {
-          assignNodeIpOutsideVlans(state, node);
+          node.hostCount = 1;
         } else {
           if (!hadVlansBefore && node.ip) {
             node.originalIp = node.originalIp ?? node.ip;
           }
-          const targetVlan =
-            (siteId
-              ? state.siteVlans.find(
-                  (item) =>
-                    item.siteId === siteId && item.vlanId === node.vlans[0],
-                )
-              : null) ?? null;
-
-          if (targetVlan) {
-            const moved = assignNodeIpInsideVlan(state, node, targetVlan);
-            if (!moved) {
-              state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para o elemento ${node.label}.`;
-            }
-          }
         }
+
+        needsAddressRefresh = true;
       }
       if (typeof action.payload.changes.description === 'string') {
         node.description = action.payload.changes.description;
       }
+
+      if (!isWan && needsAddressRefresh) {
+        const siteId = node.siteId;
+        const targetVlan =
+          node.vlans.length > 0 && siteId
+            ? (state.siteVlans.find(
+                (item) =>
+                  item.siteId === siteId && item.vlanId === node.vlans[0],
+              ) ?? null)
+            : null;
+
+        if (!targetVlan) {
+          node.hostCount = 1;
+          assignNodeIpOutsideVlans(state, node);
+        } else {
+          const moved = assignNodeIpInsideVlan(
+            state,
+            node,
+            targetVlan,
+            requestedIp ?? node.ip,
+          );
+
+          if (!moved) {
+            state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para reservar ${node.hostCount} IP(s) para ${node.label}.`;
+          }
+        }
+      }
+
+      node.hostAllocations = buildNodeHostAllocations(node);
     },
     updateNodeTechField: (
       state,
@@ -840,7 +1026,7 @@ export const networkSlice = createSlice({
         id: `link_${state.counters.link}`,
         from,
         to,
-        kind: action.payload.kind ?? 'other',
+        kind: inferLinkKind(state, from, to, action.payload.kind),
       });
       state.counters.link += 1;
       state.aclRules = reconcileAclRules(state);
@@ -862,6 +1048,27 @@ export const networkSlice = createSlice({
       if (typeof action.payload.changes.enabled === 'boolean') {
         rule.enabled = action.payload.changes.enabled;
       }
+
+      if (typeof action.payload.changes.sourceScope === 'string') {
+        rule.sourceScope = action.payload.changes.sourceScope;
+      }
+      if ('sourceVlanId' in action.payload.changes) {
+        rule.sourceVlanId = action.payload.changes.sourceVlanId;
+      }
+      if ('sourceIp' in action.payload.changes) {
+        rule.sourceIp = action.payload.changes.sourceIp;
+      }
+      if (typeof action.payload.changes.destinationScope === 'string') {
+        rule.destinationScope = action.payload.changes.destinationScope;
+      }
+      if ('destinationVlanId' in action.payload.changes) {
+        rule.destinationVlanId = action.payload.changes.destinationVlanId;
+      }
+      if ('destinationIp' in action.payload.changes) {
+        rule.destinationIp = action.payload.changes.destinationIp;
+      }
+
+      Object.assign(rule, normalizeAclRule(rule, state.nodes, state.siteVlans));
     },
     setInspectorNodeId: (state, action: PayloadAction<string | null>) => {
       state.ui.inspectorNodeId = action.payload;

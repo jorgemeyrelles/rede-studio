@@ -6,6 +6,7 @@ export type Site = {
   name: string;
   ipOctet: number;
   cidr: number;
+  reserveMarginPercent: number;
 };
 
 export type Layer = {
@@ -40,6 +41,8 @@ export type NodeItem = {
   category: NodeCategory;
   ip: string;
   originalIp?: string;
+  hostCount: number;
+  hostAllocations: Array<{ id: string; ip: string }>;
   cidr: number;
   vlans: number[];
   x: number;
@@ -55,11 +58,19 @@ export type LinkItem = {
   kind: LinkKind;
 };
 
+export type AclEndpointScope = 'node' | 'vlan' | 'ip';
+
 export type AclRule = {
   id: string;
   linkId?: string;
   sourceNodeId: string;
   destinationNodeId: string;
+  sourceScope: AclEndpointScope;
+  sourceVlanId?: number;
+  sourceIp?: string;
+  destinationScope: AclEndpointScope;
+  destinationVlanId?: number;
+  destinationIp?: string;
   action: AclAction;
   service: string;
   enabled: boolean;

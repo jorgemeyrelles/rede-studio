@@ -19,8 +19,10 @@ export type NodeCategory =
   | 'dhcp'
   | 'nas'
   | 'printer'
+  | 'printer-3d'
   | 'voip'
   | 'pc'
+  | 'smartphone'
   | 'server';
 
 export type LinkKind = 'lan' | 'wan' | 'vpn' | 'ipsec' | 'other';

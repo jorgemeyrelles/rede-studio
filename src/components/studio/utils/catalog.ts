@@ -23,8 +23,10 @@ export function getNodeIconName(category: NodeCategory): string {
   if (category === 'pc') return 'pc';
   if (category === 'server' || category === 'nas') return 'server';
   if (category === 'printer') return 'printer';
+  if (category === 'printer-3d') return 'printer3d';
   if (category === 'access-point') return 'ap';
   if (category === 'voip') return 'phone';
+  if (category === 'smartphone') return 'mobile';
   if (
     category === 'vpn' ||
     category === 'ipsec' ||

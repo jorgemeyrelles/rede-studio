@@ -4,10 +4,13 @@ export function resolveRouteType(
   linkKind: string,
   fromSiteId: string | undefined,
   toSiteId: string | undefined,
+  fromCategory: string | undefined,
   toCategory: string | undefined,
 ): RouteType {
   if (linkKind === 'vpn' || linkKind === 'ipsec') return 'VPN';
-  if (toCategory === 'wan') return 'Default';
+  if (linkKind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
+    return 'Default';
+  }
   if (fromSiteId && toSiteId && fromSiteId === toSiteId) return 'Direta';
   return 'Estática';
 }

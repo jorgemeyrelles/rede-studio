@@ -305,11 +305,13 @@ export function colorByCategory(category: string) {
   if (category === 'dhcp') return '#84cc16';
   if (category === 'nas') return '#6366f1';
   if (category === 'printer') return '#94a3b8';
+  if (category === 'printer-3d') return '#f0abfc';
   if (category === 'voip') return '#fb7185';
   if (category === 'firewall') return '#fb7185';
   if (category === 'router') return '#22d3ee';
   if (category === 'switch') return '#60a5fa';
   if (category === 'pc') return '#facc15';
+  if (category === 'smartphone') return '#34d399';
   if (category === 'server') return '#a78bfa';
   if (category === 'wan') return '#4ade80';
   if (

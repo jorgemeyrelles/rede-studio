@@ -159,6 +159,14 @@ export type RouteFirewallCopy = {
   interfaceHelpLine1: string;
   interfaceHelpLine2: string;
   interfaceHelpLine3: string;
+  endpointType: string;
+  endpointNode: string;
+  endpointVlan: string;
+  endpointIp: string;
+  selectVlan: string;
+  ipAddress: string;
+  reserveSummary: string;
+  reserveRange: string;
 };
 
 export type NetworkDiagramCopy = {
@@ -166,6 +174,9 @@ export type NetworkDiagramCopy = {
   id: string;
   name: string;
   vlans: string;
+  quantity: string;
+  maxHostsInVlan: string;
+  reservedRange: string;
   noVlanAssigned: string;
   wanNoLocalIp: string;
   info: string;
@@ -175,4 +186,6 @@ export type NetworkDiagramCopy = {
   no: string;
   siteDetails: string;
   octet: string;
+  reserveMargin: string;
+  reserveRange: string;
 };
