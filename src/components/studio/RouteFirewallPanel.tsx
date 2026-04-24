@@ -5,7 +5,7 @@ import {
   selectFirewallRules,
   selectRouteTable,
 } from '../../features/network/selectors';
-import type { AclAction, AclEndpointScope } from '../../features/network/types';
+import type { AclAction } from '../../features/network/types';
 import {
   getRouteFirewallCopy,
   ROUTE_TYPE_CLASS,
@@ -152,26 +152,93 @@ export default function RouteFirewallPanel({
       .sort((a, b) => a.vlanId - b.vlanId);
   };
 
-  const handleScopeChange = (
-    ruleId: string,
-    side: 'source' | 'destination',
-    scope: AclEndpointScope,
-    defaultVlanId?: number,
-  ) => {
-    const isSource = side === 'source';
+  // ── Tabela ACL colapsável ─────────────────────────────────────────────────
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [childActions, setChildActions] = useState<Record<string, AclAction>>({});
+  const [expansionFilters, setExpansionFilters] = useState<
+    Record<string, { origin: string; dest: string }>
+  >({});
 
-    dispatch(
-      updateAclRule({
-        id: ruleId,
-        changes: {
-          [isSource ? 'sourceScope' : 'destinationScope']: scope,
-          [isSource ? 'sourceVlanId' : 'destinationVlanId']:
-            scope === 'vlan' ? defaultVlanId : undefined,
-          [isSource ? 'sourceIp' : 'destinationIp']:
-            scope === 'ip' ? '' : undefined,
-        },
-      }),
-    );
+  const grouped = firewallRules.reduce<
+    {
+      parent: (typeof firewallRules)[number];
+      children: (typeof firewallRules)[number][];
+    }[]
+  >((acc, row) => {
+    if (!row.isDerivedAllocation) {
+      acc.push({ parent: row, children: [] });
+    } else if (acc.length > 0) {
+      acc[acc.length - 1].children.push(row);
+    }
+    return acc;
+  }, []);
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const getChildAction = (childId: string, parentAction: AclAction): AclAction =>
+    (childActions[childId] as AclAction | undefined) ?? parentAction;
+
+  const setChildAction = (childId: string, action: AclAction) =>
+    setChildActions((prev) => ({ ...prev, [childId]: action }));
+
+  const getFilter = (ruleId: string) =>
+    expansionFilters[ruleId] ?? { origin: '', dest: '' };
+
+  const setFilterValue = (
+    ruleId: string,
+    side: 'origin' | 'dest',
+    value: string,
+  ) =>
+    setExpansionFilters((prev) => ({
+      ...prev,
+      [ruleId]: { ...getFilter(ruleId), [side]: value },
+    }));
+
+  type ExpansionRow = { id: string; origem: string; destino: string };
+
+  const getExpansionRows = (
+    rule: (typeof grouped)[number]['parent'],
+    children: (typeof grouped)[number]['children'],
+  ): ExpansionRow[] => {
+    if (children.length > 0) {
+      return children.map((c) => ({ id: c.id, origem: c.origem, destino: c.destino }));
+    }
+    // Fallback: linhas por VLAN quando não há alocações por host
+    const srcVlans = getVlanOptions(rule.sourceNodeSiteId);
+    const dstVlans = getVlanOptions(rule.destinationNodeSiteId);
+    if (srcVlans.length === 0 && dstVlans.length === 0) return [];
+
+    if (srcVlans.length > 0 && dstVlans.length > 0) {
+      return srcVlans.flatMap((sv) =>
+        dstVlans.map((dv) => ({
+          id: `${rule.aclRuleId}|sv${sv.vlanId}|dv${dv.vlanId}`,
+          origem: `VLAN ${sv.vlanId} (${sv.name})`,
+          destino: `VLAN ${dv.vlanId} (${dv.name})`,
+        })),
+      );
+    }
+    if (srcVlans.length > 0) {
+      return srcVlans.map((sv) => ({
+        id: `${rule.aclRuleId}|sv${sv.vlanId}`,
+        origem: `VLAN ${sv.vlanId} (${sv.name})`,
+        destino: rule.destino,
+      }));
+    }
+    return dstVlans.map((dv) => ({
+      id: `${rule.aclRuleId}|dv${dv.vlanId}`,
+      origem: rule.origem,
+      destino: `VLAN ${dv.vlanId} (${dv.name})`,
+    }));
   };
 
   return (
@@ -322,248 +389,263 @@ export default function RouteFirewallPanel({
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-slate-400">
-                <th className="w-[40px] border-b border-slate-700 px-1 py-1">
+                <th className="w-7 border-b border-slate-700 px-1 py-1" />
+                <th className="w-[36px] border-b border-slate-700 px-1 py-1">
                   ID
                 </th>
-                <th className="w-[180px] border-b border-slate-700 px-1 py-1">
+                <th className="w-[110px] border-b border-slate-700 px-1 py-1">
                   {copy.action}
                 </th>
-                <th className="w-[115px] border-b border-slate-700 px-1 py-1">
+                <th className="border-b border-slate-700 px-1 py-1">
                   {copy.source}
                 </th>
-                <th className="w-[138px] border-b border-slate-700 px-1 py-1">
-                  {copy.endpointType} ({copy.source})
-                </th>
-                <th className="w-[115px] border-b border-slate-700 px-1 py-1">
+                <th className="border-b border-slate-700 px-1 py-1">
                   {copy.destination}
                 </th>
-                <th className="w-[138px] border-b border-slate-700 px-1 py-1">
-                  {copy.endpointType} ({copy.destination})
-                </th>
-                <th className="w-[160px] border-b border-slate-700 px-1 py-1">
+                <th className="w-[130px] border-b border-slate-700 px-1 py-1">
                   {copy.portService}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {firewallRules.length === 0 && (
+              {grouped.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-1 py-2 text-slate-500">
+                  <td colSpan={6} className="px-1 py-2 text-slate-500">
                     {copy.emptyRules}
                   </td>
                 </tr>
               )}
-              {firewallRules.map((rule) => (
-                <tr key={rule.id}>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <TruncatedValueTooltip
-                      value={rule.id}
-                      maxWidthClass="max-w-[26px]"
-                      className="text-[10px] text-slate-400"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <select
-                      value={rule.acao}
-                      onChange={(event) => {
-                        dispatch(
-                          updateAclRule({
-                            id: rule.aclRuleId,
-                            changes: {
-                              action: event.target.value as AclAction,
-                            },
-                          }),
-                        );
-                      }}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100"
-                    >
-                      <option value="ALLOW">ALLOW</option>
-                      <option value="DENY">DENY</option>
-                    </select>
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <TruncatedValueTooltip
-                      value={rule.origem}
-                      maxWidthClass="max-w-[115px]"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <div className="mt-1 space-y-1">
-                      <select
-                        value={rule.sourceScope}
-                        onChange={(event) => {
-                          const scope = event.target.value as AclEndpointScope;
-                          const vlanOptions = getVlanOptions(
-                            rule.sourceNodeSiteId,
-                          );
-                          handleScopeChange(
-                            rule.aclRuleId,
-                            'source',
-                            scope,
-                            vlanOptions[0]?.vlanId,
-                          );
-                        }}
-                        disabled={rule.isDerivedAllocation}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <option value="node">{copy.endpointNode}</option>
-                        <option value="vlan">{copy.endpointVlan}</option>
-                        <option value="ip">{copy.endpointIp}</option>
-                      </select>
+              {grouped.map(({ parent: rule, children }) => {
+                const expansionRows = getExpansionRows(rule, children);
+                const isExpandable = expansionRows.length > 0;
+                const isOpen = expandedIds.has(rule.aclRuleId);
+                const filter = getFilter(rule.aclRuleId);
 
-                      {rule.sourceScope === 'vlan' && (
-                        <select
-                          value={rule.sourceVlanId ?? ''}
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            dispatch(
-                              updateAclRule({
-                                id: rule.aclRuleId,
-                                changes: {
-                                  sourceVlanId: Number.isFinite(value)
-                                    ? value
-                                    : undefined,
-                                },
-                              }),
-                            );
-                          }}
-                          disabled={rule.isDerivedAllocation}
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                const filteredRows = expansionRows.filter((row) => {
+                  const originMatch = row.origem
+                    .toLowerCase()
+                    .includes(filter.origin.toLowerCase());
+                  const destMatch = row.destino
+                    .toLowerCase()
+                    .includes(filter.dest.toLowerCase());
+                  return originMatch && destMatch;
+                });
+
+                return (
+                  <Fragment key={rule.id}>
+                    {/* ── Linha principal da regra ────────────────────────── */}
+                    <tr className="hover:bg-slate-800/40">
+                      {/* Chevron */}
+                      <td className="border-b border-slate-800 px-1 py-1">
+                        <button
+                          type="button"
+                          aria-label={isOpen ? 'Recolher alocações' : 'Expandir alocações'}
+                          onClick={() => isExpandable && toggleExpand(rule.aclRuleId)}
+                          disabled={!isExpandable}
+                          className={`flex h-5 w-5 items-center justify-center rounded transition-all duration-150 ${
+                            isExpandable
+                              ? 'cursor-pointer text-amber-400 hover:bg-slate-700 hover:text-amber-300'
+                              : 'cursor-not-allowed text-slate-600 opacity-40'
+                          }`}
                         >
-                          <option value="">{copy.selectVlan}</option>
-                          {getVlanOptions(rule.sourceNodeSiteId).map((vlan) => (
-                            <option
-                              key={`source-${rule.aclRuleId}-${vlan.vlanId}`}
-                              value={vlan.vlanId}
-                            >
-                              VLAN {vlan.vlanId} ({vlan.name})
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className={`h-3 w-3 transition-transform duration-200 ${
+                              isOpen ? 'rotate-90' : 'rotate-0'
+                            }`}
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </td>
 
-                      {rule.sourceScope === 'ip' && (
-                        <input
-                          value={rule.sourceIp ?? ''}
-                          onChange={(event) => {
-                            dispatch(
-                              updateAclRule({
-                                id: rule.aclRuleId,
-                                changes: {
-                                  sourceIp: event.target.value,
-                                },
-                              }),
-                            );
-                          }}
-                          disabled={rule.isDerivedAllocation}
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          placeholder={copy.ipAddress}
+                      {/* ID */}
+                      <td className="border-b border-slate-800 px-1 py-1">
+                        <TruncatedValueTooltip
+                          value={rule.id}
+                          maxWidthClass="max-w-[26px]"
+                          className="text-[10px] text-slate-400"
                         />
-                      )}
-                    </div>
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <TruncatedValueTooltip
-                      value={rule.destino}
-                      maxWidthClass="max-w-[115px]"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <div className="mt-1 space-y-1">
-                      <select
-                        value={rule.destinationScope}
-                        onChange={(event) => {
-                          const scope = event.target.value as AclEndpointScope;
-                          const vlanOptions = getVlanOptions(
-                            rule.destinationNodeSiteId,
-                          );
-                          handleScopeChange(
-                            rule.aclRuleId,
-                            'destination',
-                            scope,
-                            vlanOptions[0]?.vlanId,
-                          );
-                        }}
-                        disabled={rule.isDerivedAllocation}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <option value="node">{copy.endpointNode}</option>
-                        <option value="vlan">{copy.endpointVlan}</option>
-                        <option value="ip">{copy.endpointIp}</option>
-                      </select>
+                      </td>
 
-                      {rule.destinationScope === 'vlan' && (
+                      {/* Ação */}
+                      <td className="border-b border-slate-800 px-1 py-1">
                         <select
-                          value={rule.destinationVlanId ?? ''}
+                          value={rule.acao}
                           onChange={(event) => {
-                            const value = Number(event.target.value);
                             dispatch(
                               updateAclRule({
                                 id: rule.aclRuleId,
-                                changes: {
-                                  destinationVlanId: Number.isFinite(value)
-                                    ? value
-                                    : undefined,
-                                },
+                                changes: { action: event.target.value as AclAction },
                               }),
                             );
                           }}
-                          disabled={rule.isDerivedAllocation}
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100"
                         >
-                          <option value="">{copy.selectVlan}</option>
-                          {getVlanOptions(rule.destinationNodeSiteId).map(
-                            (vlan) => (
-                              <option
-                                key={`destination-${rule.aclRuleId}-${vlan.vlanId}`}
-                                value={vlan.vlanId}
-                              >
-                                VLAN {vlan.vlanId} ({vlan.name})
-                              </option>
-                            ),
-                          )}
+                          <option value="ALLOW">ALLOW</option>
+                          <option value="DENY">DENY</option>
                         </select>
-                      )}
+                      </td>
 
-                      {rule.destinationScope === 'ip' && (
+                      {/* Origem */}
+                      <td className="border-b border-slate-800 px-1 py-1">
+                        <TruncatedValueTooltip value={rule.origem} />
+                      </td>
+
+                      {/* Destino */}
+                      <td className="border-b border-slate-800 px-1 py-1">
+                        <TruncatedValueTooltip value={rule.destino} />
+                      </td>
+
+                      {/* Serviço */}
+                      <td className="border-b border-slate-800 px-1 py-1">
                         <input
-                          value={rule.destinationIp ?? ''}
+                          value={rule.servico}
                           onChange={(event) => {
                             dispatch(
                               updateAclRule({
                                 id: rule.aclRuleId,
-                                changes: {
-                                  destinationIp: event.target.value,
-                                },
+                                changes: { service: event.target.value },
                               }),
                             );
                           }}
-                          disabled={rule.isDerivedAllocation}
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          placeholder={copy.ipAddress}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[10px] text-slate-100"
+                          placeholder="ANY, VPN, HTTPS:443"
                         />
-                      )}
-                    </div>
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1">
-                    <input
-                      value={rule.servico}
-                      onChange={(event) => {
-                        dispatch(
-                          updateAclRule({
-                            id: rule.aclRuleId,
-                            changes: {
-                              service: event.target.value,
-                            },
-                          }),
-                        );
-                      }}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[10px] text-slate-100"
-                      placeholder="ANY, VPN, HTTPS:443"
-                    />
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                    </tr>
+
+                    {/* ── Linha de expansão ──────────────────────────────── */}
+                    {isExpandable && (
+                      <tr>
+                        <td colSpan={6} className="p-0">
+                          <div
+                            className={`overflow-hidden transition-all duration-200 ${
+                              isOpen ? 'max-h-[600px]' : 'max-h-0'
+                            }`}
+                          >
+                            <div className="ml-7 border-l-2 border-amber-500/40 bg-slate-800/50">
+                              {/* Filtros */}
+                              <div className="flex gap-2 border-b border-slate-700/60 px-2 py-1.5">
+                                <div className="flex flex-1 items-center gap-1">
+                                  <span className="shrink-0 text-[10px] text-slate-500">
+                                    Origem:
+                                  </span>
+                                  <input
+                                    value={filter.origin}
+                                    onChange={(e) =>
+                                      setFilterValue(rule.aclRuleId, 'origin', e.target.value)
+                                    }
+                                    placeholder="filtrar IP / host…"
+                                    className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
+                                  />
+                                </div>
+                                <div className="flex flex-1 items-center gap-1">
+                                  <span className="shrink-0 text-[10px] text-slate-500">
+                                    Destino:
+                                  </span>
+                                  <input
+                                    value={filter.dest}
+                                    onChange={(e) =>
+                                      setFilterValue(rule.aclRuleId, 'dest', e.target.value)
+                                    }
+                                    placeholder="filtrar IP / host…"
+                                    className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
+                                  />
+                                </div>
+                                {(filter.origin || filter.dest) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpansionFilters((prev) => ({
+                                        ...prev,
+                                        [rule.aclRuleId]: { origin: '', dest: '' },
+                                      }))
+                                    }
+                                    className="shrink-0 text-[10px] text-slate-500 hover:text-slate-300"
+                                    aria-label="Limpar filtros"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Sub-tabela */}
+                              <table className="w-full border-collapse">
+                                <thead>
+                                  <tr className="text-left text-[10px] text-slate-500">
+                                    <th className="w-6 px-2 py-0.5">#</th>
+                                    <th className="w-[100px] px-2 py-0.5">Ação</th>
+                                    <th className="px-2 py-0.5">Origem</th>
+                                    <th className="px-2 py-0.5">Destino</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filteredRows.length === 0 && (
+                                    <tr>
+                                      <td
+                                        colSpan={4}
+                                        className="px-2 py-1 text-[10px] text-slate-600"
+                                      >
+                                        Nenhum resultado para os filtros aplicados.
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {filteredRows.map((row, idx) => (
+                                    <tr key={row.id} className="hover:bg-slate-700/30">
+                                      <td className="px-2 py-0.5 text-[10px] text-slate-500">
+                                        {idx + 1}
+                                      </td>
+                                      <td className="px-2 py-0.5">
+                                        <select
+                                          value={getChildAction(row.id, rule.acao)}
+                                          onChange={(e) =>
+                                            setChildAction(row.id, e.target.value as AclAction)
+                                          }
+                                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+                                        >
+                                          <option value="ALLOW">ALLOW</option>
+                                          <option value="DENY">DENY</option>
+                                        </select>
+                                      </td>
+                                      <td className="px-2 py-0.5">
+                                        <TruncatedValueTooltip
+                                          value={row.origem}
+                                          maxWidthClass="max-w-[200px]"
+                                          className="font-mono text-[10px] text-slate-300"
+                                        />
+                                      </td>
+                                      <td className="px-2 py-0.5">
+                                        <TruncatedValueTooltip
+                                          value={row.destino}
+                                          maxWidthClass="max-w-[200px]"
+                                          className="font-mono text-[10px] text-slate-300"
+                                        />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+
+                              {filteredRows.length > 0 && (
+                                <p className="px-2 py-1 text-[10px] text-slate-600">
+                                  {filteredRows.length} de {expansionRows.length} alocaç
+                                  {expansionRows.length === 1 ? 'ão' : 'ões'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
