@@ -154,7 +154,9 @@ export default function RouteFirewallPanel({
 
   // ── Tabela ACL colapsável ─────────────────────────────────────────────────
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [childActions, setChildActions] = useState<Record<string, AclAction>>({});
+  const [childActions, setChildActions] = useState<Record<string, AclAction>>(
+    {},
+  );
   const [expansionFilters, setExpansionFilters] = useState<
     Record<string, { origin: string; dest: string }>
   >({});
@@ -185,7 +187,10 @@ export default function RouteFirewallPanel({
     });
   };
 
-  const getChildAction = (childId: string, parentAction: AclAction): AclAction =>
+  const getChildAction = (
+    childId: string,
+    parentAction: AclAction,
+  ): AclAction =>
     (childActions[childId] as AclAction | undefined) ?? parentAction;
 
   const setChildAction = (childId: string, action: AclAction) =>
@@ -211,7 +216,11 @@ export default function RouteFirewallPanel({
     children: (typeof grouped)[number]['children'],
   ): ExpansionRow[] => {
     if (children.length > 0) {
-      return children.map((c) => ({ id: c.id, origem: c.origem, destino: c.destino }));
+      return children.map((c) => ({
+        id: c.id,
+        origem: c.origem,
+        destino: c.destino,
+      }));
     }
     // Fallback: linhas por VLAN quando não há alocações por host
     const srcVlans = getVlanOptions(rule.sourceNodeSiteId);
@@ -439,8 +448,12 @@ export default function RouteFirewallPanel({
                       <td className="border-b border-slate-800 px-1 py-1">
                         <button
                           type="button"
-                          aria-label={isOpen ? 'Recolher alocações' : 'Expandir alocações'}
-                          onClick={() => isExpandable && toggleExpand(rule.aclRuleId)}
+                          aria-label={
+                            isOpen ? 'Recolher alocações' : 'Expandir alocações'
+                          }
+                          onClick={() =>
+                            isExpandable && toggleExpand(rule.aclRuleId)
+                          }
                           disabled={!isExpandable}
                           className={`flex h-5 w-5 items-center justify-center rounded transition-all duration-150 ${
                             isExpandable
@@ -481,7 +494,9 @@ export default function RouteFirewallPanel({
                             dispatch(
                               updateAclRule({
                                 id: rule.aclRuleId,
-                                changes: { action: event.target.value as AclAction },
+                                changes: {
+                                  action: event.target.value as AclAction,
+                                },
                               }),
                             );
                           }}
@@ -539,7 +554,11 @@ export default function RouteFirewallPanel({
                                   <input
                                     value={filter.origin}
                                     onChange={(e) =>
-                                      setFilterValue(rule.aclRuleId, 'origin', e.target.value)
+                                      setFilterValue(
+                                        rule.aclRuleId,
+                                        'origin',
+                                        e.target.value,
+                                      )
                                     }
                                     placeholder="filtrar IP / host…"
                                     className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
@@ -552,7 +571,11 @@ export default function RouteFirewallPanel({
                                   <input
                                     value={filter.dest}
                                     onChange={(e) =>
-                                      setFilterValue(rule.aclRuleId, 'dest', e.target.value)
+                                      setFilterValue(
+                                        rule.aclRuleId,
+                                        'dest',
+                                        e.target.value,
+                                      )
                                     }
                                     placeholder="filtrar IP / host…"
                                     className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
@@ -564,7 +587,10 @@ export default function RouteFirewallPanel({
                                     onClick={() =>
                                       setExpansionFilters((prev) => ({
                                         ...prev,
-                                        [rule.aclRuleId]: { origin: '', dest: '' },
+                                        [rule.aclRuleId]: {
+                                          origin: '',
+                                          dest: '',
+                                        },
                                       }))
                                     }
                                     className="shrink-0 text-[10px] text-slate-500 hover:text-slate-300"
@@ -580,7 +606,9 @@ export default function RouteFirewallPanel({
                                 <thead>
                                   <tr className="text-left text-[10px] text-slate-500">
                                     <th className="w-6 px-2 py-0.5">#</th>
-                                    <th className="w-[100px] px-2 py-0.5">Ação</th>
+                                    <th className="w-[100px] px-2 py-0.5">
+                                      Ação
+                                    </th>
                                     <th className="px-2 py-0.5">Origem</th>
                                     <th className="px-2 py-0.5">Destino</th>
                                   </tr>
@@ -592,20 +620,30 @@ export default function RouteFirewallPanel({
                                         colSpan={4}
                                         className="px-2 py-1 text-[10px] text-slate-600"
                                       >
-                                        Nenhum resultado para os filtros aplicados.
+                                        Nenhum resultado para os filtros
+                                        aplicados.
                                       </td>
                                     </tr>
                                   )}
                                   {filteredRows.map((row, idx) => (
-                                    <tr key={row.id} className="hover:bg-slate-700/30">
+                                    <tr
+                                      key={row.id}
+                                      className="hover:bg-slate-700/30"
+                                    >
                                       <td className="px-2 py-0.5 text-[10px] text-slate-500">
                                         {idx + 1}
                                       </td>
                                       <td className="px-2 py-0.5">
                                         <select
-                                          value={getChildAction(row.id, rule.acao)}
+                                          value={getChildAction(
+                                            row.id,
+                                            rule.acao,
+                                          )}
                                           onChange={(e) =>
-                                            setChildAction(row.id, e.target.value as AclAction)
+                                            setChildAction(
+                                              row.id,
+                                              e.target.value as AclAction,
+                                            )
                                           }
                                           className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
                                         >
@@ -634,7 +672,8 @@ export default function RouteFirewallPanel({
 
                               {filteredRows.length > 0 && (
                                 <p className="px-2 py-1 text-[10px] text-slate-600">
-                                  {filteredRows.length} de {expansionRows.length} alocaç
+                                  {filteredRows.length} de{' '}
+                                  {expansionRows.length} alocaç
                                   {expansionRows.length === 1 ? 'ão' : 'ões'}
                                 </p>
                               )}
