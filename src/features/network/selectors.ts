@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
-import type { RouteRow } from './types';
+import type { FirewallGroupedResult, FirewallRuleRow, RouteRow } from './types';
 import { getNodeReservedRange, getSiteReserveRange } from './utils';
 import { resolveGateway, resolveInterface, resolveRouteType } from './utils';
 
@@ -110,7 +110,7 @@ export const selectRouteTable = createSelector(
 export const selectFirewallRules = createSelector(
   [selectNetworkState],
   (network) => {
-    const { aclRules, nodes, siteVlans } = network;
+    const { aclRules, nodes, siteVlans, links } = network;
 
     const getNode = (nodeId: string) =>
       nodes.find((item) => item.id === nodeId) ?? null;
@@ -183,6 +183,44 @@ export const selectFirewallRules = createSelector(
     };
 
     return aclRules.flatMap((rule) => {
+      const ruleSource: 'topology' | 'manual' =
+        rule.source ?? (rule.managed ? 'topology' : 'manual');
+      const rulePriority = rule.priority ?? (rule.managed ? 9999 : 500);
+
+      // Conflict: manual DENY that shadows a topology ALLOW on the same inter-site path
+      const ruleSrcSiteId = getNode(rule.sourceNodeId)?.siteId;
+      const ruleDstSiteId = getNode(rule.destinationNodeId)?.siteId;
+      const hasTopologyAllow =
+        ruleSrcSiteId &&
+        ruleDstSiteId &&
+        aclRules.some((r) => {
+          const rSource: 'topology' | 'manual' =
+            r.source ?? (r.managed ? 'topology' : 'manual');
+          if (rSource !== 'topology' || r.action !== 'ALLOW') return false;
+          const rSrcSite = getNode(r.sourceNodeId)?.siteId;
+          const rDstSite = getNode(r.destinationNodeId)?.siteId;
+          if (!rSrcSite || !rDstSite) return false;
+          return (
+            (rSrcSite === ruleSrcSiteId && rDstSite === ruleDstSiteId) ||
+            (rSrcSite === ruleDstSiteId && rDstSite === ruleSrcSiteId)
+          );
+        });
+      const hasConflict =
+        ruleSource === 'manual' &&
+        rule.action === 'DENY' &&
+        Boolean(hasTopologyAllow);
+      void ruleSrcSiteId;
+      void ruleDstSiteId;
+
+      // Stateless without return rule
+      const isStateful = rule.stateful ?? true;
+      const hasReturnRule = aclRules.some(
+        (r) =>
+          r.id === rule.returnRuleId ||
+          (r.parentRuleId === rule.id && r.isReturnRule),
+      );
+      const missingReturn = !isStateful && !hasReturnRule && !rule.isReturnRule;
+
       const sourceNode = getNode(rule.sourceNodeId);
       const destinationNode = getNode(rule.destinationNodeId);
 
@@ -237,12 +275,56 @@ export const selectFirewallRules = createSelector(
                 ? 'Nao'
                 : `O: ${sourceVlanLabel} | D: ${destinationVlanLabel}`;
 
-            return {
+            // E — NAT mode badge from FW/router on the link path
+            const linkedLink = rule.linkId
+              ? links.find((l) => l.id === rule.linkId)
+              : undefined;
+            const linkedFrom = linkedLink
+              ? nodes.find((n) => n.id === linkedLink.from)
+              : undefined;
+            const linkedTo = linkedLink
+              ? nodes.find((n) => n.id === linkedLink.to)
+              : undefined;
+            const natHost = [linkedFrom, linkedTo].find(
+              (n) => n?.category === 'firewall' || n?.category === 'router',
+            );
+            const rawNatMode = natHost
+              ? String(natHost.techProfile?.fields?.natMode ?? 'none')
+              : 'none';
+            const fwNatMode = (
+              ['pat', 'snat', 'dnat', 'hybrid', 'none'].includes(rawNatMode)
+                ? rawNatMode
+                : 'none'
+            ) as FirewallRuleRow['fwNatMode'];
+
+            // E — IPsec auth badge
+            const ipsecNode = [linkedFrom, linkedTo].find(
+              (n) => n?.category === 'ipsec' || n?.category === 'vpn',
+            );
+            const ipsecAuth = ipsecNode
+              ? String(ipsecNode.techProfile?.fields?.authMethod ?? 'psk')
+              : undefined;
+            const ipsecAuthBadge: FirewallRuleRow['ipsecAuthBadge'] =
+              ipsecAuth === 'certificate'
+                ? 'PKI'
+                : ipsecAuth === 'eap'
+                  ? 'EAP'
+                  : ipsecAuth === 'keypair'
+                    ? 'keypair'
+                    : ipsecAuth === 'none'
+                      ? '⚠ sem IKE'
+                      : ipsecAuth === 'psk'
+                        ? 'PSK'
+                        : undefined;
+
+            const row: FirewallRuleRow = {
               id:
                 sourceIndex === 0 && destinationIndex === 0
                   ? rule.id
                   : `${rule.id}#${sourceIndex + 1}-${destinationIndex + 1}`,
               aclRuleId: rule.id,
+              priority: rulePriority,
+              source: ruleSource,
               acao: rule.action,
               origem,
               destino,
@@ -250,6 +332,15 @@ export const selectFirewallRules = createSelector(
               servico: rule.service,
               enabled: rule.enabled,
               managed: rule.managed,
+              stateful: rule.stateful ?? true,
+              bidirectional: rule.bidirectional ?? false,
+              passthrough: rule.passthrough ?? false,
+              natExempt: rule.natExempt ?? false,
+              protocol: rule.protocol ?? 'any',
+              isReturnRule: rule.isReturnRule,
+              hasConflict,
+              missingReturn,
+              isDerivedAllocation: sourceIndex > 0 || destinationIndex > 0,
               sourceNodeId: rule.sourceNodeId,
               destinationNodeId: rule.destinationNodeId,
               sourceNodeSiteId: sourceNode?.siteId,
@@ -260,11 +351,47 @@ export const selectFirewallRules = createSelector(
               destinationScope: rule.destinationScope,
               destinationVlanId: rule.destinationVlanId,
               destinationIp: rule.destinationIp,
-              isDerivedAllocation: sourceIndex > 0 || destinationIndex > 0,
+              parentRuleId: rule.parentRuleId,
+              fwNatMode: fwNatMode !== 'none' ? fwNatMode : undefined,
+              ipsecAuthBadge,
             };
+
+            return row;
           },
         );
       });
     });
+  },
+);
+
+// Helper: group flat FirewallRuleRow array into parent+children groups sorted by priority
+function sortedGroupedRows(rows: FirewallRuleRow[]): FirewallRuleRow[] {
+  const groups: { parent: FirewallRuleRow; children: FirewallRuleRow[] }[] = [];
+  for (const row of rows) {
+    if (!row.isDerivedAllocation) {
+      groups.push({ parent: row, children: [] });
+    } else if (groups.length > 0) {
+      groups[groups.length - 1].children.push(row);
+    }
+  }
+  groups.sort((a, b) => a.parent.priority - b.parent.priority);
+  return groups.flatMap((g) => [g.parent, ...g.children]);
+}
+
+export const selectFirewallRulesGrouped = createSelector(
+  [selectFirewallRules],
+  (flatRules): FirewallGroupedResult => {
+    const manual = flatRules.filter(
+      (r) => r.source === 'manual' && !r.natExempt,
+    );
+    const topology = flatRules.filter(
+      (r) => r.source === 'topology' && !r.natExempt,
+    );
+    const natExempt = flatRules.filter((r) => r.natExempt);
+    return {
+      manualRules: sortedGroupedRows(manual),
+      topologyRules: sortedGroupedRows(topology),
+      natExemptRules: sortedGroupedRows(natExempt),
+    };
   },
 );

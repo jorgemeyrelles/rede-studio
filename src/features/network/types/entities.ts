@@ -56,9 +56,12 @@ export type LinkItem = {
   from: string;
   to: string;
   kind: LinkKind;
+  generateAcl?: boolean;
+  statefulOverride?: 'inherited' | 'force-stateful' | 'force-stateless';
+  description?: string;
 };
 
-export type AclEndpointScope = 'node' | 'vlan' | 'ip';
+export type AclEndpointScope = 'node' | 'vlan' | 'ip' | 'ip-list' | 'any';
 
 export type AclRule = {
   id: string;
@@ -68,13 +71,25 @@ export type AclRule = {
   sourceScope: AclEndpointScope;
   sourceVlanId?: number;
   sourceIp?: string;
+  sourceIpList?: string[];
   destinationScope: AclEndpointScope;
   destinationVlanId?: number;
   destinationIp?: string;
+  destinationIpList?: string[];
   action: AclAction;
   service: string;
   enabled: boolean;
   managed: boolean;
+  priority: number;
+  source: 'topology' | 'manual';
+  parentRuleId?: string;
+  stateful: boolean;
+  bidirectional: boolean;
+  returnRuleId?: string;
+  isReturnRule?: boolean;
+  passthrough: boolean;
+  natExempt: boolean;
+  protocol: 'tcp' | 'udp' | 'icmp' | 'any';
 };
 
 export type NetworkState = {
@@ -92,6 +107,7 @@ export type NetworkState = {
   };
   ui: {
     inspectorNodeId: string | null;
+    activeLinkId: string | null;
     zoom: number;
     vlanAssignment: {
       siteId: string;

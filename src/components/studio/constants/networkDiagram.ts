@@ -1,5 +1,5 @@
 export const BASE_Y = 120;
-export const SITE_CONTAINER_WIDTH = 360;
+export const SITE_CONTAINER_WIDTH = 468;
 export const DEFAULT_DIAGRAM_WIDTH = 1240;
 export const WAN_Y = 46;
 export const DIAGRAM_SIDE_PADDING = 16;

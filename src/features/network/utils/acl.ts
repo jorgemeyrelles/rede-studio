@@ -10,15 +10,20 @@ import type {
 } from '../types';
 
 export function isAclEligibleLink(nodes: NodeItem[], link: LinkItem) {
+  // If explicitly disabled via link inspector, skip
+  if (link.generateAcl === false) return false;
+
   const from = nodes.find((node) => node.id === link.from);
   const to = nodes.find((node) => node.id === link.to);
 
+  // Always eligible: FW-adjacent, WAN, VPN/IPSEC, or LAN (generates passthrough rule)
   return (
     from?.category === 'firewall' ||
     to?.category === 'firewall' ||
     link.kind === 'wan' ||
     link.kind === 'vpn' ||
-    link.kind === 'ipsec'
+    link.kind === 'ipsec' ||
+    link.kind === 'lan'
   );
 }
 
@@ -26,12 +31,32 @@ export function getDefaultAclService(
   linkKind: LinkKind,
   fromCategory?: NodeCategory,
   toCategory?: NodeCategory,
-) {
-  const categories = new Set([fromCategory, toCategory]);
-
-  if (linkKind === 'vpn' || linkKind === 'ipsec') {
-    return 'ICMP, TCP 443/80';
+  ipsecAuthMethod?: string,
+  hasRadiusInTopology?: boolean,
+): string {
+  if (linkKind === 'ipsec') {
+    switch (ipsecAuthMethod) {
+      case 'certificate':
+        return 'udp/500, udp/4500, esp, tcp/443';
+      case 'eap':
+        return hasRadiusInTopology
+          ? 'udp/500, udp/4500, esp, udp/1812'
+          : 'udp/500, udp/4500, esp';
+      case 'keypair':
+        return 'udp/500, udp/4500, esp';
+      case 'none':
+        return 'esp';
+      // psk is the default
+      default:
+        return 'udp/500, udp/4500, esp';
+    }
   }
+
+  if (linkKind === 'vpn') {
+    return 'udp/500, udp/1194, tcp/443';
+  }
+
+  const categories = new Set([fromCategory, toCategory]);
 
   if (categories.has('printer')) {
     return 'TCP 445/80';
@@ -147,36 +172,142 @@ export function reconcileAclRules(
   );
   const validNodeIds = new Set(state.nodes.map((node) => node.id));
 
-  const managedRules: AclRule[] = state.links
-    .filter((link) => isAclEligibleLink(state.nodes, link))
-    .map((link) => {
-      const previousRule = existingManagedByLinkId.get(link.id);
-      const from = state.nodes.find((node) => node.id === link.from);
-      const to = state.nodes.find((node) => node.id === link.to);
+  const eligibleLinks = state.links.filter((link) =>
+    isAclEligibleLink(state.nodes, link),
+  );
 
-      return normalizeAclRule(
+  // Pre-compute whether a RADIUS node exists in the topology (for EAP IPsec auth)
+  const hasRadiusNode = state.nodes.some((n) => n.category === 'radius');
+
+  const managedRules: AclRule[] = eligibleLinks.map((link, index) => {
+    const previousRule = existingManagedByLinkId.get(link.id);
+    const from = state.nodes.find((node) => node.id === link.from);
+    const to = state.nodes.find((node) => node.id === link.to);
+
+    // B — Stateful: check FW *and* router stateMode; link override wins
+    const stateNode = [from, to].find(
+      (n) => n?.category === 'firewall' || n?.category === 'router',
+    );
+    const stateMode = String(
+      stateNode?.techProfile?.fields?.stateMode ?? 'stateful',
+    );
+    const isStateful =
+      link.statefulOverride === 'force-stateful'
+        ? true
+        : link.statefulOverride === 'force-stateless'
+          ? false
+          : stateMode !== 'stateless';
+
+    // Passthrough: no FW/router in path and not encrypted/WAN link
+    const hasFwOrRouter =
+      from?.category === 'firewall' ||
+      to?.category === 'firewall' ||
+      from?.category === 'router' ||
+      to?.category === 'router';
+    const isPassthrough =
+      !hasFwOrRouter &&
+      link.kind !== 'vpn' &&
+      link.kind !== 'ipsec' &&
+      link.kind !== 'wan';
+
+    // D — IPsec auth method for service template
+    const ipsecNode = [from, to].find(
+      (n) => n?.category === 'ipsec' || n?.category === 'vpn',
+    );
+    const ipsecAuthMethod = ipsecNode
+      ? String(ipsecNode.techProfile?.fields?.authMethod ?? 'psk')
+      : undefined;
+
+    return normalizeAclRule(
+      {
+        id: previousRule?.id ?? `acl_${link.id}`,
+        linkId: link.id,
+        sourceNodeId: link.from,
+        destinationNodeId: link.to,
+        sourceScope: previousRule?.sourceScope ?? 'node',
+        sourceVlanId: previousRule?.sourceVlanId,
+        sourceIp: previousRule?.sourceIp,
+        sourceIpList: previousRule?.sourceIpList,
+        destinationScope: previousRule?.destinationScope ?? 'node',
+        destinationVlanId: previousRule?.destinationVlanId,
+        destinationIp: previousRule?.destinationIp,
+        destinationIpList: previousRule?.destinationIpList,
+        action: previousRule?.action ?? 'ALLOW',
+        service:
+          previousRule?.service ??
+          getDefaultAclService(
+            link.kind,
+            from?.category,
+            to?.category,
+            ipsecAuthMethod,
+            hasRadiusNode,
+          ),
+        enabled: previousRule?.enabled ?? true,
+        managed: true,
+        priority: 1000 + index * 10,
+        source: 'topology',
+        stateful: isStateful,
+        bidirectional: previousRule?.bidirectional ?? false,
+        passthrough: isPassthrough,
+        natExempt: false,
+        protocol: previousRule?.protocol ?? 'any',
+        parentRuleId: undefined,
+        returnRuleId: previousRule?.returnRuleId,
+        isReturnRule: previousRule?.isReturnRule,
+      },
+      state.nodes,
+      state.siteVlans,
+    );
+  });
+
+  // C — NAT Exemption: for each node with an IPsec link AND natMode ≠ 'none'
+  // generate an AclRule at priority 9990+ (one per ipsec link on a NAT node)
+  const natExemptRules: AclRule[] = [];
+  let natExemptIndex = 0;
+  for (const link of state.links) {
+    if (link.kind !== 'ipsec') continue;
+    const fromNode = state.nodes.find((n) => n.id === link.from);
+    const toNode = state.nodes.find((n) => n.id === link.to);
+
+    // Find the FW/router node on this link that has NAT enabled
+    const natNode = [fromNode, toNode].find((n) => {
+      if (!n) return false;
+      if (n.category !== 'firewall' && n.category !== 'router') return false;
+      const natMode = String(n.techProfile?.fields?.natMode ?? 'none');
+      return natMode !== 'none';
+    });
+    if (!natNode) continue;
+
+    const existingId = `nat_exempt_${link.id}`;
+    const existing = existingRules.find((r) => r.id === existingId);
+
+    natExemptRules.push(
+      normalizeAclRule(
         {
-          id: previousRule?.id ?? `acl_${link.id}`,
+          id: existingId,
           linkId: link.id,
           sourceNodeId: link.from,
           destinationNodeId: link.to,
-          sourceScope: previousRule?.sourceScope ?? 'node',
-          sourceVlanId: previousRule?.sourceVlanId,
-          sourceIp: previousRule?.sourceIp,
-          destinationScope: previousRule?.destinationScope ?? 'node',
-          destinationVlanId: previousRule?.destinationVlanId,
-          destinationIp: previousRule?.destinationIp,
-          action: previousRule?.action ?? 'ALLOW',
-          service:
-            previousRule?.service ??
-            getDefaultAclService(link.kind, from?.category, to?.category),
-          enabled: previousRule?.enabled ?? true,
+          sourceScope: 'node',
+          destinationScope: 'node',
+          action: 'ALLOW',
+          service: 'esp, udp/500, udp/4500',
+          enabled: existing?.enabled ?? true,
           managed: true,
+          priority: 9990 + natExemptIndex,
+          source: 'topology',
+          stateful: false,
+          bidirectional: true,
+          passthrough: false,
+          natExempt: true,
+          protocol: 'any',
         },
         state.nodes,
         state.siteVlans,
-      );
-    });
+      ),
+    );
+    natExemptIndex++;
+  }
 
   const manualRules = existingRules
     .filter(
@@ -185,7 +316,22 @@ export function reconcileAclRules(
         validNodeIds.has(rule.sourceNodeId) &&
         validNodeIds.has(rule.destinationNodeId),
     )
-    .map((rule) => normalizeAclRule(rule, state.nodes, state.siteVlans));
+    .map((rule, index) =>
+      normalizeAclRule(
+        {
+          ...rule,
+          source: rule.source ?? 'manual',
+          priority: rule.priority ?? index * 10 + 10,
+          stateful: rule.stateful ?? true,
+          bidirectional: rule.bidirectional ?? false,
+          passthrough: rule.passthrough ?? false,
+          natExempt: rule.natExempt ?? false,
+          protocol: rule.protocol ?? 'any',
+        },
+        state.nodes,
+        state.siteVlans,
+      ),
+    );
 
-  return [...managedRules, ...manualRules];
+  return [...managedRules, ...natExemptRules, ...manualRules];
 }

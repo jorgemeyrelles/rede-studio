@@ -12,8 +12,10 @@ import {
   addLink,
   removeLink,
   resizeLayer,
+  setActiveLinkId,
   setZoom,
   toggleNodeVlanAssignment,
+  updateLink,
   updateNodeTechField,
   updateSite,
   updateNode,
@@ -70,6 +72,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     const vlanAssignmentRef = useRef<{ siteId: string; vlanId: number } | null>(
       null,
     );
+    const layersRef = useRef<typeof layers>([]);
+    const activeLinkIdRef = useRef<string | null>(null);
     const [diagramWidth, setDiagramWidth] = useState(DEFAULT_DIAGRAM_WIDTH);
     const [activeTooltip, setActiveTooltip] = useState<DiagramTooltip | null>(
       null,
@@ -162,6 +166,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
         siteLayers.forEach((layer) => {
           const layerPos = layout.layerPositions.get(layer.id);
+          const uniformLayerWidth =
+            layout.siteMaxLayerWidths.get(site.id) ?? layer.width;
           items.push({
             key: layer.id,
             text: layer.name,
@@ -170,7 +176,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             category: 'layer',
             layerStroke: visual.stroke,
             layerFill: visual.layerFill,
-            size: `${layer.width} ${layer.height}`,
+            size: `${uniformLayerWidth} ${layer.height}`,
             loc: `${layerPos?.x ?? 20} ${layerPos?.y ?? BASE_Y + 62}`,
             layerId: layer.id,
           });
@@ -237,10 +243,33 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       return links.map((link) => {
         const fromNode = nodeById.get(link.from);
         const toNode = nodeById.get(link.to);
+
+        // Compute stateful/passthrough for visual
+        const fwNode = [fromNode, toNode].find(
+          (n) => n?.category === 'firewall',
+        );
+        const stateMode = String(
+          fwNode?.techProfile?.fields?.stateMode ?? 'stateful',
+        );
+        const isStateful =
+          link.statefulOverride === 'force-stateful'
+            ? true
+            : link.statefulOverride === 'force-stateless'
+              ? false
+              : stateMode !== 'stateless';
+        const hasFw =
+          fromNode?.category === 'firewall' || toNode?.category === 'firewall';
+        const isPassthrough =
+          !hasFw &&
+          link.kind !== 'vpn' &&
+          link.kind !== 'ipsec' &&
+          link.kind !== 'wan';
+
         const visual = resolveLinkVisual(
           link.kind,
           fromNode?.category,
           toNode?.category,
+          { stateful: isStateful, passthrough: isPassthrough },
         );
         const description = resolveLinkDescription(
           link.kind,
@@ -265,6 +294,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     useEffect(() => {
       nodesByIdRef.current = new Map(nodes.map((node) => [node.id, node]));
     }, [nodes]);
+
+    useEffect(() => {
+      layersRef.current = layers;
+    }, [layers]);
+
+    useEffect(() => {
+      activeLinkIdRef.current = ui.activeLinkId;
+    }, [ui.activeLinkId]);
 
     useEffect(() => {
       vlanAssignmentRef.current = ui.vlanAssignment;
@@ -460,7 +497,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 fill: 'rgba(2, 6, 23, 0.55)',
                 stroke: '#475569',
                 strokeDashArray: [5, 4],
-                minSize: new go.Size(220, 140),
+                minSize: new go.Size(286, 140),
               },
               new go.Binding('fill', 'layerFill'),
               new go.Binding('stroke', 'layerStroke'),
@@ -529,8 +566,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               fill: '#060d19',
               stroke: '#1d3353',
               strokeWidth: 1,
-              width: 112,
-              height: 96,
+              width: 90,
+              height: 77,
               portId: '',
               fromLinkable: true,
               toLinkable: true,
@@ -543,38 +580,38 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               h ? 2.4 : 1,
             ).ofObject(),
             new go.Binding('width', 'isHighlighted', (h) =>
-              h ? 122 : 112,
+              h ? 98 : 90,
             ).ofObject(),
             new go.Binding('height', 'isHighlighted', (h) =>
-              h ? 106 : 96,
+              h ? 85 : 77,
             ).ofObject(),
           ),
           $(
             go.Picture,
             {
               name: 'ICON',
-              width: 44,
-              height: 44,
+              width: 35,
+              height: 35,
               alignment: new go.Spot(0.5, 0.28, 0, 0),
               imageStretch: go.ImageStretch.Uniform,
               background: 'transparent',
             },
             new go.Binding('source', 'iconSrc'),
             new go.Binding('width', 'isHighlighted', (h) =>
-              h ? 52 : 44,
+              h ? 42 : 35,
             ).ofObject(),
             new go.Binding('height', 'isHighlighted', (h) =>
-              h ? 52 : 44,
+              h ? 42 : 35,
             ).ofObject(),
           ),
           $(
             go.TextBlock,
             {
-              margin: new go.Margin(52, 6, 14, 6),
+              margin: new go.Margin(42, 6, 11, 6),
               stroke: '#d8e7fb',
               font: '700 12px Barlow',
               textAlign: 'center',
-              maxSize: new go.Size(104, NaN),
+              maxSize: new go.Size(83, NaN),
             },
             new go.Binding('text', 'text'),
           ),
@@ -702,6 +739,15 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         dispatch(addLink({ from, to }));
       });
 
+      diagram.addDiagramListener('ObjectSingleClicked', (event) => {
+        const part = event.subject.part;
+        if (!(part instanceof go.Link)) return;
+        const linkId = String(part.data.key ?? '');
+        if (!linkId) return;
+        const current = activeLinkIdRef.current;
+        dispatch(setActiveLinkId(current === linkId ? null : linkId));
+      });
+
       diagram.addDiagramListener('SelectionMoved', (event) => {
         event.subject.each((part: go.Part) => {
           if (!(part instanceof go.Node)) return;
@@ -724,13 +770,27 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         if (!data?.layerId) return;
         const shape = part.resizeObject;
         if (!shape) return;
-        dispatch(
-          resizeLayer({
-            layerId: data.layerId,
-            width: shape.desiredSize.width,
-            height: shape.desiredSize.height,
-          }),
+        const newWidth = shape.desiredSize.width;
+        const newHeight = shape.desiredSize.height;
+
+        const resizedLayer = layersRef.current.find(
+          (l) => l.id === data.layerId,
         );
+        if (!resizedLayer) return;
+
+        // Propaga mesma largura para todas as camadas do mesmo site
+        const siblings = layersRef.current.filter(
+          (l) => l.siteId === resizedLayer.siteId,
+        );
+        for (const sibling of siblings) {
+          dispatch(
+            resizeLayer({
+              layerId: sibling.id,
+              width: newWidth,
+              height: sibling.id === data.layerId ? newHeight : sibling.height,
+            }),
+          );
+        }
       });
 
       diagram.addDiagramListener('ViewportBoundsChanged', () => {

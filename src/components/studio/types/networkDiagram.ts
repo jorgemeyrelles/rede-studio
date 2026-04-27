@@ -18,5 +18,6 @@ export type GridLayoutResult = {
   layerPositions: Map<string, { x: number; y: number }>;
   siteHeights: Map<string, number>;
   siteWidths: Map<string, number>;
+  siteMaxLayerWidths: Map<string, number>;
   wanPosition: { x: number; y: number };
 };

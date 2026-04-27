@@ -93,6 +93,7 @@ export function buildGridLayout({
   const limitedSites = sites.slice(0, 4);
   const siteWidths = new Map<string, number>();
   const siteHeights = new Map<string, number>();
+  const siteMaxLayerWidths = new Map<string, number>();
   const layerPositions = new Map<string, { x: number; y: number }>();
   const sitePositions = new Map<string, { x: number; y: number }>();
 
@@ -105,10 +106,11 @@ export function buildGridLayout({
       (acc, layer) => Math.max(acc, layer.width),
       0,
     );
+    siteMaxLayerWidths.set(site.id, maxLayerWidth);
     const width = Math.max(
       SITE_CONTAINER_WIDTH,
       Math.min(
-        760,
+        988,
         maxLayerWidth > 0 ? maxLayerWidth + 64 : SITE_CONTAINER_WIDTH,
       ),
     );
@@ -239,10 +241,11 @@ export function buildGridLayout({
       .filter((layer) => layer.siteId === site.id)
       .sort((a, b) => a.order - b.order);
     const siteWidth = siteWidths.get(site.id) ?? SITE_CONTAINER_WIDTH;
+    const uniformLayerWidth = siteMaxLayerWidths.get(site.id) ?? 0;
 
     let cursorY = sitePos.y + LAYER_TOP_OFFSET;
     siteLayers.forEach((layer) => {
-      const layerXOffset = Math.max(24, (siteWidth - layer.width) / 2);
+      const layerXOffset = Math.max(24, (siteWidth - uniformLayerWidth) / 2);
       layerPositions.set(layer.id, {
         x: sitePos.x + layerXOffset,
         y: cursorY,
@@ -262,6 +265,7 @@ export function buildGridLayout({
     layerPositions,
     siteHeights,
     siteWidths,
+    siteMaxLayerWidths,
     wanPosition,
   };
 }
@@ -331,7 +335,15 @@ export function resolveLinkVisual(
   kind: string,
   fromCategory?: string,
   toCategory?: string,
+  opts?: { stateful?: boolean; passthrough?: boolean },
 ) {
+  const stateful = opts?.stateful ?? true;
+  const passthrough = opts?.passthrough ?? false;
+
+  if (passthrough) {
+    return { stroke: '#64748b', dash: undefined, width: 1.2 };
+  }
+
   const edge = [fromCategory, toCategory].filter(Boolean);
   const hasSecurity = edge.some((cat) =>
     ['firewall', 'ids', 'ips', 'proxy'].includes(String(cat)),
@@ -344,15 +356,17 @@ export function resolveLinkVisual(
     return { stroke: '#22d3ee', dash: [9, 5], width: 2.2 };
   }
   if (kind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
+    if (!stateful) return { stroke: '#f59e0b', dash: [4, 3], width: 2.0 };
     return { stroke: '#fb923c', dash: undefined, width: 2.6 };
   }
   if (hasSecurity) {
+    if (!stateful) return { stroke: '#f59e0b', dash: [4, 3], width: 2.0 };
     return { stroke: '#f97316', dash: [2, 4], width: 2.1 };
   }
   if (kind === 'lan') {
     return { stroke: '#60a5fa', dash: undefined, width: 1.8 };
   }
-  return { stroke: '#94a3b8', dash: [6, 4], width: 1.7 };
+  return { stroke: '#fbbf24', dash: [10, 6], width: 1.8 };
 }
 
 export function resolveLinkDescription(

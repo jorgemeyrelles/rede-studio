@@ -1,15 +1,20 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
+  AclRule,
+  AddCustomAclRulePayload,
   AddLinkPayload,
   AddNodePayload,
   AddSiteVlanPayload,
   Layer,
   NetworkState,
   NodeCategory,
+  RemoveCustomAclRulePayload,
   RemoveSiteVlanPayload,
+  ReorderCustomAclRulePayload,
   SetVlanAssignmentPayload,
   ToggleNodeVlanPayload,
   UpdateAclRulePayload,
+  UpdateLinkPayload,
   UpdateNodePayload,
   UpdateNodeTechFieldPayload,
   UpdateSitePayload,
@@ -80,6 +85,7 @@ const initialState: NetworkState = {
   },
   ui: {
     inspectorNodeId: null,
+    activeLinkId: null,
     zoom: 1,
     vlanAssignment: null,
   },
@@ -432,7 +438,7 @@ export const networkSlice = createSlice({
       siteVlans: [],
       nodes: [...initialState.nodes],
       counters: { ...initialState.counters },
-      ui: { ...initialState.ui, vlanAssignment: null },
+      ui: { ...initialState.ui, activeLinkId: null, vlanAssignment: null },
       meta: { ...initialState.meta },
     }),
     hydrateNetworkState: (_state, action: PayloadAction<NetworkState>) => {
@@ -709,10 +715,10 @@ export const networkSlice = createSlice({
         siteId,
         name: `Camada ${order}`,
         order,
-        width: 320,
+        width: 416,
         height: 180,
-        minWidth: 220,
-        maxWidth: 680,
+        minWidth: 286,
+        maxWidth: 884,
         minHeight: 140,
         maxHeight: 520,
       });
@@ -1048,6 +1054,15 @@ export const networkSlice = createSlice({
       if (typeof action.payload.changes.enabled === 'boolean') {
         rule.enabled = action.payload.changes.enabled;
       }
+      if (typeof action.payload.changes.stateful === 'boolean') {
+        rule.stateful = action.payload.changes.stateful;
+      }
+      if (typeof action.payload.changes.bidirectional === 'boolean') {
+        rule.bidirectional = action.payload.changes.bidirectional;
+      }
+      if (typeof action.payload.changes.protocol === 'string') {
+        rule.protocol = action.payload.changes.protocol;
+      }
 
       if (typeof action.payload.changes.sourceScope === 'string') {
         rule.sourceScope = action.payload.changes.sourceScope;
@@ -1058,6 +1073,9 @@ export const networkSlice = createSlice({
       if ('sourceIp' in action.payload.changes) {
         rule.sourceIp = action.payload.changes.sourceIp;
       }
+      if ('sourceIpList' in action.payload.changes) {
+        rule.sourceIpList = action.payload.changes.sourceIpList;
+      }
       if (typeof action.payload.changes.destinationScope === 'string') {
         rule.destinationScope = action.payload.changes.destinationScope;
       }
@@ -1067,11 +1085,151 @@ export const networkSlice = createSlice({
       if ('destinationIp' in action.payload.changes) {
         rule.destinationIp = action.payload.changes.destinationIp;
       }
+      if ('destinationIpList' in action.payload.changes) {
+        rule.destinationIpList = action.payload.changes.destinationIpList;
+      }
 
       Object.assign(rule, normalizeAclRule(rule, state.nodes, state.siteVlans));
     },
+    addCustomAclRule: (
+      state,
+      action: PayloadAction<AddCustomAclRulePayload>,
+    ) => {
+      const { sourceNodeId, destinationNodeId } = action.payload;
+      const validNodeIds = new Set(state.nodes.map((n) => n.id));
+      if (
+        !validNodeIds.has(sourceNodeId) ||
+        !validNodeIds.has(destinationNodeId)
+      )
+        return;
+
+      const manualRules = state.aclRules.filter((r) => !r.managed);
+      const maxPriority = manualRules.reduce(
+        (max, r) => Math.max(max, r.priority ?? 0),
+        0,
+      );
+
+      const ruleId = `acl_manual_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+      const returnId = `acl_manual_ret_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+
+      const newRule: AclRule = {
+        id: ruleId,
+        sourceNodeId,
+        destinationNodeId,
+        sourceScope: action.payload.sourceScope ?? 'node',
+        sourceVlanId: action.payload.sourceVlanId,
+        sourceIp: action.payload.sourceIp,
+        sourceIpList: action.payload.sourceIpList,
+        destinationScope: action.payload.destinationScope ?? 'node',
+        destinationVlanId: action.payload.destinationVlanId,
+        destinationIp: action.payload.destinationIp,
+        destinationIpList: action.payload.destinationIpList,
+        action: action.payload.action,
+        service: action.payload.service,
+        enabled: true,
+        managed: false,
+        priority: maxPriority + 10,
+        source: 'manual',
+        stateful: action.payload.stateful,
+        bidirectional: action.payload.bidirectional,
+        passthrough: false,
+        natExempt: false,
+        protocol: action.payload.protocol,
+        // F — if bidirectional, link to auto-generated return rule
+        returnRuleId: action.payload.bidirectional ? returnId : undefined,
+      };
+
+      state.aclRules.push(
+        normalizeAclRule(newRule, state.nodes, state.siteVlans),
+      );
+
+      // F — auto-generate mirrored return rule for bidirectional manual rules
+      if (action.payload.bidirectional) {
+        const returnRule: AclRule = {
+          id: returnId,
+          sourceNodeId: destinationNodeId,
+          destinationNodeId: sourceNodeId,
+          sourceScope: action.payload.destinationScope ?? 'node',
+          sourceVlanId: action.payload.destinationVlanId,
+          sourceIp: action.payload.destinationIp,
+          destinationScope: action.payload.sourceScope ?? 'node',
+          destinationVlanId: action.payload.sourceVlanId,
+          destinationIp: action.payload.sourceIp,
+          action: action.payload.action,
+          service: action.payload.service,
+          enabled: true,
+          managed: false,
+          priority: maxPriority + 11,
+          source: 'manual',
+          stateful: action.payload.stateful,
+          bidirectional: false,
+          passthrough: false,
+          natExempt: false,
+          protocol: action.payload.protocol,
+          parentRuleId: ruleId,
+          isReturnRule: true,
+        };
+        state.aclRules.push(
+          normalizeAclRule(returnRule, state.nodes, state.siteVlans),
+        );
+      }
+    },
+    removeCustomAclRule: (
+      state,
+      action: PayloadAction<RemoveCustomAclRulePayload>,
+    ) => {
+      const rule = state.aclRules.find((r) => r.id === action.payload.id);
+      if (!rule || rule.managed) return;
+      // F — also remove the auto-generated return rule if it exists
+      const returnId = rule.returnRuleId;
+      state.aclRules = state.aclRules.filter(
+        (r) => r.id !== action.payload.id && r.id !== returnId,
+      );
+    },
+    reorderCustomAclRule: (
+      state,
+      action: PayloadAction<ReorderCustomAclRulePayload>,
+    ) => {
+      const { id, direction } = action.payload;
+      const manualRules = state.aclRules
+        .filter((r) => !r.managed)
+        .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      const idx = manualRules.findIndex((r) => r.id === id);
+      if (idx === -1) return;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= manualRules.length) return;
+
+      const priorityA = manualRules[idx].priority ?? 0;
+      const priorityB = manualRules[swapIdx].priority ?? 0;
+      const ruleA = state.aclRules.find((r) => r.id === manualRules[idx].id);
+      const ruleB = state.aclRules.find(
+        (r) => r.id === manualRules[swapIdx].id,
+      );
+      if (ruleA) ruleA.priority = priorityB;
+      if (ruleB) ruleB.priority = priorityA;
+    },
+    updateLink: (state, action: PayloadAction<UpdateLinkPayload>) => {
+      const link = state.links.find((l) => l.id === action.payload.id);
+      if (!link) return;
+      if (typeof action.payload.changes.kind === 'string') {
+        link.kind = action.payload.changes.kind;
+      }
+      if (typeof action.payload.changes.generateAcl === 'boolean') {
+        link.generateAcl = action.payload.changes.generateAcl;
+      }
+      if (typeof action.payload.changes.statefulOverride === 'string') {
+        link.statefulOverride = action.payload.changes.statefulOverride;
+      }
+      if (typeof action.payload.changes.description === 'string') {
+        link.description = action.payload.changes.description;
+      }
+      state.aclRules = reconcileAclRules(state);
+    },
     setInspectorNodeId: (state, action: PayloadAction<string | null>) => {
       state.ui.inspectorNodeId = action.payload;
+    },
+    setActiveLinkId: (state, action: PayloadAction<string | null>) => {
+      state.ui.activeLinkId = action.payload;
     },
     setZoom: (state, action: PayloadAction<number>) => {
       state.ui.zoom = action.payload;
@@ -1107,7 +1265,12 @@ export const {
   addLink,
   removeLink,
   updateAclRule,
+  addCustomAclRule,
+  removeCustomAclRule,
+  reorderCustomAclRule,
+  updateLink,
   setInspectorNodeId,
+  setActiveLinkId,
   setZoom,
   setPersistWarning,
   markSaved,

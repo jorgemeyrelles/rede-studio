@@ -39,11 +39,53 @@ export type UpdateAclRulePayload = {
     service: string;
     enabled: boolean;
     sourceScope: AclEndpointScope;
-    sourceVlanId?: number;
-    sourceIp?: string;
+    sourceVlanId: number | undefined;
+    sourceIp: string | undefined;
+    sourceIpList: string[] | undefined;
     destinationScope: AclEndpointScope;
-    destinationVlanId?: number;
-    destinationIp?: string;
+    destinationVlanId: number | undefined;
+    destinationIp: string | undefined;
+    destinationIpList: string[] | undefined;
+    stateful: boolean;
+    bidirectional: boolean;
+    protocol: 'tcp' | 'udp' | 'icmp' | 'any';
+  }>;
+};
+
+export type AddCustomAclRulePayload = {
+  sourceNodeId: string;
+  destinationNodeId: string;
+  sourceScope: AclEndpointScope;
+  sourceVlanId?: number;
+  sourceIp?: string;
+  sourceIpList?: string[];
+  destinationScope: AclEndpointScope;
+  destinationVlanId?: number;
+  destinationIp?: string;
+  destinationIpList?: string[];
+  action: AclAction;
+  service: string;
+  protocol: 'tcp' | 'udp' | 'icmp' | 'any';
+  stateful: boolean;
+  bidirectional: boolean;
+};
+
+export type RemoveCustomAclRulePayload = {
+  id: string;
+};
+
+export type ReorderCustomAclRulePayload = {
+  id: string;
+  direction: 'up' | 'down';
+};
+
+export type UpdateLinkPayload = {
+  id: string;
+  changes: Partial<{
+    kind: LinkKind;
+    generateAcl: boolean;
+    statefulOverride: 'inherited' | 'force-stateful' | 'force-stateless';
+    description: string;
   }>;
 };
 
