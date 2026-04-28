@@ -16,7 +16,11 @@ type StudioToolbarProps = {
   onToggleLegend?: () => void;
 };
 
-export default function StudioToolbar({ language, isLegendOpen, onToggleLegend }: StudioToolbarProps) {
+export default function StudioToolbar({
+  language,
+  isLegendOpen,
+  onToggleLegend,
+}: StudioToolbarProps) {
   const dispatch = useAppDispatch();
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;

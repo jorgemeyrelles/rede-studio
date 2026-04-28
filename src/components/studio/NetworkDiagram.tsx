@@ -521,11 +521,15 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   go.Size.stringify,
                 ),
                 // Mínimo = altura na criação; máximo = ~3 nós empilhados
-                new go.Binding('minSize', 'minHeight', (h) =>
-                  new go.Size(286, Number(h) || 180),
+                new go.Binding(
+                  'minSize',
+                  'minHeight',
+                  (h) => new go.Size(286, Number(h) || 180),
                 ),
-                new go.Binding('maxSize', 'maxHeight', (h) =>
-                  new go.Size(NaN, Number(h) || 300),
+                new go.Binding(
+                  'maxSize',
+                  'maxHeight',
+                  (h) => new go.Size(NaN, Number(h) || 300),
                 ),
               ),
             ),
@@ -813,7 +817,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         // Coleta todos os objetos na posição e verifica se há link entre eles.
         // Links têm prioridade — um Group por cima não bloqueia a seleção da linha.
         const objs: go.GraphObject[] = [];
-        event.diagram.findObjectsAt(clickPt).each((obj) => { objs.push(obj); });
+        event.diagram.findObjectsAt(clickPt).each((obj) => {
+          objs.push(obj);
+        });
         const foundObj = objs.find((obj) => obj.part instanceof go.Link);
 
         if (!foundObj) {
@@ -825,7 +831,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         event.diagram.clearSelection();
 
         const link = foundObj.part as go.Link;
-        const linkId = String((link.data as Record<string, unknown>)?.key ?? '');
+        const linkId = String(
+          (link.data as Record<string, unknown>)?.key ?? '',
+        );
         if (!linkId) return;
         const current = activeLinkIdRef.current;
         dispatch(setActiveLinkId(current === linkId ? null : linkId));
