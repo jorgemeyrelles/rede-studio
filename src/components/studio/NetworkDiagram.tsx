@@ -179,6 +179,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             size: `${uniformLayerWidth} ${layer.height}`,
             loc: `${layerPos?.x ?? 20} ${layerPos?.y ?? BASE_Y + 62}`,
             layerId: layer.id,
+            minHeight: layer.minHeight,
+            maxHeight: layer.maxHeight,
           });
         });
       }
@@ -475,7 +477,15 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           {
             movable: false,
             resizable: true,
+            selectable: true,
+            resizeObjectName: 'LAYER_BG',
             locationSpot: go.Spot.TopLeft,
+            mouseEnter: (_event, obj) => {
+              (obj as go.Group).isHighlighted = true;
+            },
+            mouseLeave: (_event, obj) => {
+              (obj as go.Group).isHighlighted = false;
+            },
           },
           new go.Binding('location', 'loc', go.Point.parse),
           $(
@@ -484,26 +494,74 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               stroke: '#f8fafc',
               font: '600 12px Barlow',
               margin: new go.Margin(0, 0, 4, 2),
+              pickable: false,
             },
             new go.Binding('text', 'text'),
           ),
           $(
             go.Panel,
-            'Auto',
+            'Spot',
+            $(
+              go.Panel,
+              'Auto',
+              $(
+                go.Shape,
+                'RoundedRectangle',
+                {
+                  name: 'LAYER_BG',
+                  fill: 'rgba(2, 6, 23, 0.55)',
+                  stroke: '#475569',
+                  strokeDashArray: [5, 4],
+                  // Fundo não intercepta cliques — permite selecionar links abaixo
+                  pickable: false,
+                },
+                new go.Binding('fill', 'layerFill'),
+                new go.Binding('stroke', 'layerStroke'),
+                new go.Binding('desiredSize', 'size', go.Size.parse).makeTwoWay(
+                  go.Size.stringify,
+                ),
+                // Mínimo = altura na criação; máximo = ~3 nós empilhados
+                new go.Binding('minSize', 'minHeight', (h) =>
+                  new go.Size(286, Number(h) || 180),
+                ),
+                new go.Binding('maxSize', 'maxHeight', (h) =>
+                  new go.Size(NaN, Number(h) || 300),
+                ),
+              ),
+            ),
+            // ▶ Indicador de resize — borda direita
             $(
               go.Shape,
-              'RoundedRectangle',
+              'TriangleRight',
               {
-                fill: 'rgba(2, 6, 23, 0.55)',
-                stroke: '#475569',
-                strokeDashArray: [5, 4],
-                minSize: new go.Size(286, 140),
+                alignment: new go.Spot(1, 0.5, -3, 0),
+                alignmentFocus: go.Spot.Right,
+                width: 7,
+                height: 13,
+                fill: '#94a3b8',
+                stroke: null,
+                cursor: 'e-resize',
+                pickable: false,
+                visible: false,
               },
-              new go.Binding('fill', 'layerFill'),
-              new go.Binding('stroke', 'layerStroke'),
-              new go.Binding('desiredSize', 'size', go.Size.parse).makeTwoWay(
-                go.Size.stringify,
-              ),
+              new go.Binding('visible', 'isHighlighted').ofObject(),
+            ),
+            // ▼ Indicador de resize — borda inferior
+            $(
+              go.Shape,
+              'TriangleDown',
+              {
+                alignment: new go.Spot(0.5, 1, 0, -3),
+                alignmentFocus: go.Spot.Bottom,
+                width: 13,
+                height: 7,
+                fill: '#94a3b8',
+                stroke: null,
+                cursor: 's-resize',
+                pickable: false,
+                visible: false,
+              },
+              new go.Binding('visible', 'isHighlighted').ofObject(),
             ),
           ),
         ),
@@ -660,7 +718,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       diagram.linkTemplate = $(
         go.Link,
         {
-          layerName: 'Background',
+          // Camada padrão (Default) — links ficam acima do Background dos Groups
+          // e são encontrados pelo hit-test
+          layerName: '',
           routing: go.Routing.AvoidsNodes,
           curve: go.Curve.JumpGap,
           corner: 8,
@@ -670,8 +730,16 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           toEndSegmentLength: 14,
         },
         new go.Binding('layerName', 'isHighlighted', (h) =>
-          h ? 'Foreground' : 'Background',
+          h ? 'Foreground' : '',
         ).ofObject(),
+        // Área de hit invisível — facilita clicar em linhas finas
+        $(go.Shape, {
+          isPanelMain: true,
+          strokeWidth: 14,
+          stroke: 'transparent',
+          opacity: 0,
+          pickable: true,
+        }),
         $(
           go.Shape,
           {
@@ -740,9 +808,24 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       });
 
       diagram.addDiagramListener('ObjectSingleClicked', (event) => {
-        const part = event.subject.part;
-        if (!(part instanceof go.Link)) return;
-        const linkId = String(part.data.key ?? '');
+        const clickPt = event.diagram.lastInput.documentPoint;
+
+        // Coleta todos os objetos na posição e verifica se há link entre eles.
+        // Links têm prioridade — um Group por cima não bloqueia a seleção da linha.
+        const objs: go.GraphObject[] = [];
+        event.diagram.findObjectsAt(clickPt).each((obj) => { objs.push(obj); });
+        const foundObj = objs.find((obj) => obj.part instanceof go.Link);
+
+        if (!foundObj) {
+          // Nenhum link na posição — mantém estado atual
+          return;
+        }
+
+        // Link encontrado: garante que camadas não fiquem selecionadas
+        event.diagram.clearSelection();
+
+        const link = foundObj.part as go.Link;
+        const linkId = String((link.data as Record<string, unknown>)?.key ?? '');
         if (!linkId) return;
         const current = activeLinkIdRef.current;
         dispatch(setActiveLinkId(current === linkId ? null : linkId));

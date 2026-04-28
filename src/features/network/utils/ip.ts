@@ -130,3 +130,97 @@ export function isIpInVlan(ip: string, vlan: SiteVlan) {
 export function isIpInAnyVlan(ip: string, vlans: SiteVlan[]) {
   return vlans.some((vlan) => isIpInVlan(ip, vlan));
 }
+
+// ── Fase 2 — multi-rede / endereçamento flexível ──────────────────────────────
+
+import type { AddressFamily } from '../types';
+
+/**
+ * Retorna o prefixo numérico (1º octeto ou os dois primeiros)
+ * de acordo com a addressFamily escolhida.
+ * Para '172.x' usa 172.16 como base (range privado RFC 1918).
+ */
+export function addressFamilyPrefix(family: AddressFamily): string {
+  switch (family) {
+    case '10.x':
+      return '10';
+    case '172.x':
+      return '172.16';
+    case '192.168.x':
+      return '192.168';
+    default:
+      return '200'; // '200.x' — padrão legado
+  }
+}
+
+/**
+ * Monta o endereço de rede a partir da família e do 3º octeto.
+ * Ex: addressFamily='10.x', thirdOctet=50 → '10.0.50.0'
+ *     addressFamily='200.x', thirdOctet=10 → '200.10.0.0' (usa siteOctet no 2º)
+ *
+ * Para o padrão legado '200.x', o 2º octeto vem de `siteOctet`.
+ */
+export function buildNetworkAddress(
+  family: AddressFamily,
+  thirdOctet: number,
+  siteOctet?: number,
+): string {
+  const prefix = addressFamilyPrefix(family);
+  if (family === '200.x') {
+    return `200.${siteOctet ?? 10}.${thirdOctet}.0`;
+  }
+  if (family === '192.168.x' || family === '172.x') {
+    return `${prefix}.${thirdOctet}.0`;
+  }
+  // '10.x'
+  return `10.0.${thirdOctet}.0`;
+}
+
+/**
+ * Retorna o número de hosts disponíveis dado um CIDR.
+ * Ex: cidr=24 → 254; cidr=26 → 62; cidr=30 → 2
+ */
+export function cidrToHostCount(cidr: number): number {
+  const safe = Math.max(1, Math.min(32, cidr));
+  if (safe >= 31) return Math.max(1, 2 ** (32 - safe));
+  return Math.max(1, 2 ** (32 - safe) - 2);
+}
+
+/**
+ * Verifica se uma sub-rede (networkAddress + cidr) está contida
+ * no bloco pai (parentNetwork + parentCidr) e sem sobreposição
+ * com blocos irmãos.
+ */
+export function validateSubnetInParent(params: {
+  subnetAddress: string;
+  subnetCidr: number;
+  parentAddress: string;
+  parentCidr: number;
+}): { valid: boolean; reason?: string } {
+  const { subnetAddress, subnetCidr, parentAddress, parentCidr } = params;
+
+  const subnetStart = ipToNumber(subnetAddress);
+  const parentStart = ipToNumber(parentAddress);
+  if (subnetStart === null || parentStart === null) {
+    return { valid: false, reason: 'Endereço IP inválido' };
+  }
+
+  if (subnetCidr <= parentCidr) {
+    return {
+      valid: false,
+      reason: 'CIDR da sub-rede deve ser maior que o da rede pai',
+    };
+  }
+
+  const parentSize = 2 ** (32 - parentCidr);
+  const parentEnd = parentStart + parentSize - 1;
+
+  const subnetSize = 2 ** (32 - subnetCidr);
+  const subnetEnd = subnetStart + subnetSize - 1;
+
+  if (subnetStart < parentStart || subnetEnd > parentEnd) {
+    return { valid: false, reason: 'Sub-rede fora do bloco da rede pai' };
+  }
+
+  return { valid: true };
+}

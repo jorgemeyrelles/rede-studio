@@ -97,6 +97,21 @@ export function buildGridLayout({
   const layerPositions = new Map<string, { x: number; y: number }>();
   const sitePositions = new Map<string, { x: number; y: number }>();
 
+  // Default site width adapts to how many sites exist:
+  //  • 1 site  → fills ~80% of the canvas (maximum breathing room)
+  //  • 2+ sites → fills each column so both sites occupy the available space
+  const numSites = limitedSites.length;
+  const dynamicDefaultWidth =
+    numSites <= 1
+      ? Math.floor(diagramWidth * 0.8)
+      : Math.floor(
+          (diagramWidth -
+            CENTER_CHANNEL_WIDTH -
+            GRID_COLUMN_GAP * 2 -
+            DIAGRAM_SIDE_PADDING * 2) /
+            2,
+        );
+
   for (const site of limitedSites) {
     const siteLayers = layers
       .filter((layer) => layer.siteId === site.id)
@@ -111,7 +126,7 @@ export function buildGridLayout({
       SITE_CONTAINER_WIDTH,
       Math.min(
         988,
-        maxLayerWidth > 0 ? maxLayerWidth + 64 : SITE_CONTAINER_WIDTH,
+        maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth,
       ),
     );
 

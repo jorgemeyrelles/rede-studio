@@ -7,7 +7,7 @@ import {
   removeNode,
   removeSite,
 } from '../../features/network/networkSlice';
-import type { NodeCategory } from '../../features/network/types';
+import type { LayerTier, NodeCategory } from '../../features/network/types';
 import { selectLegendTree } from '../../features/network/selectors';
 import {
   getLegendPanelCopy,
@@ -21,6 +21,88 @@ import {
 type LegendPanelProps = {
   language: StudioLanguage;
 };
+
+// ── Tier presets ──────────────────────────────────────────────────────────────
+const TIER_PRESETS: {
+  tier: LayerTier;
+  emoji: string;
+  label: string;
+  sub: string;
+  color: string;
+  badge: string;
+}[] = [
+  {
+    tier: 'edge',
+    emoji: '🔵',
+    label: 'Edge',
+    sub: 'RTR / FW',
+    color: 'border-blue-600/70 bg-blue-950/30 hover:bg-blue-900/40',
+    badge: 'bg-blue-700 text-blue-100',
+  },
+  {
+    tier: 'distribution',
+    emoji: '🟡',
+    label: 'Distribuição',
+    sub: 'SW L3 / LB',
+    color: 'border-yellow-600/70 bg-yellow-950/30 hover:bg-yellow-900/40',
+    badge: 'bg-yellow-700 text-yellow-100',
+  },
+  {
+    tier: 'access',
+    emoji: '🟢',
+    label: 'Acesso',
+    sub: 'SW L2 / AP',
+    color: 'border-green-600/70 bg-green-950/30 hover:bg-green-900/40',
+    badge: 'bg-green-800 text-green-100',
+  },
+  {
+    tier: 'endpoint',
+    emoji: '⚫',
+    label: 'Endpoints',
+    sub: 'PC / IP Phone',
+    color: 'border-slate-500/70 bg-slate-800/30 hover:bg-slate-700/40',
+    badge: 'bg-slate-700 text-slate-200',
+  },
+  {
+    tier: 'dmz',
+    emoji: '🟠',
+    label: 'DMZ',
+    sub: 'Serv. públicos',
+    color: 'border-orange-600/70 bg-orange-950/30 hover:bg-orange-900/40',
+    badge: 'bg-orange-700 text-orange-100',
+  },
+  {
+    tier: 'management',
+    emoji: '🔒',
+    label: 'Gerência',
+    sub: 'OOB / Mgmt',
+    color: 'border-violet-600/70 bg-violet-950/30 hover:bg-violet-900/40',
+    badge: 'bg-violet-800 text-violet-100',
+  },
+  {
+    tier: 'custom',
+    emoji: '✏',
+    label: 'Livre',
+    sub: '(sem papel)',
+    color: 'border-slate-600/50 bg-slate-900/30 hover:bg-slate-800/40',
+    badge: 'bg-slate-600 text-slate-300',
+  },
+];
+
+const TIER_DEFAULT_NAMES: Record<LayerTier, string> = {
+  edge: 'Borda / Edge',
+  distribution: 'Distribuição',
+  access: 'Acesso',
+  endpoint: 'Endpoints',
+  dmz: 'DMZ',
+  management: 'Gerência',
+  custom: '',
+};
+
+function getTierBadge(tier?: LayerTier) {
+  if (!tier) return null;
+  return TIER_PRESETS.find((p) => p.tier === tier) ?? null;
+}
 
 export default function LegendPanel({ language }: LegendPanelProps) {
   const dispatch = useAppDispatch();
@@ -36,6 +118,41 @@ export default function LegendPanel({ language }: LegendPanelProps) {
   const [searchByLayer, setSearchByLayer] = useState<Record<string, string>>(
     {},
   );
+
+  // ── Tier picker state ───────────────────────────────────────────────────────
+  const [tierPickerSiteId, setTierPickerSiteId] = useState<string | null>(null);
+  const [pendingTier, setPendingTier] = useState<LayerTier | null>(null);
+  const [pendingLayerName, setPendingLayerName] = useState('');
+
+  function openTierPicker(siteId: string) {
+    setTierPickerSiteId(siteId);
+    setPendingTier(null);
+    setPendingLayerName('');
+  }
+
+  function closeTierPicker() {
+    setTierPickerSiteId(null);
+    setPendingTier(null);
+    setPendingLayerName('');
+  }
+
+  function selectTierPreset(tier: LayerTier) {
+    setPendingTier(tier);
+    const defaultName = TIER_DEFAULT_NAMES[tier];
+    setPendingLayerName(defaultName);
+  }
+
+  function handleConfirmAddLayer() {
+    if (!tierPickerSiteId) return;
+    dispatch(
+      addLayer({
+        siteId: tierPickerSiteId,
+        tier: pendingTier ?? undefined,
+        name: pendingLayerName || undefined,
+      }),
+    );
+    closeTierPicker();
+  }
 
   function getCategoryForLayer(layerId: string): NodeCategory {
     return categoryByLayer[layerId] ?? 'router';
@@ -149,7 +266,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 <button
                   onClick={(event) => {
                     event.preventDefault();
-                    dispatch(addLayer({ siteId: site.id }));
+                    openTierPicker(site.id);
                   }}
                   className="rounded bg-emerald-400 px-2 py-1 text-[10px] font-bold uppercase text-slate-950"
                 >
@@ -167,6 +284,59 @@ export default function LegendPanel({ language }: LegendPanelProps) {
               </div>
             </summary>
 
+            {/* ── Tier Picker modal inline ────────────────────────────────── */}
+            {tierPickerSiteId === site.id && (
+              <div
+                className="mx-2 mb-2 mt-1 rounded border border-emerald-700/50 bg-emerald-950/20 p-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                  Papel da camada{' '}
+                  <span className="text-slate-500">(opcional)</span>
+                </p>
+                <div className="mb-2 grid grid-cols-2 gap-1">
+                  {TIER_PRESETS.map((preset) => (
+                    <button
+                      key={preset.tier}
+                      type="button"
+                      onClick={() => selectTierPreset(preset.tier)}
+                      className={`flex flex-col items-start rounded border px-2 py-1.5 text-left text-[10px] transition ${preset.color} ${pendingTier === preset.tier ? 'ring-1 ring-emerald-400' : ''}`}
+                    >
+                      <span className="font-semibold">
+                        {preset.emoji} {preset.label}
+                      </span>
+                      <span className="text-slate-400">{preset.sub}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="mb-2 flex flex-col gap-0.5">
+                  <span className="text-[10px] text-slate-400">Nome</span>
+                  <input
+                    value={pendingLayerName}
+                    onChange={(e) => setPendingLayerName(e.target.value)}
+                    placeholder="Camada..."
+                    className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-600"
+                  />
+                </label>
+                <div className="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={closeTierPicker}
+                    className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmAddLayer}
+                    className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-emerald-500"
+                  >
+                    + Adicionar Camada
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 px-2 pb-2">
               {site.layers.map((layer) => (
                 <details
@@ -175,7 +345,20 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   className="rounded border border-slate-800 bg-slate-950/40"
                 >
                   <summary className="flex cursor-pointer items-center justify-between px-2 py-2 text-xs text-slate-300">
-                    <span>{layer.name}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      {(() => {
+                        const badge = getTierBadge(layer.tier);
+                        return badge ? (
+                          <span
+                            className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-bold ${badge.badge}`}
+                            title={badge.label}
+                          >
+                            {badge.emoji}
+                          </span>
+                        ) : null;
+                      })()}
+                      <span className="truncate">{layer.name}</span>
+                    </span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(event) => {
@@ -185,8 +368,13 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                             prev === layer.id ? null : layer.id,
                           );
                         }}
-                        className="rounded bg-amber-300 px-2 py-1 text-[10px] font-bold uppercase text-slate-950"
+                        className={`rounded border px-2 py-1 text-[10px] font-bold uppercase transition ${
+                          openPickerLayerId === layer.id
+                            ? 'border-cyan-600 bg-cyan-900/40 text-cyan-300'
+                            : 'border-[#2c4464] bg-[#0d1a2e] text-slate-100 hover:bg-slate-800'
+                        }`}
                       >
+                        [{getNodeVisual(getCategoryForLayer(layer.id)).short}]{' '}
                         {copy.addIcon}
                       </button>
                       <button

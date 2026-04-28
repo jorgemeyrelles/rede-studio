@@ -2,22 +2,51 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
   AclRule,
   AddCustomAclRulePayload,
+  AddCustomServicePayload,
+  AddCertificatePayload,
+  AddIpsecSaPayload,
+  AddSslVpnProfilePayload,
+  AddFwPolicyPayload,
+  AddNatRulePayload,
+  AddActiveSessionPayload,
+  AddLayerPayload,
   AddLinkPayload,
   AddNodePayload,
+  AddSiteNetworkPayload,
   AddSiteVlanPayload,
+  AddSubnetPayload,
+  ClearActiveSessionsPayload,
   Layer,
   NetworkState,
   NodeCategory,
+  RemoveCertificatePayload,
   RemoveCustomAclRulePayload,
+  RemoveCustomServicePayload,
+  RemoveFwPolicyPayload,
+  RemoveIpsecSaPayload,
+  RemoveNatRulePayload,
+  RemoveSiteNetworkPayload,
   RemoveSiteVlanPayload,
+  RemoveSslVpnProfilePayload,
+  RemoveSubnetPayload,
   ReorderCustomAclRulePayload,
   SetVlanAssignmentPayload,
   ToggleNodeVlanPayload,
   UpdateAclRulePayload,
+  UpdateAclRuleQoSPayload,
+  SetAclChildOverridePayload,
+  UpdateCertificatePayload,
+  UpdateCustomServicePayload,
+  UpdateFwPolicyPayload,
+  UpdateIpsecSaPayload,
+  UpdateLayerTierPayload,
   UpdateLinkPayload,
+  UpdateNatRulePayload,
   UpdateNodePayload,
   UpdateNodeTechFieldPayload,
+  UpdateNodeZonePayload,
   UpdateSitePayload,
+  UpdateSslVpnProfilePayload,
 } from './types';
 import { SCHEMA_VERSION } from './constants';
 import {
@@ -77,6 +106,16 @@ const initialState: NetworkState = {
   links: [],
   aclRules: [],
   siteVlans: [],
+  siteNetworks: [],
+  subnets: [],
+  // Fase 3
+  customServices: [],
+  certificates: [],
+  ipsecSas: [],
+  sslVpnProfiles: [],
+  fwPolicies: [],
+  natRules: [],
+  activeSessions: [],
   counters: {
     site: 1,
     layer: 1,
@@ -392,6 +431,55 @@ function normalizeState(input: NetworkState): NetworkState {
     sites: normalizedSites,
     layers: normalizedLayers,
     siteVlans: normalizedSiteVlans,
+    // Fase 2 — preserva ou inicializa arrays; filtra orphans (siteId inválido)
+    siteNetworks: Array.isArray(input.siteNetworks)
+      ? input.siteNetworks
+          .filter((n) =>
+            normalizedSites.some(
+              (s) => s.id === (siteIdMap.get(n.siteId) ?? n.siteId),
+            ),
+          )
+          .map((n) => ({ ...n, siteId: siteIdMap.get(n.siteId) ?? n.siteId }))
+      : [],
+    subnets: Array.isArray(input.subnets)
+      ? input.subnets
+          .filter((s) =>
+            normalizedSites.some(
+              (site) => site.id === (siteIdMap.get(s.siteId) ?? s.siteId),
+            ),
+          )
+          .map((s) => ({ ...s, siteId: siteIdMap.get(s.siteId) ?? s.siteId }))
+      : [],
+    // Fase 3 — preservar como estão (não dependem de IDs normalizados)
+    customServices: Array.isArray(input.customServices)
+      ? input.customServices
+      : [],
+    certificates: Array.isArray(input.certificates) ? input.certificates : [],
+    ipsecSas: Array.isArray(input.ipsecSas)
+      ? input.ipsecSas.filter((sa) =>
+          normalizedLinks.some((l) => l.id === sa.linkId),
+        )
+      : [],
+    sslVpnProfiles: Array.isArray(input.sslVpnProfiles)
+      ? input.sslVpnProfiles.filter((p) =>
+          normalizedLinks.some((l) => l.id === p.linkId),
+        )
+      : [],
+    fwPolicies: Array.isArray(input.fwPolicies)
+      ? input.fwPolicies.filter((p) =>
+          normalizedNodes.some((n) => n.id === p.nodeId),
+        )
+      : [],
+    natRules: Array.isArray(input.natRules)
+      ? input.natRules.filter((r) =>
+          normalizedNodes.some((n) => n.id === r.nodeId),
+        )
+      : [],
+    activeSessions: Array.isArray(input.activeSessions)
+      ? input.activeSessions.filter((s) =>
+          normalizedNodes.some((n) => n.id === s.nodeId),
+        )
+      : [],
     nodes: normalizedNodes,
     links: normalizedLinks,
     ui: {
@@ -436,6 +524,15 @@ export const networkSlice = createSlice({
       links: [],
       aclRules: [],
       siteVlans: [],
+      siteNetworks: [],
+      subnets: [],
+      customServices: [],
+      certificates: [],
+      ipsecSas: [],
+      sslVpnProfiles: [],
+      fwPolicies: [],
+      natRules: [],
+      activeSessions: [],
       nodes: [...initialState.nodes],
       counters: { ...initialState.counters },
       ui: { ...initialState.ui, activeLinkId: null, vlanAssignment: null },
@@ -703,24 +800,114 @@ export const networkSlice = createSlice({
 
       assignNodeIpOutsideVlans(state, node);
     },
-    addLayer: (state, action: PayloadAction<{ siteId: string }>) => {
-      const { siteId } = action.payload;
+
+    // ── Fase 2 — SiteNetwork ────────────────────────────────────────────────
+    addSiteNetwork: (state, action: PayloadAction<AddSiteNetworkPayload>) => {
+      const { siteId, name, purpose, addressFamily, thirdOctet, cidr } =
+        action.payload;
+      if (!state.sites.some((s) => s.id === siteId)) return;
+
+      const id = `${siteId}-net-${Date.now()}`;
+      state.siteNetworks.push({
+        id,
+        siteId,
+        name: name.trim() || 'Rede',
+        purpose,
+        addressFamily,
+        thirdOctet: Math.max(0, Math.min(255, Math.trunc(thirdOctet))),
+        cidr: Math.max(8, Math.min(30, Math.trunc(cidr))),
+      });
+    },
+    removeSiteNetwork: (
+      state,
+      action: PayloadAction<RemoveSiteNetworkPayload>,
+    ) => {
+      const { id } = action.payload;
+      state.siteNetworks = state.siteNetworks.filter((n) => n.id !== id);
+      // Limpar referências nas sub-redes
+      state.subnets = state.subnets.filter((s) => s.networkId !== id);
+      // Limpar networkId nas VLANs e layers que apontavam para esta rede
+      state.siteVlans.forEach((v) => {
+        if (v.networkId === id) v.networkId = undefined;
+      });
+      state.layers.forEach((l) => {
+        if (l.networkId === id) l.networkId = undefined;
+      });
+      state.nodes.forEach((n) => {
+        if (n.networkId === id) n.networkId = undefined;
+      });
+    },
+
+    // ── Fase 2 — Subnet ────────────────────────────────────────────────────
+    addSubnet: (state, action: PayloadAction<AddSubnetPayload>) => {
+      const { siteId, networkId, vlanId, name, cidr, networkAddress } =
+        action.payload;
+      if (!state.siteNetworks.some((n) => n.id === networkId)) return;
+      const id = `${networkId}-sub-${Date.now()}`;
+      state.subnets.push({
+        id,
+        siteId,
+        networkId,
+        vlanId,
+        name: name.trim() || 'Sub-rede',
+        cidr: Math.max(8, Math.min(30, Math.trunc(cidr))),
+        networkAddress,
+      });
+    },
+    removeSubnet: (state, action: PayloadAction<RemoveSubnetPayload>) => {
+      state.subnets = state.subnets.filter((s) => s.id !== action.payload.id);
+    },
+
+    // ── Fase 1 — updateLayerTier / updateNodeZone (exports aqui por ordem) ─
+    updateLayerTier: (state, action: PayloadAction<UpdateLayerTierPayload>) => {
+      const layer = state.layers.find((l) => l.id === action.payload.id);
+      if (!layer) return;
+      layer.tier = action.payload.tier;
+      if (action.payload.name !== undefined) {
+        layer.name = action.payload.name;
+      }
+    },
+    updateNodeZone: (state, action: PayloadAction<UpdateNodeZonePayload>) => {
+      const node = state.nodes.find((n) => n.id === action.payload.id);
+      if (!node) return;
+      node.zone = action.payload.zone;
+    },
+
+    addLayer: (state, action: PayloadAction<AddLayerPayload>) => {
+      const { siteId, tier, name } = action.payload;
       const siteExists = state.sites.some((site) => site.id === siteId);
       if (!siteExists) return;
 
       const order = getLayerOrder(state.layers, siteId);
       const layerId = makeLayerId(siteId, order);
+
+      const tierDefaultNames: Record<string, string> = {
+        edge: 'Borda / Edge',
+        distribution: 'Distribuição',
+        access: 'Acesso',
+        endpoint: 'Endpoints',
+        dmz: 'DMZ',
+        management: 'Gerência',
+        custom: `Camada ${order}`,
+      };
+      const layerName =
+        name?.trim() ||
+        (tier
+          ? (tierDefaultNames[tier] ?? `Camada ${order}`)
+          : `Camada ${order}`);
+
       state.layers.push({
         id: layerId,
         siteId,
-        name: `Camada ${order}`,
+        name: layerName,
         order,
         width: 416,
         height: 180,
         minWidth: 286,
         maxWidth: 884,
-        minHeight: 140,
-        maxHeight: 520,
+        minHeight: 180, // mínimo = altura na criação
+        maxHeight: 300, // máximo ≈ 3 nós empilhados (3×76 + margens)
+        tier,
       });
       state.counters.layer += 1;
     },
@@ -1241,6 +1428,187 @@ export const networkSlice = createSlice({
       state.meta.lastSavedAt = action.payload;
       state.meta.persistWarning = null;
     },
+
+    // ── Fase 3 — CustomService ──────────────────────────────────────────────
+    addCustomService: (
+      state,
+      action: PayloadAction<AddCustomServicePayload>,
+    ) => {
+      const id = `svc-${Date.now()}`;
+      state.customServices.push({ id, ...action.payload });
+    },
+    updateCustomService: (
+      state,
+      action: PayloadAction<UpdateCustomServicePayload>,
+    ) => {
+      const svc = state.customServices.find((s) => s.id === action.payload.id);
+      if (svc) Object.assign(svc, action.payload.changes);
+    },
+    removeCustomService: (
+      state,
+      action: PayloadAction<RemoveCustomServicePayload>,
+    ) => {
+      state.customServices = state.customServices.filter(
+        (s) => s.id !== action.payload.id,
+      );
+    },
+
+    // ── Fase 3 — Certificate ───────────────────────────────────────────────
+    addCertificate: (state, action: PayloadAction<AddCertificatePayload>) => {
+      const id = `cert-${Date.now()}`;
+      state.certificates.push({ id, ...action.payload });
+    },
+    updateCertificate: (
+      state,
+      action: PayloadAction<UpdateCertificatePayload>,
+    ) => {
+      const cert = state.certificates.find((c) => c.id === action.payload.id);
+      if (cert) Object.assign(cert, action.payload.changes);
+    },
+    removeCertificate: (
+      state,
+      action: PayloadAction<RemoveCertificatePayload>,
+    ) => {
+      state.certificates = state.certificates.filter(
+        (c) => c.id !== action.payload.id,
+      );
+    },
+
+    // ── Fase 3 — IPsec SA ──────────────────────────────────────────────────
+    addIpsecSa: (state, action: PayloadAction<AddIpsecSaPayload>) => {
+      const { linkId } = action.payload;
+      if (!state.links.some((l) => l.id === linkId)) return;
+      const id = `sa-${Date.now()}`;
+      state.ipsecSas.push({ id, state: 'down', ...action.payload });
+    },
+    updateIpsecSa: (state, action: PayloadAction<UpdateIpsecSaPayload>) => {
+      const sa = state.ipsecSas.find((s) => s.id === action.payload.id);
+      if (sa) Object.assign(sa, action.payload.changes);
+    },
+    removeIpsecSa: (state, action: PayloadAction<RemoveIpsecSaPayload>) => {
+      state.ipsecSas = state.ipsecSas.filter((s) => s.id !== action.payload.id);
+    },
+
+    // ── Fase 3 — SSL-VPN Profile ───────────────────────────────────────────
+    addSslVpnProfile: (
+      state,
+      action: PayloadAction<AddSslVpnProfilePayload>,
+    ) => {
+      const { linkId } = action.payload;
+      if (!state.links.some((l) => l.id === linkId)) return;
+      const id = `svpn-${Date.now()}`;
+      state.sslVpnProfiles.push({
+        id,
+        authMode: 'password',
+        ...action.payload,
+      });
+    },
+    updateSslVpnProfile: (
+      state,
+      action: PayloadAction<UpdateSslVpnProfilePayload>,
+    ) => {
+      const profile = state.sslVpnProfiles.find(
+        (p) => p.id === action.payload.id,
+      );
+      if (profile) Object.assign(profile, action.payload.changes);
+    },
+    removeSslVpnProfile: (
+      state,
+      action: PayloadAction<RemoveSslVpnProfilePayload>,
+    ) => {
+      state.sslVpnProfiles = state.sslVpnProfiles.filter(
+        (p) => p.id !== action.payload.id,
+      );
+    },
+
+    // ── Fase 3 — Firewall Policy ───────────────────────────────────────────
+    addFwPolicy: (state, action: PayloadAction<AddFwPolicyPayload>) => {
+      const { nodeId } = action.payload;
+      if (!state.nodes.some((n) => n.id === nodeId)) return;
+      const priority =
+        state.fwPolicies.filter((p) => p.nodeId === nodeId).length + 1;
+      const id = `pol-${Date.now()}`;
+      state.fwPolicies.push({
+        id,
+        action: 'accept',
+        enabled: true,
+        priority,
+        ...action.payload,
+      });
+    },
+    updateFwPolicy: (state, action: PayloadAction<UpdateFwPolicyPayload>) => {
+      const pol = state.fwPolicies.find((p) => p.id === action.payload.id);
+      if (pol) Object.assign(pol, action.payload.changes);
+    },
+    removeFwPolicy: (state, action: PayloadAction<RemoveFwPolicyPayload>) => {
+      state.fwPolicies = state.fwPolicies.filter(
+        (p) => p.id !== action.payload.id,
+      );
+    },
+
+    // ── Fase 3 — NAT Rule ──────────────────────────────────────────────────
+    addNatRule: (state, action: PayloadAction<AddNatRulePayload>) => {
+      const { nodeId } = action.payload;
+      if (!state.nodes.some((n) => n.id === nodeId)) return;
+      const id = `nat-${Date.now()}`;
+      state.natRules.push({ id, enabled: true, ...action.payload });
+    },
+    updateNatRule: (state, action: PayloadAction<UpdateNatRulePayload>) => {
+      const rule = state.natRules.find((r) => r.id === action.payload.id);
+      if (rule) Object.assign(rule, action.payload.changes);
+    },
+    removeNatRule: (state, action: PayloadAction<RemoveNatRulePayload>) => {
+      state.natRules = state.natRules.filter((r) => r.id !== action.payload.id);
+    },
+
+    // ── Fase 3 — Active Sessions ───────────────────────────────────────────
+    addActiveSession: (
+      state,
+      action: PayloadAction<AddActiveSessionPayload>,
+    ) => {
+      const { nodeId } = action.payload;
+      if (!state.nodes.some((n) => n.id === nodeId)) return;
+      const id = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.activeSessions.push({
+        state: 'ESTABLISHED',
+        ...action.payload,
+        id,
+      });
+    },
+    clearActiveSessions: (
+      state,
+      action: PayloadAction<ClearActiveSessionsPayload>,
+    ) => {
+      state.activeSessions = state.activeSessions.filter(
+        (s) => s.nodeId !== action.payload.nodeId,
+      );
+    },
+
+    // ── Fase 3 — QoS em AclRule ────────────────────────────────────────────
+    updateAclRuleQoS: (
+      state,
+      action: PayloadAction<UpdateAclRuleQoSPayload>,
+    ) => {
+      const rule = state.aclRules.find((r) => r.id === action.payload.id);
+      if (!rule) return;
+      const { id: _id, ...qosFields } = action.payload;
+      Object.assign(rule, qosFields);
+    },
+
+    // ── Child action overrides (sobrescrita por IP/VLAN no painel de expansão)
+    setAclChildOverride: (
+      state,
+      action: PayloadAction<SetAclChildOverridePayload>,
+    ) => {
+      const rule = state.aclRules.find((r) => r.id === action.payload.ruleId);
+      if (!rule) return;
+      if (!rule.childOverrides) rule.childOverrides = {};
+      if (action.payload.action === null) {
+        delete rule.childOverrides[action.payload.childId];
+      } else {
+        rule.childOverrides[action.payload.childId] = action.payload.action;
+      }
+    },
   },
 });
 
@@ -1253,8 +1621,13 @@ export const {
   removeSiteVlan,
   setVlanAssignmentMode,
   toggleNodeVlanAssignment,
+  addSiteNetwork,
+  removeSiteNetwork,
+  addSubnet,
+  removeSubnet,
   addLayer,
   removeLayer,
+  updateLayerTier,
   resizeLayer,
   addNode,
   addFloatingNode,
@@ -1262,9 +1635,12 @@ export const {
   updateNodePosition,
   updateNode,
   updateNodeTechField,
+  updateNodeZone,
   addLink,
   removeLink,
   updateAclRule,
+  updateAclRuleQoS,
+  setAclChildOverride,
   addCustomAclRule,
   removeCustomAclRule,
   reorderCustomAclRule,
@@ -1275,6 +1651,27 @@ export const {
   setPersistWarning,
   markSaved,
   hydrateNetworkState,
+  // Fase 3
+  addCustomService,
+  updateCustomService,
+  removeCustomService,
+  addCertificate,
+  updateCertificate,
+  removeCertificate,
+  addIpsecSa,
+  updateIpsecSa,
+  removeIpsecSa,
+  addSslVpnProfile,
+  updateSslVpnProfile,
+  removeSslVpnProfile,
+  addFwPolicy,
+  updateFwPolicy,
+  removeFwPolicy,
+  addNatRule,
+  updateNatRule,
+  removeNatRule,
+  addActiveSession,
+  clearActiveSessions,
 } = networkSlice.actions;
 
 export default networkSlice.reducer;

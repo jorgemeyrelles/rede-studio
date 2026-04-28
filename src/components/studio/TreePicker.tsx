@@ -6,7 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   NodeItem,
   Site,
+  SiteNetwork,
   SiteVlan,
+  Subnet,
 } from '../../features/network/types/entities';
 import type { AclEndpointScope } from '../../features/network/types/entities';
 
@@ -17,13 +19,17 @@ export type TreePickerValue = {
   siteId?: string;
   ip?: string;
   ipList?: string[];
+  subnetId?: string;
+  zone?: string;
 };
 
 interface TreePickerProps {
   nodes: NodeItem[];
   siteVlans: SiteVlan[];
   sites: Site[];
-  value: string; // nodeId or 'any'
+  siteNetworks?: SiteNetwork[];
+  subnets?: Subnet[];
+  value: string; // nodeId or 'any' or 'subnet:id' or 'zone:name'
   onChange: (nodeId: string) => void;
   placeholder?: string;
   excludeNodeId?: string;
@@ -59,6 +65,8 @@ export function TreePicker({
   nodes,
   siteVlans,
   sites,
+  siteNetworks: _siteNetworks = [],
+  subnets = [],
   value,
   onChange,
   placeholder = 'Selecionar nó…',
@@ -127,12 +135,26 @@ export function TreePicker({
     setOpen(false);
   };
 
-  const displayLabel =
-    value === 'any'
-      ? 'Qualquer (ANY)'
-      : selectedNode
-        ? `${selectedNode.label} (${selectedNode.ip})`
-        : placeholder;
+  const displayLabel = (() => {
+    if (value === 'any') return 'Qualquer (ANY)';
+    if (value.startsWith('subnet:')) {
+      const sub = subnets.find((s) => s.id === value.slice(7));
+      return sub
+        ? `Sub-rede: ${sub.name} (${sub.networkAddress}/${sub.cidr})`
+        : value;
+    }
+    if (value.startsWith('zone:')) {
+      return `Zona: ${value.slice(5)}`;
+    }
+    return selectedNode
+      ? `${selectedNode.label} (${selectedNode.ip})`
+      : placeholder;
+  })();
+
+  // Zonas únicas presentes nos nós
+  const uniqueZones = [
+    ...new Set(nodes.filter((n) => n.zone).map((n) => n.zone as string)),
+  ].sort();
 
   return (
     <div ref={ref} className="relative">
@@ -257,6 +279,61 @@ export function TreePicker({
                     </span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* ── Subnets (Fase 2) ─────────────────────────────────── */}
+            {subnets.length > 0 && (
+              <div>
+                <div className="bg-slate-800/70 px-2 py-1 text-[10px] font-semibold text-slate-400">
+                  Sub-redes
+                </div>
+                {subnets.map((sub) => {
+                  const key = `subnet:${sub.id}`;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => {
+                        onChange(key);
+                        setOpen(false);
+                      }}
+                      className={`w-full px-3 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === key ? 'text-sky-400' : 'text-slate-300'}`}
+                    >
+                      {value === key ? '✓ ' : ''}
+                      {sub.name}
+                      <span className="ml-1 font-mono text-[9px] text-slate-500">
+                        {sub.networkAddress}/{sub.cidr}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Zonas (Fase 2) ───────────────────────────────────── */}
+            {uniqueZones.length > 0 && (
+              <div>
+                <div className="bg-slate-800/70 px-2 py-1 text-[10px] font-semibold text-slate-400">
+                  Zonas
+                </div>
+                {uniqueZones.map((zone) => {
+                  const key = `zone:${zone}`;
+                  return (
+                    <button
+                      key={zone}
+                      type="button"
+                      onClick={() => {
+                        onChange(key);
+                        setOpen(false);
+                      }}
+                      className={`w-full px-3 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === key ? 'text-sky-400' : 'text-slate-300'}`}
+                    >
+                      {value === key ? '✓ ' : ''}
+                      <span className="capitalize">{zone}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

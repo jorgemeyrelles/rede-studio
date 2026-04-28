@@ -137,7 +137,7 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   return (
     <section className="w-full rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">
-        {copy.title}
+        Redes &amp; VLANs
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

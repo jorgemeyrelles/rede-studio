@@ -12,9 +12,9 @@ import type {
 } from '../types';
 
 export const STUDIO_LANGUAGE_OPTIONS: LanguageOption[] = [
-  { value: 'pt', label: 'Português', flag: '🇧🇷' },
-  { value: 'en', label: 'English', flag: '🇺🇸' },
-  { value: 'es', label: 'Español', flag: '🇪🇸' },
+  { value: 'pt', label: 'Português', flag: 'PT' },
+  { value: 'en', label: 'English', flag: 'EN' },
+  { value: 'es', label: 'Español', flag: 'ES' },
 ];
 
 export const STUDIO_TOOLBAR_COPY: Record<StudioLanguage, StudioToolbarCopy> = {

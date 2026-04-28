@@ -5,6 +5,8 @@ import LegendPanel from '../components/studio/LegendPanel';
 import RouteFirewallPanel from '../components/studio/RouteFirewallPanel';
 import SiteVlanPanel from '../components/studio/SiteVlanPanel';
 import StudioToolbar from '../components/studio/StudioToolbar';
+import CustomServicePanel from '../components/studio/CustomServicePanel';
+import CertificatePanel from '../components/studio/CertificatePanel';
 import {
   generateStudioPdfReport,
   getStudioPageCopy,
@@ -32,6 +34,7 @@ export default function StudioPage({ language }: StudioPageProps) {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
   const diagramCaptureRef = useRef<HTMLDivElement | null>(null);
   const networkDiagramRef = useRef<NetworkDiagramHandle | null>(null);
   const copy = getStudioPageCopy(language);
@@ -101,26 +104,43 @@ export default function StudioPage({ language }: StudioPageProps) {
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-3 p-4">
-      <section className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[260px_1fr]">
-        <div className="h-0 min-h-full overflow-hidden">
+      <div className="relative">
+        {/* ── Legend drawer overlay ─────────────────────────────────────── */}
+        {isLegendOpen && (
+          <div
+            className="absolute inset-0 z-40 bg-black/30"
+            onClick={() => setIsLegendOpen(false)}
+          />
+        )}
+        <div
+          className={`absolute left-0 top-0 z-50 h-full w-[300px] shadow-2xl transition-transform duration-200 ${
+            isLegendOpen ? 'translate-x-0' : '-translate-x-[110%]'
+          }`}
+        >
           <LegendPanel language={language} />
         </div>
 
         <section className="space-y-3">
           <div className="rounded-lg border border-[#315072] bg-[#0b172a]/75 px-4 py-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
-              {copy.proposalTitle}
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+                {copy.proposalTitle}
+              </div>
+              <h2 className="mt-1 text-lg font-semibold text-slate-100">
+                {copy.diagramTitle}
+                {/* <span className="ml-2 text-sm font-medium text-cyan-300">
+                  Matriz | Tunelamento | Filial
+                </span> */}
+              </h2>
+              <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
             </div>
-            <h2 className="mt-1 text-lg font-semibold text-slate-100">
-              {copy.diagramTitle}
-              {/* <span className="ml-2 text-sm font-medium text-cyan-300">
-                Matriz | Tunelamento | Filial
-              </span> */}
-            </h2>
-            <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
           </div>
 
-          <StudioToolbar language={language} />
+          <StudioToolbar
+            language={language}
+            isLegendOpen={isLegendOpen}
+            onToggleLegend={() => setIsLegendOpen((v) => !v)}
+          />
 
           <div className="rounded-lg border border-[#315072] bg-[#091527]/80 p-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
             <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">
@@ -133,11 +153,16 @@ export default function StudioPage({ language }: StudioPageProps) {
             </div>
           </div>
         </section>
-      </section>
+      </div>
 
       <RouteFirewallPanel language={language} />
 
       <SiteVlanPanel language={language} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CustomServicePanel />
+        <CertificatePanel />
+      </div>
 
       <div className="w-full rounded-lg border border-[#315072] bg-[#0b172a]/75 px-3 py-2 text-xs text-slate-300">
         <div className="flex items-center justify-between gap-3">

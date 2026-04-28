@@ -2,11 +2,19 @@ import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
   updateAclRule,
+  updateAclRuleQoS,
+  setAclChildOverride,
   addCustomAclRule,
   removeCustomAclRule,
   reorderCustomAclRule,
   setActiveLinkId,
   updateLink,
+  addIpsecSa,
+  updateIpsecSa,
+  removeIpsecSa,
+  addSslVpnProfile,
+  updateSslVpnProfile,
+  removeSslVpnProfile,
 } from '../../features/network/networkSlice';
 import {
   selectFirewallRulesGrouped,
@@ -138,6 +146,48 @@ type RouteFirewallPanelProps = {
   language: StudioLanguage;
 };
 
+// ── Flag badge with custom styled tooltip ──────────────────────────────────
+function FlagBadge({
+  children,
+  tooltip,
+  className,
+}: {
+  children: ReactNode;
+  tooltip: string;
+  className: string;
+}) {
+  const [position, setPosition] = useState<TooltipPosition | null>(null);
+
+  const open = (el: HTMLSpanElement) => {
+    const rect = el.getBoundingClientRect();
+    setPosition({ top: rect.top + rect.height / 2, left: rect.right + 6 });
+  };
+  const close = () => setPosition(null);
+
+  return (
+    <>
+      <span
+        className={`cursor-help rounded px-1 py-px text-[9px] ${className}`}
+        onMouseEnter={(e) => open(e.currentTarget)}
+        onMouseLeave={close}
+        onFocus={(e) => open(e.currentTarget)}
+        onBlur={close}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      {position && (
+        <div
+          className="fixed z-[1000] max-w-[260px] -translate-y-1/2 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-left text-[11px] leading-relaxed text-slate-200 shadow-xl"
+          style={{ top: position.top, left: position.left }}
+        >
+          {tooltip}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Badge helpers ───────────────────────────────────────────────────────────
 function RuleBadges({ rule }: { rule: FirewallRuleRow }) {
   const natLabel =
@@ -174,84 +224,84 @@ function RuleBadges({ rule }: { rule: FirewallRuleRow }) {
   return (
     <span className="flex flex-wrap gap-0.5">
       {!rule.stateful && !rule.passthrough && (
-        <span
-          title="Stateless"
-          className="rounded bg-amber-900/60 px-1 py-px text-[9px] text-amber-300"
+        <FlagBadge
+          tooltip="Stateless — sem rastreamento de conexão"
+          className="bg-amber-900/60 text-amber-300"
         >
           ~
-        </span>
+        </FlagBadge>
       )}
       {rule.bidirectional && (
-        <span
-          title="Bidirecional — par de retorno gerado"
-          className="rounded bg-sky-900/60 px-1 py-px text-[9px] text-sky-300"
+        <FlagBadge
+          tooltip="Bidirecional — regra de retorno gerada automaticamente"
+          className="bg-sky-900/60 text-sky-300"
         >
           ↔
-        </span>
+        </FlagBadge>
       )}
       {rule.passthrough && (
-        <span
-          title="Passthrough (sem FW/router no caminho)"
-          className="rounded bg-slate-700 px-1 py-px text-[9px] text-slate-400"
+        <FlagBadge
+          tooltip="Passthrough — sem firewall ou roteador no caminho"
+          className="bg-slate-700 text-slate-400"
         >
           ⊘
-        </span>
+        </FlagBadge>
       )}
       {rule.hasConflict && (
-        <span
-          title="Conflito: DENY manual sobrescreve ALLOW de topologia"
-          className="rounded bg-red-900/60 px-1 py-px text-[9px] text-red-400"
+        <FlagBadge
+          tooltip="Conflito: regra DENY manual sobrescreve ALLOW de topologia"
+          className="bg-red-900/60 text-red-400"
         >
           ⚠
-        </span>
+        </FlagBadge>
       )}
       {rule.natExempt && (
-        <span
-          title="NAT Exempt — bypass NAT para IPsec"
-          className="rounded bg-emerald-900/60 px-1 py-px text-[9px] text-emerald-400"
+        <FlagBadge
+          tooltip="NAT Exempt — bypass de NAT para tráfego IPsec"
+          className="bg-emerald-900/60 text-emerald-400"
         >
           🛡
-        </span>
+        </FlagBadge>
       )}
       {natLabel && (
-        <span
-          title={natTitle}
-          className="rounded bg-amber-900/60 px-1 py-px text-[9px] text-amber-300"
+        <FlagBadge
+          tooltip={natTitle}
+          className="bg-amber-900/60 text-amber-300"
         >
           {natLabel}
-        </span>
+        </FlagBadge>
       )}
       {rule.ipsecAuthBadge && (
-        <span
-          title={`IPsec auth: ${rule.ipsecAuthBadge}`}
-          className={`rounded px-1 py-px text-[9px] ${ipsecBadgeColor}`}
+        <FlagBadge
+          tooltip={`IPsec auth: ${rule.ipsecAuthBadge}`}
+          className={ipsecBadgeColor}
         >
           {rule.ipsecAuthBadge}
-        </span>
+        </FlagBadge>
       )}
       {rule.managed && (
-        <span
-          title="Gerenciada por topologia"
-          className="rounded bg-slate-700 px-1 py-px text-[9px] text-slate-400"
+        <FlagBadge
+          tooltip="Gerenciada automaticamente pela topologia — não editável"
+          className="bg-slate-700 text-slate-400"
         >
           🔒
-        </span>
+        </FlagBadge>
       )}
       {rule.isReturnRule && (
-        <span
-          title="Regra de retorno automática"
-          className="rounded bg-purple-900/60 px-1 py-px text-[9px] text-purple-300"
+        <FlagBadge
+          tooltip="Regra de retorno gerada automaticamente para a regra bidirecional"
+          className="bg-purple-900/60 text-purple-300"
         >
           ←R
-        </span>
+        </FlagBadge>
       )}
       {rule.missingReturn && (
-        <span
-          title="Stateless sem regra de retorno"
-          className="rounded bg-orange-900/60 px-1 py-px text-[9px] text-orange-400"
+        <FlagBadge
+          tooltip="Stateless sem regra de retorno — tráfego de resposta pode ser bloqueado"
+          className="bg-orange-900/60 text-orange-400"
         >
           ⚠stl
-        </span>
+        </FlagBadge>
       )}
     </span>
   );
@@ -455,6 +505,12 @@ export default function RouteFirewallPanel({
   const sites = useAppSelector((state) => state.network.sites);
   const nodes = useAppSelector((state) => state.network.nodes);
   const links = useAppSelector((state) => state.network.links);
+  const certificates = useAppSelector((state) => state.network.certificates);
+  const ipsecSas = useAppSelector((state) => state.network.ipsecSas);
+  const sslVpnProfiles = useAppSelector(
+    (state) => state.network.sslVpnProfiles,
+  );
+  const aclRules = useAppSelector((state) => state.network.aclRules);
   const activeLinkId = useAppSelector((state) => state.network.ui.activeLinkId);
   const activeLink = activeLinkId
     ? (links.find((l) => l.id === activeLinkId) ?? null)
@@ -476,9 +532,7 @@ export default function RouteFirewallPanel({
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [childActions, setChildActions] = useState<Record<string, AclAction>>(
-    {},
-  );
+  const [qosExpandedIds, setQosExpandedIds] = useState<Set<string>>(new Set());
   const [expansionFilters, setExpansionFilters] = useState<
     Record<string, { origin: string; dest: string }>
   >({});
@@ -516,11 +570,28 @@ export default function RouteFirewallPanel({
   const getChildAction = (
     childId: string,
     parentAction: AclAction,
-  ): AclAction =>
-    (childActions[childId] as AclAction | undefined) ?? parentAction;
+    ruleId: string,
+  ): AclAction => {
+    const rule = aclRules.find((r) => r.id === ruleId);
+    return (
+      (rule?.childOverrides?.[childId] as AclAction | undefined) ?? parentAction
+    );
+  };
 
-  const setChildAction = (childId: string, action: AclAction) =>
-    setChildActions((prev) => ({ ...prev, [childId]: action }));
+  const setChildAction = (
+    ruleId: string,
+    childId: string,
+    action: AclAction,
+    parentAction: AclAction,
+  ) =>
+    dispatch(
+      setAclChildOverride({
+        ruleId,
+        childId,
+        // null = remover sobrescrita quando volta ao padrão do pai
+        action: action === parentAction ? null : action,
+      }),
+    );
 
   const getFilter = (ruleId: string) =>
     expansionFilters[ruleId] ?? { origin: '', dest: '' };
@@ -618,7 +689,7 @@ export default function RouteFirewallPanel({
     rule: FirewallRuleRow,
     children: FirewallRuleRow[],
     idx: number,
-    totalManual: number,
+    _totalManual: number,
     isManual: boolean,
     allManualGroups: { parent: FirewallRuleRow; children: FirewallRuleRow[] }[],
   ) => {
@@ -630,6 +701,14 @@ export default function RouteFirewallPanel({
       rule.destinationScope === 'ip-list';
     const expansionRows = getExpansionRows(rule, children);
     const isOpen = expandedIds.has(rule.aclRuleId);
+    const isQosOpen = qosExpandedIds.has(rule.aclRuleId);
+    const rawRule = aclRules.find((r) => r.id === rule.aclRuleId);
+    const hasQos = !!(
+      rawRule?.dscpMark !== undefined ||
+      rawRule?.trafficClass ||
+      rawRule?.guaranteedBwKbps ||
+      rawRule?.maxBwKbps
+    );
     const filter = getFilter(rule.aclRuleId);
 
     const filteredRows = expansionRows.filter((row) => {
@@ -695,12 +774,18 @@ export default function RouteFirewallPanel({
 
           {/* Origem */}
           <td className="border-b border-slate-800 px-1 py-1">
-            <TruncatedValueTooltip value={rule.origem} />
+            <TruncatedValueTooltip
+              value={rule.origem}
+              maxWidthClass="max-w-[140px]"
+            />
           </td>
 
           {/* Destino */}
           <td className="border-b border-slate-800 px-1 py-1">
-            <TruncatedValueTooltip value={rule.destino} />
+            <TruncatedValueTooltip
+              value={rule.destino}
+              maxWidthClass="max-w-[140px]"
+            />
           </td>
 
           {/* Serviço */}
@@ -721,29 +806,59 @@ export default function RouteFirewallPanel({
           </td>
 
           {/* Badges + actions */}
-          <td className="border-b border-slate-800 px-1 py-1">
-            <div className="flex items-center gap-1">
+          <td className="border-b border-slate-800 px-1 py-1 text-right">
+            <div className="flex flex-wrap items-center justify-end gap-1">
               <RuleBadges rule={rule} />
-              {/* G — ↔ toggle for topology rows with missing return rule */}
-              {!isManual && rule.missingReturn && !rule.isReturnRule && (
-                <button
-                  type="button"
-                  title="Marcar como bidirecional — gera regra de retorno"
-                  onClick={() =>
-                    dispatch(
-                      updateAclRule({
-                        id: rule.aclRuleId,
-                        changes: { bidirectional: true },
-                      }),
-                    )
-                  }
-                  className="ml-1 flex h-5 w-5 items-center justify-center rounded border border-amber-700/60 bg-amber-900/20 text-[10px] text-amber-400 hover:bg-amber-800/40"
-                >
-                  ↔
-                </button>
-              )}
+              {/* QoS toggle button */}
+              <button
+                type="button"
+                title="QoS — Qualidade de Serviço"
+                onClick={() =>
+                  setQosExpandedIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(rule.aclRuleId)) next.delete(rule.aclRuleId);
+                    else next.add(rule.aclRuleId);
+                    return next;
+                  })
+                }
+                className={`flex h-5 items-center rounded px-1 text-[9px] font-bold transition ${
+                  hasQos
+                    ? 'border border-orange-600/60 bg-orange-900/30 text-orange-300'
+                    : 'text-slate-600 hover:text-slate-400'
+                }`}
+              >
+                {hasQos ? '🔶' : '◇'} QoS
+              </button>
+              {/* G — ↔ toggle bidirecional (topologia stateless) */}
+              {!isManual &&
+                !rule.isReturnRule &&
+                (rule.missingReturn || rule.bidirectional) && (
+                  <button
+                    type="button"
+                    title={
+                      rule.bidirectional
+                        ? 'Remover marcação bidirecional — o aviso de retorno reaparecerá'
+                        : 'Marcar como bidirecional — suprime aviso de regra de retorno'
+                    }
+                    onClick={() =>
+                      dispatch(
+                        updateAclRule({
+                          id: rule.aclRuleId,
+                          changes: { bidirectional: !rule.bidirectional },
+                        }),
+                      )
+                    }
+                    className={`ml-1 flex h-5 w-5 items-center justify-center rounded border text-[10px] transition ${
+                      rule.bidirectional
+                        ? 'border-sky-600/60 bg-sky-900/30 text-sky-300 hover:bg-red-900/30 hover:text-red-300 hover:border-red-600/60'
+                        : 'border-amber-700/60 bg-amber-900/20 text-amber-400 hover:bg-amber-800/40'
+                    }`}
+                  >
+                    ↔
+                  </button>
+                )}
               {isManual && (
-                <div className="ml-auto flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5">
                   {/* H — drag handle */}
                   <span
                     title="Arrastar para reordenar"
@@ -786,6 +901,147 @@ export default function RouteFirewallPanel({
           </td>
         </tr>
 
+        {/* ── QoS inline panel ────────────────────────────────────────────── */}
+        <tr>
+          <td colSpan={7} className="p-0">
+            <div
+              className={`overflow-hidden transition-all duration-200 ${isQosOpen ? 'max-h-[200px]' : 'max-h-0'}`}
+            >
+              <div className="ml-7 border-l-2 border-orange-500/40 bg-orange-950/10 px-3 py-2">
+                <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-orange-400">
+                  QoS — Qualidade de Serviço
+                </p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+                  {/* Classe de Tráfego */}
+                  <div>
+                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                      Classe de Tráfego
+                    </label>
+                    <select
+                      value={rawRule?.trafficClass ?? ''}
+                      onChange={(e) =>
+                        dispatch(
+                          updateAclRuleQoS({
+                            id: rule.aclRuleId,
+                            trafficClass: (e.target.value ||
+                              undefined) as Parameters<
+                              typeof updateAclRuleQoS
+                            >[0] extends { trafficClass?: infer T }
+                              ? T
+                              : never,
+                          }),
+                        )
+                      }
+                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+                    >
+                      <option value="">— padrão —</option>
+                      <option value="critical">🔴 Critical</option>
+                      <option value="voice">🟠 Voice</option>
+                      <option value="video">🟡 Video</option>
+                      <option value="bulk">🔵 Bulk</option>
+                      <option value="best-effort">⚪ Best-Effort</option>
+                    </select>
+                  </div>
+                  {/* DSCP Mark */}
+                  <div>
+                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                      DSCP Mark (0–63)
+                    </label>
+                    <div className="flex gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={63}
+                        value={rawRule?.dscpMark ?? ''}
+                        onChange={(e) =>
+                          dispatch(
+                            updateAclRuleQoS({
+                              id: rule.aclRuleId,
+                              dscpMark:
+                                e.target.value !== ''
+                                  ? Number(e.target.value)
+                                  : undefined,
+                            }),
+                          )
+                        }
+                        placeholder="Ex: 46"
+                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                      />
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value !== '')
+                            dispatch(
+                              updateAclRuleQoS({
+                                id: rule.aclRuleId,
+                                dscpMark: Number(e.target.value),
+                              }),
+                            );
+                        }}
+                        className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-300"
+                      >
+                        <option value="">Preset</option>
+                        <option value="46">EF=46</option>
+                        <option value="34">AF41=34</option>
+                        <option value="26">AF31=26</option>
+                        <option value="18">AF21=18</option>
+                        <option value="0">CS0=0</option>
+                      </select>
+                    </div>
+                  </div>
+                  {/* Banda Garantida */}
+                  <div>
+                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                      Banda Garantida (kbps)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={rawRule?.guaranteedBwKbps ?? ''}
+                      onChange={(e) =>
+                        dispatch(
+                          updateAclRuleQoS({
+                            id: rule.aclRuleId,
+                            guaranteedBwKbps:
+                              e.target.value !== ''
+                                ? Number(e.target.value)
+                                : undefined,
+                          }),
+                        )
+                      }
+                      placeholder="Ex: 1000"
+                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                    />
+                  </div>
+                  {/* Banda Máxima */}
+                  <div>
+                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                      Banda Máxima (kbps)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={rawRule?.maxBwKbps ?? ''}
+                      onChange={(e) =>
+                        dispatch(
+                          updateAclRuleQoS({
+                            id: rule.aclRuleId,
+                            maxBwKbps:
+                              e.target.value !== ''
+                                ? Number(e.target.value)
+                                : undefined,
+                          }),
+                        )
+                      }
+                      placeholder="Ex: 5000"
+                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
         {/* Expansion row */}
         {isExpandable && (
           <tr>
@@ -861,42 +1117,59 @@ export default function RouteFirewallPanel({
                           </td>
                         </tr>
                       )}
-                      {filteredRows.map((row, rowIdx) => (
-                        <tr key={row.id} className="hover:bg-slate-700/30">
-                          <td className="px-2 py-0.5 text-[10px] text-slate-500">
-                            {rowIdx + 1}
-                          </td>
-                          <td className="px-2 py-0.5">
-                            <select
-                              value={getChildAction(row.id, rule.acao)}
-                              onChange={(e) =>
-                                setChildAction(
-                                  row.id,
-                                  e.target.value as AclAction,
-                                )
-                              }
-                              className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                            >
-                              <option value="ALLOW">ALLOW</option>
-                              <option value="DENY">DENY</option>
-                            </select>
-                          </td>
-                          <td className="px-2 py-0.5">
-                            <TruncatedValueTooltip
-                              value={row.origem}
-                              maxWidthClass="max-w-[200px]"
-                              className="font-mono text-[10px] text-slate-300"
-                            />
-                          </td>
-                          <td className="px-2 py-0.5">
-                            <TruncatedValueTooltip
-                              value={row.destino}
-                              maxWidthClass="max-w-[200px]"
-                              className="font-mono text-[10px] text-slate-300"
-                            />
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredRows.map((row, rowIdx) => {
+                        const childOverrideAction = getChildAction(
+                          row.id,
+                          rule.acao,
+                          rule.aclRuleId,
+                        );
+                        const hasOverride = childOverrideAction !== rule.acao;
+                        return (
+                          <tr
+                            key={row.id}
+                            className={`hover:bg-slate-700/30 ${hasOverride ? 'bg-red-950/20' : ''}`}
+                          >
+                            <td className="px-2 py-0.5 text-[10px] text-slate-500">
+                              {rowIdx + 1}
+                            </td>
+                            <td className="px-2 py-0.5">
+                              <select
+                                value={childOverrideAction}
+                                onChange={(e) =>
+                                  setChildAction(
+                                    rule.aclRuleId,
+                                    row.id,
+                                    e.target.value as AclAction,
+                                    rule.acao,
+                                  )
+                                }
+                                className={`w-full rounded border px-1 py-0.5 text-[10px] text-slate-100 ${
+                                  hasOverride
+                                    ? 'border-red-600/60 bg-red-900/30 font-semibold text-red-300'
+                                    : 'border-slate-700 bg-slate-900'
+                                }`}
+                              >
+                                <option value="ALLOW">ALLOW</option>
+                                <option value="DENY">DENY</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-0.5">
+                              <TruncatedValueTooltip
+                                value={row.origem}
+                                maxWidthClass="max-w-[200px]"
+                                className="font-mono text-[10px] text-slate-300"
+                              />
+                            </td>
+                            <td className="px-2 py-0.5">
+                              <TruncatedValueTooltip
+                                value={row.destino}
+                                maxWidthClass="max-w-[200px]"
+                                className="font-mono text-[10px] text-slate-300"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {filteredRows.length > 0 && (
@@ -1051,12 +1324,18 @@ export default function RouteFirewallPanel({
                     {copy.interfaceHelpLine3}
                   </HeaderInfoTooltip>
                 </th>
+                <th className="w-[90px] border-b border-slate-700 px-1 py-1 text-slate-400">
+                  Rede
+                </th>
+                <th className="w-[70px] border-b border-slate-700 px-1 py-1 text-slate-400">
+                  Zona
+                </th>
               </tr>
             </thead>
             <tbody>
               {routes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-1 py-2 text-slate-500">
+                  <td colSpan={7} className="px-1 py-2 text-slate-500">
                     {copy.emptyRoutes}
                   </td>
                 </tr>
@@ -1065,7 +1344,7 @@ export default function RouteFirewallPanel({
                 <Fragment key={`group-${group.siteId}`}>
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       className="bg-slate-800/70 px-2 py-1 font-semibold text-sky-300 border-b border-slate-600 border-t border-slate-600"
                     >
                       📍 {group.siteName}
@@ -1095,11 +1374,31 @@ export default function RouteFirewallPanel({
                       <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
                         {route.iface}
                       </td>
+                      <td className="border-b border-slate-800 px-1 py-1 text-slate-400">
+                        {route.networkName}
+                      </td>
+                      <td className="border-b border-slate-800 px-1 py-1">
+                        <span
+                          className={`rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
+                            route.zone === 'wan'
+                              ? 'bg-orange-900/50 text-orange-300'
+                              : route.zone === 'vpn'
+                                ? 'bg-cyan-900/50 text-cyan-300'
+                                : route.zone === 'dmz'
+                                  ? 'bg-amber-900/50 text-amber-300'
+                                  : route.zone === 'lan'
+                                    ? 'bg-emerald-900/50 text-emerald-300'
+                                    : 'bg-slate-700 text-slate-400'
+                          }`}
+                        >
+                          {route.zone}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       className="border-b border-slate-700 px-2 py-1 text-[11px] text-slate-400"
                     >
                       {copy.otherIps}:{' '}
@@ -1231,6 +1530,387 @@ export default function RouteFirewallPanel({
               >
                 Deselecionar link
               </button>
+
+              {/* ── IPsec SA ──────────────────────────────────────────── */}
+              {(activeLink.kind === 'ipsec' || activeLink.kind === 'vpn') && (
+                <details
+                  className="rounded border border-indigo-700/40 bg-indigo-950/20"
+                  open
+                >
+                  <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-indigo-300">
+                    <span>🔒 IPsec SAs</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        dispatch(
+                          addIpsecSa({
+                            linkId: activeLinkId!,
+                            name: `SA-${ipsecSas.filter((s) => s.linkId === activeLinkId).length + 1}`,
+                            phase: 1,
+                            state: 'down',
+                            encAlg: 'aes256',
+                            hashAlg: 'sha256',
+                            dhGroup: 14,
+                            lifetimeSec: 86400,
+                          }),
+                        );
+                      }}
+                      className="rounded bg-indigo-700/30 px-1.5 py-0.5 text-[9px] text-indigo-300 hover:bg-indigo-600/40"
+                    >
+                      + SA
+                    </button>
+                  </summary>
+                  <div className="space-y-2 px-2 pb-2 pt-1">
+                    {ipsecSas.filter((sa) => sa.linkId === activeLinkId)
+                      .length === 0 && (
+                      <p className="text-[10px] text-slate-500">
+                        Nenhuma SA configurada.
+                      </p>
+                    )}
+                    {ipsecSas
+                      .filter((sa) => sa.linkId === activeLinkId)
+                      .map((sa) => (
+                        <div
+                          key={sa.id}
+                          className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
+                        >
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="font-semibold text-slate-200">
+                              {sa.name}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={`rounded px-1 py-0.5 text-[9px] font-semibold ${
+                                  sa.state === 'established'
+                                    ? 'bg-green-800/50 text-green-300'
+                                    : sa.state === 'rekeying'
+                                      ? 'bg-yellow-800/50 text-yellow-300'
+                                      : sa.state === 'connecting'
+                                        ? 'bg-blue-800/50 text-blue-300'
+                                        : 'bg-red-800/50 text-red-300'
+                                }`}
+                              >
+                                {sa.state}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  dispatch(removeIpsecSa({ id: sa.id }))
+                                }
+                                className="rounded px-1 text-red-400 hover:bg-red-900/30"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-slate-400">
+                            <span>Fase {sa.phase}</span>
+                            <span>DH: {sa.dhGroup ?? '—'}</span>
+                            <span>Cifra: {sa.encAlg ?? '—'}</span>
+                            <span>Hash: {sa.hashAlg ?? '—'}</span>
+                            <span>
+                              Lifetime:{' '}
+                              {sa.lifetimeSec ? `${sa.lifetimeSec}s` : '—'}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex gap-1">
+                            <select
+                              value={sa.state}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateIpsecSa({
+                                    id: sa.id,
+                                    changes: {
+                                      state: e.target.value as typeof sa.state,
+                                    },
+                                  }),
+                                )
+                              }
+                              className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                            >
+                              <option value="established">established</option>
+                              <option value="rekeying">rekeying</option>
+                              <option value="connecting">connecting</option>
+                              <option value="down">down</option>
+                            </select>
+                            <select
+                              value={sa.phase}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateIpsecSa({
+                                    id: sa.id,
+                                    changes: {
+                                      phase: Number(e.target.value) as 1 | 2,
+                                    },
+                                  }),
+                                )
+                              }
+                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                            >
+                              <option value={1}>Phase 1</option>
+                              <option value={2}>Phase 2</option>
+                            </select>
+                          </div>
+                          <div className="mt-1 grid grid-cols-2 gap-1">
+                            <input
+                              type="text"
+                              placeholder="Local ID"
+                              value={sa.localId ?? ''}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateIpsecSa({
+                                    id: sa.id,
+                                    changes: { localId: e.target.value },
+                                  }),
+                                )
+                              }
+                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Remote ID"
+                              value={sa.remoteId ?? ''}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateIpsecSa({
+                                    id: sa.id,
+                                    changes: { remoteId: e.target.value },
+                                  }),
+                                )
+                              }
+                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              )}
+
+              {/* ── SSL-VPN Profiles ───────────────────────────────────── */}
+              {activeLink.kind === 'vpn' && (
+                <details className="rounded border border-cyan-700/40 bg-cyan-950/20">
+                  <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-cyan-300">
+                    <span>🌐 SSL-VPN</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        dispatch(
+                          addSslVpnProfile({
+                            linkId: activeLinkId!,
+                            name: `VPN-Profile-${sslVpnProfiles.filter((p) => p.linkId === activeLinkId).length + 1}`,
+                            authMode: 'password',
+                            ipPool: '10.0.50.0/24',
+                            mfaEnabled: false,
+                          }),
+                        );
+                      }}
+                      className="rounded bg-cyan-700/30 px-1.5 py-0.5 text-[9px] text-cyan-300 hover:bg-cyan-600/40"
+                    >
+                      + Perfil
+                    </button>
+                  </summary>
+                  <div className="space-y-2 px-2 pb-2 pt-1">
+                    {sslVpnProfiles.filter((p) => p.linkId === activeLinkId)
+                      .length === 0 && (
+                      <p className="text-[10px] text-slate-500">
+                        Nenhum perfil configurado.
+                      </p>
+                    )}
+                    {sslVpnProfiles
+                      .filter((p) => p.linkId === activeLinkId)
+                      .map((profile) => (
+                        <div
+                          key={profile.id}
+                          className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
+                        >
+                          <div className="mb-1 flex items-center justify-between">
+                            <input
+                              type="text"
+                              value={profile.name}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateSslVpnProfile({
+                                    id: profile.id,
+                                    changes: { name: e.target.value },
+                                  }),
+                                )
+                              }
+                              className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[10px] font-semibold text-slate-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                dispatch(
+                                  removeSslVpnProfile({ id: profile.id }),
+                                )
+                              }
+                              className="ml-1 rounded px-1 text-red-400 hover:bg-red-900/30"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
+                                Auth
+                              </label>
+                              <select
+                                value={profile.authMode}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: {
+                                        authMode: e.target
+                                          .value as typeof profile.authMode,
+                                      },
+                                    }),
+                                  )
+                                }
+                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                              >
+                                <option value="password">Password</option>
+                                <option value="certificate">Certificate</option>
+                                <option value="ldap">LDAP</option>
+                                <option value="radius">RADIUS</option>
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
+                                IP Pool
+                              </label>
+                              <input
+                                type="text"
+                                value={profile.ipPool ?? ''}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: { ipPool: e.target.value },
+                                    }),
+                                  )
+                                }
+                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200"
+                                placeholder="10.0.50.0/24"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
+                                DNS
+                              </label>
+                              <input
+                                type="text"
+                                value={profile.dns1 ?? ''}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: { dns1: e.target.value },
+                                    }),
+                                  )
+                                }
+                                placeholder="DNS 1"
+                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                              />
+                              <input
+                                type="text"
+                                value={profile.dns2 ?? ''}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: { dns2: e.target.value },
+                                    }),
+                                  )
+                                }
+                                placeholder="DNS 2"
+                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
+                                Cert.
+                              </label>
+                              <select
+                                value={profile.serverCertId ?? ''}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: {
+                                        serverCertId:
+                                          e.target.value || undefined,
+                                      },
+                                    }),
+                                  )
+                                }
+                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                              >
+                                <option value="">— nenhum —</option>
+                                {certificates
+                                  .filter(
+                                    (c) =>
+                                      c.type === 'local' || c.type === 'ca',
+                                  )
+                                  .map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                              </select>
+                            </div>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={profile.mfaEnabled ?? false}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: { mfaEnabled: e.target.checked },
+                                    }),
+                                  )
+                                }
+                                className="h-3 w-3 accent-cyan-500"
+                              />
+                              <span className="text-[9px] text-slate-400">
+                                MFA habilitado
+                              </span>
+                            </label>
+                            <div>
+                              <label className="text-[9px] text-slate-500">
+                                Split Tunnel (uma rota por linha)
+                              </label>
+                              <textarea
+                                value={(profile.splitTunnelRoutes ?? []).join(
+                                  '\n',
+                                )}
+                                onChange={(e) =>
+                                  dispatch(
+                                    updateSslVpnProfile({
+                                      id: profile.id,
+                                      changes: {
+                                        splitTunnelRoutes: e.target.value
+                                          .split('\n')
+                                          .filter(Boolean),
+                                      },
+                                    }),
+                                  )
+                                }
+                                rows={2}
+                                placeholder="10.0.0.0/8"
+                                className="mt-0.5 w-full rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
         </div>
@@ -1372,27 +2052,27 @@ export default function RouteFirewallPanel({
           <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left text-slate-400">
-                  <th className="w-7 border-b border-slate-700 px-1 py-1" />
+                <tr className="text-slate-400">
+                  <th className="w-7 border-b border-slate-700 px-1 py-1 text-center" />
                   <th
-                    className="w-[42px] border-b border-slate-700 px-1 py-1"
+                    className="w-[42px] border-b border-slate-700 px-1 py-1 text-center"
                     title="Prioridade — menor valor = avaliado primeiro"
                   >
                     Prio
                   </th>
-                  <th className="w-[100px] border-b border-slate-700 px-1 py-1">
+                  <th className="w-[60px] border-b border-slate-700 px-1 py-1 text-center">
                     {copy.action}
                   </th>
-                  <th className="border-b border-slate-700 px-1 py-1">
+                  <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
                     {copy.source}
                   </th>
-                  <th className="border-b border-slate-700 px-1 py-1">
+                  <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
                     {copy.destination}
                   </th>
-                  <th className="w-[120px] border-b border-slate-700 px-1 py-1">
+                  <th className="w-[120px] border-b border-slate-700 px-1 py-1 text-center">
                     {copy.portService}
                   </th>
-                  <th className="w-[90px] border-b border-slate-700 px-1 py-1">
+                  <th className="w-[160px] border-b border-slate-700 px-1 py-1 text-center">
                     Flags
                   </th>
                 </tr>

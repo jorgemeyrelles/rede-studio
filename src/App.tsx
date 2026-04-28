@@ -67,13 +67,13 @@ export default function App() {
                       onClick={() => setStudioLanguage(option.value)}
                       aria-label={option.label}
                       title={option.label}
-                      className={`rounded px-2 py-1 text-sm transition ${
+                      className={`rounded px-2 py-1 text-[11px] font-bold tracking-wide transition ${
                         isActive
                           ? 'bg-cyan-400/90 text-slate-950'
                           : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700'
                       }`}
                     >
-                      <span aria-hidden="true">{option.flag}</span>
+                      {option.flag}
                     </button>
                   );
                 })}

@@ -12,9 +12,11 @@ import {
 
 type StudioToolbarProps = {
   language: StudioLanguage;
+  isLegendOpen?: boolean;
+  onToggleLegend?: () => void;
 };
 
-export default function StudioToolbar({ language }: StudioToolbarProps) {
+export default function StudioToolbar({ language, isLegendOpen, onToggleLegend }: StudioToolbarProps) {
   const dispatch = useAppDispatch();
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;
@@ -28,6 +30,24 @@ export default function StudioToolbar({ language }: StudioToolbarProps) {
     <section className="rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
         <div className="flex items-center gap-2">
+          {/* Hamburguer — abre/fecha legenda */}
+          {onToggleLegend && (
+            <button
+              type="button"
+              onClick={onToggleLegend}
+              aria-label={isLegendOpen ? 'Fechar legenda' : 'Abrir legenda'}
+              title={isLegendOpen ? 'Fechar legenda' : 'Abrir legenda'}
+              className={`flex shrink-0 flex-col items-center justify-center gap-[5px] rounded border px-2 py-1.5 transition ${
+                isLegendOpen
+                  ? 'border-cyan-600 bg-cyan-900/40 text-cyan-300'
+                  : 'border-slate-600 bg-slate-800/70 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span className="block h-[2px] w-4 rounded-full bg-current" />
+              <span className="block h-[2px] w-4 rounded-full bg-current" />
+              <span className="block h-[2px] w-4 rounded-full bg-current" />
+            </button>
+          )}
           <button
             onClick={() => dispatch(addSite())}
             disabled={isSiteLimitReached}

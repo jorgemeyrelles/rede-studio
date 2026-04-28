@@ -14,6 +14,10 @@ export type RouteRow = {
   reservedSiteRange?: string;
   reservedSiteCount?: number;
   reserveMarginPercent?: number;
+  /** Fase 1 — zona inferida pelo tipo de rota */
+  zone: string;
+  /** Fase 2 — nome da rede lógica (SiteNetwork); '—' até Fase 2 */
+  networkName: string;
 };
 
 export type FirewallRuleRow = {

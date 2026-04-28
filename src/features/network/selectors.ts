@@ -43,7 +43,7 @@ export const selectLegendTree = createSelector(
 export const selectRouteTable = createSelector(
   [selectNetworkState],
   (network) => {
-    const { links, nodes, sites } = network;
+    const { links, nodes, sites, siteNetworks } = network;
 
     // Contador de interface por site para numeração dinâmica
     const ifaceCountersBySite: Record<string, { eth: number; tun: number }> =
@@ -86,6 +86,22 @@ export const selectRouteTable = createSelector(
           ? '0.0.0.0/0'
           : `${to?.ip ?? '0.0.0.0'}/${to?.cidr ?? 0}`;
 
+      // Fase 1 — zona inferida pelo tipo de rota e categoria dos nós
+      const zone = (() => {
+        if (tipo === 'Default') return 'wan';
+        if (tipo === 'VPN') return 'vpn';
+        if (from?.category === 'wan' || to?.category === 'wan') return 'wan';
+        return from?.zone ?? to?.zone ?? 'lan';
+      })();
+
+      // Fase 2 — networkName a partir do networkId do nó de origem
+      const networkName = (() => {
+        const networkId = from?.networkId ?? to?.networkId;
+        if (!networkId) return '—';
+        const net = (siteNetworks ?? []).find((n) => n.id === networkId);
+        return net?.name ?? '—';
+      })();
+
       return {
         siteId: ownerSiteId,
         siteName,
@@ -100,6 +116,8 @@ export const selectRouteTable = createSelector(
             : undefined,
         reservedSiteCount: reserveRange?.count ?? 0,
         reserveMarginPercent: ownerSite?.reserveMarginPercent ?? 0,
+        zone,
+        networkName,
       };
     });
 
@@ -219,7 +237,11 @@ export const selectFirewallRules = createSelector(
           r.id === rule.returnRuleId ||
           (r.parentRuleId === rule.id && r.isReturnRule),
       );
-      const missingReturn = !isStateful && !hasReturnRule && !rule.isReturnRule;
+      const missingReturn =
+        !isStateful &&
+        !hasReturnRule &&
+        !rule.isReturnRule &&
+        !rule.bidirectional;
 
       const sourceNode = getNode(rule.sourceNodeId);
       const destinationNode = getNode(rule.destinationNodeId);
