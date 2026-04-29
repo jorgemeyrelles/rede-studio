@@ -42,6 +42,30 @@ body {
   padding: 30px 20px 60px;
 }
 
+/* ── SCROLLBAR DA PÁGINA ── */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #0ea5e9 #060d19;
+}
+html::-webkit-scrollbar {
+  width: 8px;
+}
+html::-webkit-scrollbar-track {
+  background: #060d19;
+  border-left: 1px solid #0f2040;
+}
+html::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #0369a1 0%, #0ea5e9 50%, #22d3ee 100%);
+  border-radius: 999px;
+  border: 1px solid #38bdf8;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0ea5e9 0%, #22d3ee 50%, #67e8f9 100%);
+}
+html::-webkit-scrollbar-corner {
+  background: #060d19;
+}
+
 /* ── CORPO (Diagrama s51) ── */
 .corpo {
   padding: 22px 14px 40px;
@@ -1191,31 +1215,33 @@ tr:hover td {
   line-height: 1.6;
 }
 
-/* ── THEME SCROLLBAR ── */
+/* ── THEME SCROLLBAR (dashboard) ── */
 .theme-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #4d7ba8 #0b1728;
+  scrollbar-color: #0ea5e9 #0a1525;
 }
 
 .theme-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 .theme-scrollbar::-webkit-scrollbar-track {
-  background: linear-gradient(180deg, #0a1525 0%, #0b1b2f 100%);
-  border: 1px solid #1e3654;
+  background: #0a1525;
   border-radius: 999px;
 }
 
 .theme-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #3b6692 0%, #5e8cb6 100%);
-  border: 1px solid #79a6cf;
+  background: linear-gradient(180deg, #0369a1 0%, #0ea5e9 50%, #22d3ee 100%);
   border-radius: 999px;
 }
 
 .theme-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #4a78a3 0%, #74a4ce 100%);
+  background: linear-gradient(180deg, #0ea5e9 0%, #22d3ee 50%, #67e8f9 100%);
+}
+
+.theme-scrollbar::-webkit-scrollbar-corner {
+  background: #0a1525;
 }
 .vpn-step-text strong {
   color: var(--yellow);

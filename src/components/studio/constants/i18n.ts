@@ -16,19 +16,19 @@ export const STUDIO_LANGUAGE_OPTIONS: LanguageOption[] = [
     value: 'pt',
     label: 'Português',
     flag: 'PT',
-    flagSrc: '/images/flags/br.svg',
+    flagSrc: `${import.meta.env.BASE_URL}images/flags/br.svg`,
   },
   {
     value: 'en',
     label: 'English',
     flag: 'EN',
-    flagSrc: '/images/flags/us.svg',
+    flagSrc: `${import.meta.env.BASE_URL}images/flags/us.svg`,
   },
   {
     value: 'es',
     label: 'Español',
     flag: 'ES',
-    flagSrc: '/images/flags/es.svg',
+    flagSrc: `${import.meta.env.BASE_URL}images/flags/es.svg`,
   },
 ];
 
