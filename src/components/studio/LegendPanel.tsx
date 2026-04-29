@@ -16,7 +16,10 @@ import type {
   NodeCategory,
   SiteNetwork,
 } from '../../features/network/types';
-import { buildNetworkAddress, cidrToHostCount } from '../../features/network/utils';
+import {
+  buildNetworkAddress,
+  cidrToHostCount,
+} from '../../features/network/utils';
 import { selectLegendTree } from '../../features/network/selectors';
 import {
   getLegendPanelCopy,
@@ -187,9 +190,8 @@ function suggestNextThirdOctet(
 export default function LegendPanel({ language }: LegendPanelProps) {
   const dispatch = useAppDispatch();
   const legendTree = useAppSelector(selectLegendTree);
-  const { nodes, links, sites, siteVlans, layers, siteNetworks } = useAppSelector(
-    (state) => state.network,
-  );
+  const { nodes, links, sites, siteVlans, layers, siteNetworks } =
+    useAppSelector((state) => state.network);
   const copy = getLegendPanelCopy(language);
 
   const [categoryByLayer, setCategoryByLayer] = useState<
@@ -257,7 +259,10 @@ export default function LegendPanel({ language }: LegendPanelProps) {
       siteNetworks ?? [],
     );
     setNetworkPickerSiteId(siteId);
-    setNetworkDraft({ ...DEFAULT_NETWORK_DRAFT, thirdOctet: String(suggested) });
+    setNetworkDraft({
+      ...DEFAULT_NETWORK_DRAFT,
+      thirdOctet: String(suggested),
+    });
   }
 
   function closeNetworkPicker() {
@@ -747,15 +752,17 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                         }))
                       }
                       className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 [appearance:textfield]"
-                    />  
+                    />
                   </label>
                 </div>
                 {/* Preview do bloco calculado */}
                 {(() => {
                   const oct = Number(networkDraft.thirdOctet);
                   const cidr = Number(networkDraft.cidr);
-                  const siteOctet = sites.find((s) => s.id === site.id)?.ipOctet ?? 0;
-                  if (!Number.isFinite(oct) || !Number.isFinite(cidr)) return null;
+                  const siteOctet =
+                    sites.find((s) => s.id === site.id)?.ipOctet ?? 0;
+                  if (!Number.isFinite(oct) || !Number.isFinite(cidr))
+                    return null;
                   const addr = buildNetworkAddress(
                     networkDraft.addressFamily,
                     oct,
@@ -849,56 +856,57 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   </summary>
 
                   {/* Tooltip info da rede */}
-                  {networkInfoId === network.id && (() => {
-                    const siteItem = sites.find((s) => s.id === site.id);
-                    const siteOctet = siteItem?.ipOctet ?? 0;
-                    const baseAddr = buildNetworkAddress(
-                      network.addressFamily as AddressFamily,
-                      network.thirdOctet,
-                      siteOctet,
-                    );
-                    const hosts = cidrToHostCount(network.cidr);
-                    const vlanCount = (siteVlans ?? []).filter(
-                      (v) => v.networkId === network.id,
-                    ).length;
-                    const layerCount = (layers ?? []).filter(
-                      (l) => l.networkId === network.id,
-                    ).length;
-                    return (
-                      <div
-                        className="mx-2 mb-1 mt-0.5 rounded border border-sky-700/40 bg-sky-950/30 p-2 text-[10px]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="mb-1 font-semibold text-sky-300">
-                          Informações da Rede
+                  {networkInfoId === network.id &&
+                    (() => {
+                      const siteItem = sites.find((s) => s.id === site.id);
+                      const siteOctet = siteItem?.ipOctet ?? 0;
+                      const baseAddr = buildNetworkAddress(
+                        network.addressFamily as AddressFamily,
+                        network.thirdOctet,
+                        siteOctet,
+                      );
+                      const hosts = cidrToHostCount(network.cidr);
+                      const vlanCount = (siteVlans ?? []).filter(
+                        (v) => v.networkId === network.id,
+                      ).length;
+                      const layerCount = (layers ?? []).filter(
+                        (l) => l.networkId === network.id,
+                      ).length;
+                      return (
+                        <div
+                          className="mx-2 mb-1 mt-0.5 rounded border border-sky-700/40 bg-sky-950/30 p-2 text-[10px]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="mb-1 font-semibold text-sky-300">
+                            Informações da Rede
+                          </div>
+                          <div className="space-y-0.5 text-slate-300">
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Bloco</span>
+                              <span className="font-mono text-sky-200">
+                                {baseAddr}/{network.cidr}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Família</span>
+                              <span>{network.addressFamily}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Hosts</span>
+                              <span>{hosts.toLocaleString('pt-BR')}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">VLANs</span>
+                              <span>{vlanCount}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Camadas</span>
+                              <span>{layerCount}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-0.5 text-slate-300">
-                          <div className="flex justify-between gap-2">
-                            <span className="text-slate-500">Bloco</span>
-                            <span className="font-mono text-sky-200">
-                              {baseAddr}/{network.cidr}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <span className="text-slate-500">Família</span>
-                            <span>{network.addressFamily}</span>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <span className="text-slate-500">Hosts</span>
-                            <span>{hosts.toLocaleString('pt-BR')}</span>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <span className="text-slate-500">VLANs</span>
-                            <span>{vlanCount}</span>
-                          </div>
-                          <div className="flex justify-between gap-2">
-                            <span className="text-slate-500">Camadas</span>
-                            <span>{layerCount}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
 
                   {/* TierPicker para camada dentro desta rede */}
                   {renderTierPicker(site.id, network.id)}

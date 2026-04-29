@@ -1784,9 +1784,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               tooltipWidth: 260,
               tooltipHeight: 180,
             });
-            const netSite = sites.find(
-              (s) => s.id === tooltipNetwork.siteId,
-            );
+            const netSite = sites.find((s) => s.id === tooltipNetwork.siteId);
             const baseAddr = netSite
               ? buildNetworkAddress(
                   tooltipNetwork.addressFamily,

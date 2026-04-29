@@ -168,7 +168,9 @@ export function normalizeTechProfile(
 
       // Cifras AEAD já autenticam — integridade separada deve ser n-a
       // Cifras não-AEAD precisam de integridade explícita
-      const resolvedCipher = String(nextFields.encryptionSuite ?? 'aes-256-gcm');
+      const resolvedCipher = String(
+        nextFields.encryptionSuite ?? 'aes-256-gcm',
+      );
       if (AEAD_CIPHERS.has(resolvedCipher)) {
         nextFields.integrity = 'n-a';
       } else if (

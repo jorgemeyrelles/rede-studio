@@ -112,9 +112,15 @@ function BooleanCell({
   return (
     <button
       type="button"
-      title={value ? 'Habilitado — clique para desabilitar' : 'Desabilitado — clique para habilitar'}
+      title={
+        value
+          ? 'Habilitado — clique para desabilitar'
+          : 'Desabilitado — clique para habilitar'
+      }
       onClick={() =>
-        dispatch(updateNodeTechField({ id: nodeId, key: fieldKey, value: !value }))
+        dispatch(
+          updateNodeTechField({ id: nodeId, key: fieldKey, value: !value }),
+        )
       }
       className={`rounded px-1.5 py-0.5 text-[9px] font-semibold transition ${
         value
@@ -138,7 +144,11 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
 
   const commitRaw = () => {
     dispatch(
-      updateNodeTechField({ id: row.nodeId, key: 'bgpNeighbors', value: draft }),
+      updateNodeTechField({
+        id: row.nodeId,
+        key: 'bgpNeighbors',
+        value: draft,
+      }),
     );
     setEditingRaw(false);
   };
@@ -179,7 +189,11 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
           title={expanded ? 'Recolher peers' : 'Expandir peers'}
         >
           {expanded ? '▼' : '▶'}{' '}
-          <span className={count === 0 ? 'text-slate-600 italic' : 'text-violet-300'}>
+          <span
+            className={
+              count === 0 ? 'text-slate-600 italic' : 'text-violet-300'
+            }
+          >
             {count === 0 ? 'sem peers' : `${count} peer${count > 1 ? 's' : ''}`}
           </span>
         </button>
@@ -207,7 +221,9 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
             {row.bgpNeighborsParsed!.map((n, i) => (
               <tr key={i} className="text-[10px]">
                 <td className="pr-2 font-mono text-slate-300">{n.ip || '—'}</td>
-                <td className="font-mono text-violet-300">{n.remoteAsn || '—'}</td>
+                <td className="font-mono text-violet-300">
+                  {n.remoteAsn || '—'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -228,7 +244,9 @@ function StaticRow({ row }: { row: RoutingProtocolRow }) {
         {row.nodeLabel}
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}>
+        <span
+          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+        >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
@@ -253,7 +271,9 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
         {row.nodeLabel}
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}>
+        <span
+          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+        >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
@@ -285,7 +305,10 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
         />
       </td>
       {/* BGP colunas — vazio */}
-      <td colSpan={3} className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700">
+      <td
+        colSpan={3}
+        className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700"
+      >
         —
       </td>
     </tr>
@@ -303,12 +326,17 @@ function BgpRow({ row }: { row: RoutingProtocolRow }) {
         {row.nodeLabel}
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}>
+        <span
+          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+        >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
       {/* OSPF colunas — vazio */}
-      <td colSpan={3} className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700">
+      <td
+        colSpan={3}
+        className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700"
+      >
         —
       </td>
       {/* ASN */}
@@ -326,7 +354,11 @@ function BgpRow({ row }: { row: RoutingProtocolRow }) {
       </td>
       {/* MD5 */}
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <BooleanCell nodeId={row.nodeId} fieldKey="bgpMd5" value={row.bgpMd5 ?? false} />
+        <BooleanCell
+          nodeId={row.nodeId}
+          fieldKey="bgpMd5"
+          value={row.bgpMd5 ?? false}
+        />
       </td>
     </tr>
   );
@@ -343,29 +375,55 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
         {row.nodeLabel}
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}>
+        <span
+          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+        >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
       {/* OSPF */}
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <EditableCell nodeId={row.nodeId} fieldKey="ospfArea" value={row.ospfArea ?? '0.0.0.0'} placeholder="0.0.0.0" />
+        <EditableCell
+          nodeId={row.nodeId}
+          fieldKey="ospfArea"
+          value={row.ospfArea ?? '0.0.0.0'}
+          placeholder="0.0.0.0"
+        />
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <EditableCell nodeId={row.nodeId} fieldKey="ospfHello" value={row.ospfHello ?? 10} numeric />
+        <EditableCell
+          nodeId={row.nodeId}
+          fieldKey="ospfHello"
+          value={row.ospfHello ?? 10}
+          numeric
+        />
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <EditableCell nodeId={row.nodeId} fieldKey="ospfDead" value={row.ospfDead ?? 40} numeric />
+        <EditableCell
+          nodeId={row.nodeId}
+          fieldKey="ospfDead"
+          value={row.ospfDead ?? 40}
+          numeric
+        />
       </td>
       {/* BGP */}
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <EditableCell nodeId={row.nodeId} fieldKey="bgpAsn" value={row.bgpAsn ?? ''} placeholder="65001" />
+        <EditableCell
+          nodeId={row.nodeId}
+          fieldKey="bgpAsn"
+          value={row.bgpAsn ?? ''}
+          placeholder="65001"
+        />
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
         <NeighborsCell row={row} />
       </td>
       <td className="border-b border-slate-800 px-2 py-1.5">
-        <BooleanCell nodeId={row.nodeId} fieldKey="bgpMd5" value={row.bgpMd5 ?? false} />
+        <BooleanCell
+          nodeId={row.nodeId}
+          fieldKey="bgpMd5"
+          value={row.bgpMd5 ?? false}
+        />
       </td>
     </tr>
   );
@@ -520,9 +578,15 @@ export default function RoutingProtocolTable({
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-[10px] text-slate-500">
-                <th className="border-b border-slate-700 px-2 py-1 w-[100px]">Site</th>
-                <th className="border-b border-slate-700 px-2 py-1 w-[90px]">Nó</th>
-                <th className="border-b border-slate-700 px-2 py-1 w-[60px]">Modo</th>
+                <th className="border-b border-slate-700 px-2 py-1 w-[100px]">
+                  Site
+                </th>
+                <th className="border-b border-slate-700 px-2 py-1 w-[90px]">
+                  Nó
+                </th>
+                <th className="border-b border-slate-700 px-2 py-1 w-[60px]">
+                  Modo
+                </th>
                 {/* OSPF */}
                 <th
                   className={`border-b border-slate-700 px-2 py-1 w-[80px] ${!hasOspf ? 'text-slate-700' : 'text-blue-400/70'}`}
@@ -566,15 +630,22 @@ export default function RoutingProtocolTable({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-2 py-2 text-[10px] text-slate-600 italic">
+                  <td
+                    colSpan={9}
+                    className="px-2 py-2 text-[10px] text-slate-600 italic"
+                  >
                     Nenhum roteador com modo "{filterMode}".
                   </td>
                 </tr>
               )}
               {filtered.map((row) => (
                 <>
-                  {row.mode === 'static' && <StaticRow key={row.nodeId} row={row} />}
-                  {row.mode === 'ospf' && <OspfRow key={row.nodeId} row={row} />}
+                  {row.mode === 'static' && (
+                    <StaticRow key={row.nodeId} row={row} />
+                  )}
+                  {row.mode === 'ospf' && (
+                    <OspfRow key={row.nodeId} row={row} />
+                  )}
                   {row.mode === 'bgp' && (
                     <>
                       <BgpRow key={row.nodeId} row={row} />

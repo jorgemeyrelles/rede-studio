@@ -467,11 +467,11 @@ export const selectRoutingProtocolRows = createSelector(
       .map((node) => {
         const site = sites.find((s) => s.id === node.siteId);
         const fields = node.techProfile?.fields ?? {};
-        const mode = (String(fields.routingMode ?? 'static') as
+        const mode = String(fields.routingMode ?? 'static') as
           | 'static'
           | 'ospf'
           | 'bgp'
-          | 'mixed');
+          | 'mixed';
 
         const warnings: string[] = [];
         if (mode === 'bgp' || mode === 'mixed') {
