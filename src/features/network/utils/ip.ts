@@ -1,4 +1,4 @@
-import type { Site, SiteVlan } from '../types';
+import type { Site, SiteNetwork, SiteVlan } from '../types';
 
 export function ipToNumber(ip: string) {
   const parts = ip.split('.').map((item) => Number(item));
@@ -223,4 +223,48 @@ export function validateSubnetInParent(params: {
   }
 
   return { valid: true };
+}
+
+// ── Fase 2 — funções de range por SiteNetwork ─────────────────────────────────
+
+/**
+ * Retorna os limites numéricos (min/max) de uma SiteNetwork.
+ * Usa addressFamily + thirdOctet + cidr para calcular o bloco.
+ */
+export function networkRangeBounds(
+  network: Pick<SiteNetwork, 'addressFamily' | 'thirdOctet' | 'cidr'>,
+  siteOctet: number,
+): { min: number; max: number } {
+  const addr = buildNetworkAddress(
+    network.addressFamily,
+    network.thirdOctet,
+    siteOctet,
+  );
+  const start = ipToNumber(addr) ?? 0;
+  const blockSize = 2 ** (32 - Math.max(1, Math.min(32, network.cidr)));
+  return { min: start, max: start + blockSize - 1 };
+}
+
+/**
+ * Versão network-aware de buildIpFromSiteAndRadical.
+ * O radical X.Y é interpretado como offset a partir do endereço base da rede:
+ *   IP = prefix.A.B.(C + X).Y  onde prefix.A.B.C é buildNetworkAddress.
+ */
+export function buildIpFromNetworkAndRadical(
+  network: Pick<SiteNetwork, 'addressFamily' | 'thirdOctet'>,
+  startRadical: string,
+  siteOctet: number,
+): string | null {
+  const parsed = parseRadical(startRadical);
+  if (!parsed) return null;
+  const base = buildNetworkAddress(
+    network.addressFamily,
+    network.thirdOctet,
+    siteOctet,
+  );
+  const baseParts = base.split('.').map(Number);
+  if (baseParts.length !== 4 || baseParts.some((p) => !Number.isFinite(p)))
+    return null;
+  const thirdOctet = Math.max(0, Math.min(255, baseParts[2] + parsed.third));
+  return `${baseParts[0]}.${baseParts[1]}.${thirdOctet}.${parsed.fourth}`;
 }

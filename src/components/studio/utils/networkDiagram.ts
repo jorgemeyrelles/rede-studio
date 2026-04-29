@@ -6,6 +6,7 @@ import {
   EMPTY_SITE_HEIGHT,
   GRID_COLUMN_GAP,
   GRID_ROW_GAP,
+  INTER_NETWORK_GAP,
   LAYER_TOP_OFFSET,
   LAYER_VERTICAL_GAP,
   SITE_BOTTOM_PADDING,
@@ -87,6 +88,7 @@ export function buildGridLayout({
     order: number;
     width: number;
     height: number;
+    networkId?: string;
   }>;
   diagramWidth: number;
 }): GridLayoutResult {
@@ -112,6 +114,8 @@ export function buildGridLayout({
             2,
         );
 
+  const SITE_H_PADDING = 32; // padding horizontal interno do site (16 cada lado)
+
   for (const site of limitedSites) {
     const siteLayers = layers
       .filter((layer) => layer.siteId === site.id)
@@ -122,23 +126,66 @@ export function buildGridLayout({
       0,
     );
     siteMaxLayerWidths.set(site.id, maxLayerWidth);
-    const width = Math.max(
-      SITE_CONTAINER_WIDTH,
-      Math.min(
-        988,
-        maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth,
-      ),
-    );
 
-    let stackedHeight = LAYER_TOP_OFFSET;
-    siteLayers.forEach((layer, index) => {
-      stackedHeight += layer.height;
-      if (index < siteLayers.length - 1) stackedHeight += LAYER_VERTICAL_GAP;
+    // Agrupar camadas por rede para determinar layout
+    const netGroups = new Map<string | null, typeof siteLayers>();
+    siteLayers.forEach((layer) => {
+      const key = layer.networkId ?? null;
+      if (!netGroups.has(key)) netGroups.set(key, []);
+      netGroups.get(key)!.push(layer);
     });
-    stackedHeight += SITE_BOTTOM_PADDING;
+    // Remover grupo vazio de camadas sem rede
+    if ((netGroups.get(null) ?? []).length === 0) netGroups.delete(null);
+
+    const isMultiNetwork =
+      netGroups.size > 1 || (netGroups.size === 1 && !netGroups.has(null));
+
+    let width: number;
+    let computedHeight: number;
+
+    if (isMultiNetwork) {
+      // Redes lado a lado: largura = soma das colunas + gaps
+      const netCount = netGroups.size;
+      width = Math.max(
+        SITE_CONTAINER_WIDTH,
+        netCount * maxLayerWidth +
+          (netCount - 1) * INTER_NETWORK_GAP +
+          SITE_H_PADDING,
+      );
+      // Altura = coluna mais alta
+      let maxNetHeight = 0;
+      for (const [, netLayers] of netGroups) {
+        let netH = 0;
+        netLayers.forEach((layer, i) => {
+          netH +=
+            layer.height + (i < netLayers.length - 1 ? LAYER_VERTICAL_GAP : 0);
+        });
+        maxNetHeight = Math.max(maxNetHeight, netH);
+      }
+      computedHeight = Math.max(
+        EMPTY_SITE_HEIGHT,
+        LAYER_TOP_OFFSET + maxNetHeight + SITE_BOTTOM_PADDING,
+      );
+    } else {
+      // Coluna única — comportamento legado
+      width = Math.max(
+        SITE_CONTAINER_WIDTH,
+        Math.min(
+          1383,
+          maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth,
+        ),
+      );
+      let stackedHeight = LAYER_TOP_OFFSET;
+      siteLayers.forEach((layer, index) => {
+        stackedHeight += layer.height;
+        if (index < siteLayers.length - 1) stackedHeight += LAYER_VERTICAL_GAP;
+      });
+      stackedHeight += SITE_BOTTOM_PADDING;
+      computedHeight = Math.max(EMPTY_SITE_HEIGHT, stackedHeight);
+    }
 
     siteWidths.set(site.id, width);
-    siteHeights.set(site.id, Math.max(EMPTY_SITE_HEIGHT, stackedHeight));
+    siteHeights.set(site.id, computedHeight);
   }
 
   const s1 = limitedSites[0];
@@ -249,6 +296,8 @@ export function buildGridLayout({
     });
   }
 
+  const SITE_H_PADDING_POS = 24; // recuo horizontal interno para posicionamento
+
   for (const site of limitedSites) {
     const sitePos = sitePositions.get(site.id);
     if (!sitePos) continue;
@@ -258,15 +307,46 @@ export function buildGridLayout({
     const siteWidth = siteWidths.get(site.id) ?? SITE_CONTAINER_WIDTH;
     const uniformLayerWidth = siteMaxLayerWidths.get(site.id) ?? 0;
 
-    let cursorY = sitePos.y + LAYER_TOP_OFFSET;
+    // Reagrupar por rede para o posicionamento
+    const netGroupsPos = new Map<string | null, typeof siteLayers>();
     siteLayers.forEach((layer) => {
-      const layerXOffset = Math.max(24, (siteWidth - uniformLayerWidth) / 2);
-      layerPositions.set(layer.id, {
-        x: sitePos.x + layerXOffset,
-        y: cursorY,
-      });
-      cursorY += layer.height + LAYER_VERTICAL_GAP;
+      const key = layer.networkId ?? null;
+      if (!netGroupsPos.has(key)) netGroupsPos.set(key, []);
+      netGroupsPos.get(key)!.push(layer);
     });
+    if ((netGroupsPos.get(null) ?? []).length === 0) netGroupsPos.delete(null);
+
+    const isMultiNetworkPos =
+      netGroupsPos.size > 1 ||
+      (netGroupsPos.size === 1 && !netGroupsPos.has(null));
+
+    if (!isMultiNetworkPos) {
+      // Coluna única — comportamento legado (centralizado)
+      let cursorY = sitePos.y + LAYER_TOP_OFFSET;
+      siteLayers.forEach((layer) => {
+        const layerXOffset = Math.max(24, (siteWidth - uniformLayerWidth) / 2);
+        layerPositions.set(layer.id, {
+          x: sitePos.x + layerXOffset,
+          y: cursorY,
+        });
+        cursorY += layer.height + LAYER_VERTICAL_GAP;
+      });
+    } else {
+      // Redes lado a lado — cada rede ocupa uma coluna
+      let colX = sitePos.x + SITE_H_PADDING_POS;
+      for (const [, netLayers] of netGroupsPos) {
+        if (netLayers.length === 0) continue;
+        let cursorY = sitePos.y + LAYER_TOP_OFFSET;
+        netLayers
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .forEach((layer) => {
+            layerPositions.set(layer.id, { x: colX, y: cursorY });
+            cursorY += layer.height + LAYER_VERTICAL_GAP;
+          });
+        colX += uniformLayerWidth + INTER_NETWORK_GAP;
+      }
+    }
   }
 
   const wanTop = hasMiddleRow ? Math.max(28, row1Y - 74) : WAN_Y;

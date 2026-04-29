@@ -7,14 +7,6 @@ import {
   addCustomAclRule,
   removeCustomAclRule,
   reorderCustomAclRule,
-  setActiveLinkId,
-  updateLink,
-  addIpsecSa,
-  updateIpsecSa,
-  removeIpsecSa,
-  addSslVpnProfile,
-  updateSslVpnProfile,
-  removeSslVpnProfile,
 } from '../../features/network/networkSlice';
 import {
   selectFirewallRulesGrouped,
@@ -32,6 +24,7 @@ import {
 import type { TooltipPosition } from './catalog';
 import type { RouteType } from '../../features/network/types';
 import TreePicker from './TreePicker';
+import RoutingProtocolTable from './RoutingProtocolTable';
 
 function HeaderInfoTooltip({
   label,
@@ -505,22 +498,14 @@ export default function RouteFirewallPanel({
   const sites = useAppSelector((state) => state.network.sites);
   const nodes = useAppSelector((state) => state.network.nodes);
   const links = useAppSelector((state) => state.network.links);
-  const certificates = useAppSelector((state) => state.network.certificates);
-  const ipsecSas = useAppSelector((state) => state.network.ipsecSas);
-  const sslVpnProfiles = useAppSelector(
-    (state) => state.network.sslVpnProfiles,
-  );
   const aclRules = useAppSelector((state) => state.network.aclRules);
-  const activeLinkId = useAppSelector((state) => state.network.ui.activeLinkId);
-  const activeLink = activeLinkId
-    ? (links.find((l) => l.id === activeLinkId) ?? null)
-    : null;
   const copy = getRouteFirewallCopy(language);
   const routeTypeLabels: Record<RouteType, string> = {
     Direta: copy.routeTypeDirect,
     Estática: copy.routeTypeStatic,
     Default: copy.routeTypeDefault,
     VPN: copy.routeTypeVpn,
+    BGP: 'BGP',
   };
 
   const getVlanOptions = (siteId?: string) => {
@@ -1418,738 +1403,244 @@ export default function RouteFirewallPanel({
         </div>
       </div>
 
-      {/* ── Linha 2: Inspector 25% + Firewall 75% ────────────────────────── */}
-      <div className="grid gap-3 lg:grid-cols-[1fr_3fr]">
-        {/* Inspector de link */}
-        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
-            Inspector de Link
+      {/* ── Firewall / ACL ───────────────────────────────────────────────── */}
+      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+        {/* Header */}
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
+            {copy.firewallTitle}
           </h3>
-          {!activeLink ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-slate-600">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="h-8 w-8 opacity-40"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                />
-              </svg>
-              <p className="text-[11px] leading-relaxed">
-                Clique em um <span className="text-slate-400">link</span> no
-                diagrama para inspecionar suas propriedades
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="rounded border border-sky-700/30 bg-sky-950/20 px-2 py-1.5">
-                <p className="text-[10px] text-sky-400 font-semibold uppercase tracking-wider mb-0.5">
-                  Link selecionado
-                </p>
-                <p
-                  className="font-mono text-[10px] text-slate-300 truncate"
-                  title={activeLink.id}
-                >
-                  {activeLink.id}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Tipo:{' '}
-                  <span className="text-slate-300">{activeLink.kind}</span>
-                </p>
-              </div>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-slate-400">Modo stateful</span>
-                <select
-                  value={activeLink.statefulOverride ?? 'inherited'}
-                  onChange={(e) =>
-                    dispatch(
-                      updateLink({
-                        id: activeLinkId!,
-                        changes: {
-                          statefulOverride: e.target.value as
-                            | 'inherited'
-                            | 'force-stateful'
-                            | 'force-stateless',
-                        },
-                      }),
-                    )
-                  }
-                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-200"
-                >
-                  <option value="inherited">Herdado do FW</option>
-                  <option value="force-stateful">Forçar stateful</option>
-                  <option value="force-stateless">Forçar stateless</option>
-                </select>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={activeLink.generateAcl ?? true}
-                  onChange={(e) =>
-                    dispatch(
-                      updateLink({
-                        id: activeLinkId!,
-                        changes: { generateAcl: e.target.checked },
-                      }),
-                    )
-                  }
-                  className="h-3 w-3 accent-blue-500"
-                />
-                <span className="text-slate-300">Gerar regras ACL</span>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-slate-400">Descrição</span>
-                <input
-                  type="text"
-                  value={activeLink.description ?? ''}
-                  onChange={(e) =>
-                    dispatch(
-                      updateLink({
-                        id: activeLinkId!,
-                        changes: { description: e.target.value },
-                      }),
-                    )
-                  }
-                  placeholder="Descrição do link..."
-                  className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-200 placeholder-slate-600"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => dispatch(setActiveLinkId(null))}
-                className="w-full rounded border border-slate-600 py-1 text-[10px] text-slate-500 hover:border-slate-400 hover:text-slate-300"
-              >
-                Deselecionar link
-              </button>
-
-              {/* ── IPsec SA ──────────────────────────────────────────── */}
-              {(activeLink.kind === 'ipsec' || activeLink.kind === 'vpn') && (
-                <details
-                  className="rounded border border-indigo-700/40 bg-indigo-950/20"
-                  open
-                >
-                  <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-indigo-300">
-                    <span>🔒 IPsec SAs</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        dispatch(
-                          addIpsecSa({
-                            linkId: activeLinkId!,
-                            name: `SA-${ipsecSas.filter((s) => s.linkId === activeLinkId).length + 1}`,
-                            phase: 1,
-                            state: 'down',
-                            encAlg: 'aes256',
-                            hashAlg: 'sha256',
-                            dhGroup: 14,
-                            lifetimeSec: 86400,
-                          }),
-                        );
-                      }}
-                      className="rounded bg-indigo-700/30 px-1.5 py-0.5 text-[9px] text-indigo-300 hover:bg-indigo-600/40"
-                    >
-                      + SA
-                    </button>
-                  </summary>
-                  <div className="space-y-2 px-2 pb-2 pt-1">
-                    {ipsecSas.filter((sa) => sa.linkId === activeLinkId)
-                      .length === 0 && (
-                      <p className="text-[10px] text-slate-500">
-                        Nenhuma SA configurada.
-                      </p>
-                    )}
-                    {ipsecSas
-                      .filter((sa) => sa.linkId === activeLinkId)
-                      .map((sa) => (
-                        <div
-                          key={sa.id}
-                          className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
-                        >
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="font-semibold text-slate-200">
-                              {sa.name}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <span
-                                className={`rounded px-1 py-0.5 text-[9px] font-semibold ${
-                                  sa.state === 'established'
-                                    ? 'bg-green-800/50 text-green-300'
-                                    : sa.state === 'rekeying'
-                                      ? 'bg-yellow-800/50 text-yellow-300'
-                                      : sa.state === 'connecting'
-                                        ? 'bg-blue-800/50 text-blue-300'
-                                        : 'bg-red-800/50 text-red-300'
-                                }`}
-                              >
-                                {sa.state}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  dispatch(removeIpsecSa({ id: sa.id }))
-                                }
-                                className="rounded px-1 text-red-400 hover:bg-red-900/30"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-slate-400">
-                            <span>Fase {sa.phase}</span>
-                            <span>DH: {sa.dhGroup ?? '—'}</span>
-                            <span>Cifra: {sa.encAlg ?? '—'}</span>
-                            <span>Hash: {sa.hashAlg ?? '—'}</span>
-                            <span>
-                              Lifetime:{' '}
-                              {sa.lifetimeSec ? `${sa.lifetimeSec}s` : '—'}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex gap-1">
-                            <select
-                              value={sa.state}
-                              onChange={(e) =>
-                                dispatch(
-                                  updateIpsecSa({
-                                    id: sa.id,
-                                    changes: {
-                                      state: e.target.value as typeof sa.state,
-                                    },
-                                  }),
-                                )
-                              }
-                              className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
-                            >
-                              <option value="established">established</option>
-                              <option value="rekeying">rekeying</option>
-                              <option value="connecting">connecting</option>
-                              <option value="down">down</option>
-                            </select>
-                            <select
-                              value={sa.phase}
-                              onChange={(e) =>
-                                dispatch(
-                                  updateIpsecSa({
-                                    id: sa.id,
-                                    changes: {
-                                      phase: Number(e.target.value) as 1 | 2,
-                                    },
-                                  }),
-                                )
-                              }
-                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
-                            >
-                              <option value={1}>Phase 1</option>
-                              <option value={2}>Phase 2</option>
-                            </select>
-                          </div>
-                          <div className="mt-1 grid grid-cols-2 gap-1">
-                            <input
-                              type="text"
-                              placeholder="Local ID"
-                              value={sa.localId ?? ''}
-                              onChange={(e) =>
-                                dispatch(
-                                  updateIpsecSa({
-                                    id: sa.id,
-                                    changes: { localId: e.target.value },
-                                  }),
-                                )
-                              }
-                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Remote ID"
-                              value={sa.remoteId ?? ''}
-                              onChange={(e) =>
-                                dispatch(
-                                  updateIpsecSa({
-                                    id: sa.id,
-                                    changes: { remoteId: e.target.value },
-                                  }),
-                                )
-                              }
-                              className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </details>
-              )}
-
-              {/* ── SSL-VPN Profiles ───────────────────────────────────── */}
-              {activeLink.kind === 'vpn' && (
-                <details className="rounded border border-cyan-700/40 bg-cyan-950/20">
-                  <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-cyan-300">
-                    <span>🌐 SSL-VPN</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        dispatch(
-                          addSslVpnProfile({
-                            linkId: activeLinkId!,
-                            name: `VPN-Profile-${sslVpnProfiles.filter((p) => p.linkId === activeLinkId).length + 1}`,
-                            authMode: 'password',
-                            ipPool: '10.0.50.0/24',
-                            mfaEnabled: false,
-                          }),
-                        );
-                      }}
-                      className="rounded bg-cyan-700/30 px-1.5 py-0.5 text-[9px] text-cyan-300 hover:bg-cyan-600/40"
-                    >
-                      + Perfil
-                    </button>
-                  </summary>
-                  <div className="space-y-2 px-2 pb-2 pt-1">
-                    {sslVpnProfiles.filter((p) => p.linkId === activeLinkId)
-                      .length === 0 && (
-                      <p className="text-[10px] text-slate-500">
-                        Nenhum perfil configurado.
-                      </p>
-                    )}
-                    {sslVpnProfiles
-                      .filter((p) => p.linkId === activeLinkId)
-                      .map((profile) => (
-                        <div
-                          key={profile.id}
-                          className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
-                        >
-                          <div className="mb-1 flex items-center justify-between">
-                            <input
-                              type="text"
-                              value={profile.name}
-                              onChange={(e) =>
-                                dispatch(
-                                  updateSslVpnProfile({
-                                    id: profile.id,
-                                    changes: { name: e.target.value },
-                                  }),
-                                )
-                              }
-                              className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[10px] font-semibold text-slate-200"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                dispatch(
-                                  removeSslVpnProfile({ id: profile.id }),
-                                )
-                              }
-                              className="ml-1 rounded px-1 text-red-400 hover:bg-red-900/30"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
-                                Auth
-                              </label>
-                              <select
-                                value={profile.authMode}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: {
-                                        authMode: e.target
-                                          .value as typeof profile.authMode,
-                                      },
-                                    }),
-                                  )
-                                }
-                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
-                              >
-                                <option value="password">Password</option>
-                                <option value="certificate">Certificate</option>
-                                <option value="ldap">LDAP</option>
-                                <option value="radius">RADIUS</option>
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
-                                IP Pool
-                              </label>
-                              <input
-                                type="text"
-                                value={profile.ipPool ?? ''}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: { ipPool: e.target.value },
-                                    }),
-                                  )
-                                }
-                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200"
-                                placeholder="10.0.50.0/24"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
-                                DNS
-                              </label>
-                              <input
-                                type="text"
-                                value={profile.dns1 ?? ''}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: { dns1: e.target.value },
-                                    }),
-                                  )
-                                }
-                                placeholder="DNS 1"
-                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                              />
-                              <input
-                                type="text"
-                                value={profile.dns2 ?? ''}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: { dns2: e.target.value },
-                                    }),
-                                  )
-                                }
-                                placeholder="DNS 2"
-                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="w-16 shrink-0 text-[9px] text-slate-500">
-                                Cert.
-                              </label>
-                              <select
-                                value={profile.serverCertId ?? ''}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: {
-                                        serverCertId:
-                                          e.target.value || undefined,
-                                      },
-                                    }),
-                                  )
-                                }
-                                className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
-                              >
-                                <option value="">— nenhum —</option>
-                                {certificates
-                                  .filter(
-                                    (c) =>
-                                      c.type === 'local' || c.type === 'ca',
-                                  )
-                                  .map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={profile.mfaEnabled ?? false}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: { mfaEnabled: e.target.checked },
-                                    }),
-                                  )
-                                }
-                                className="h-3 w-3 accent-cyan-500"
-                              />
-                              <span className="text-[9px] text-slate-400">
-                                MFA habilitado
-                              </span>
-                            </label>
-                            <div>
-                              <label className="text-[9px] text-slate-500">
-                                Split Tunnel (uma rota por linha)
-                              </label>
-                              <textarea
-                                value={(profile.splitTunnelRoutes ?? []).join(
-                                  '\n',
-                                )}
-                                onChange={(e) =>
-                                  dispatch(
-                                    updateSslVpnProfile({
-                                      id: profile.id,
-                                      changes: {
-                                        splitTunnelRoutes: e.target.value
-                                          .split('\n')
-                                          .filter(Boolean),
-                                      },
-                                    }),
-                                  )
-                                }
-                                rows={2}
-                                placeholder="10.0.0.0/8"
-                                className="mt-0.5 w-full rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </details>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setManualZoneFirst((v) => !v)}
+              title="Alternar posição das exceções manuais"
+              className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300 hover:border-slate-400 hover:text-slate-100"
+            >
+              {manualZoneFirst ? 'exceções: antes ▼' : 'exceções: depois ▲'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreator((v) => !v)}
+              className="rounded border border-violet-600 bg-violet-900/30 px-2 py-0.5 text-[10px] text-violet-300 hover:bg-violet-800/40 hover:text-violet-200"
+            >
+              {showCreator ? '✕ Cancelar' : '+ Regra'}
+            </button>
+          </div>
         </div>
 
-        {/* Firewall / ACL */}
-        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
-          {/* Header */}
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
-              {copy.firewallTitle}
-            </h3>
-            <div className="flex items-center gap-2">
+        {/* Custom rule creator */}
+        {showCreator && (
+          <div className="mb-2 rounded border border-violet-700/50 bg-violet-950/30 p-2 text-[11px]">
+            <p className="mb-1.5 font-semibold text-violet-300">
+              Nova regra manual
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <label className="flex flex-col gap-0.5">
+                <span className="text-slate-400">Origem (nó)</span>
+                <TreePicker
+                  nodes={nodes}
+                  siteVlans={siteVlans}
+                  sites={sites}
+                  value={newSrcNodeId}
+                  onChange={setNewSrcNodeId}
+                  placeholder="— selecione origem —"
+                  excludeNodeId={newDstNodeId}
+                />
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-slate-400">Destino (nó)</span>
+                <TreePicker
+                  nodes={nodes}
+                  siteVlans={siteVlans}
+                  sites={sites}
+                  value={newDstNodeId}
+                  onChange={setNewDstNodeId}
+                  placeholder="— selecione destino —"
+                  excludeNodeId={newSrcNodeId}
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <label className="flex flex-col gap-0.5">
+                <span className="text-slate-400">Serviço</span>
+                <ServicePicker value={newService} onChange={setNewService} />
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-slate-400">Protocolo</span>
+                <select
+                  value={newProtocol}
+                  onChange={(e) =>
+                    setNewProtocol(
+                      e.target.value as 'tcp' | 'udp' | 'icmp' | 'any',
+                    )
+                  }
+                  className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
+                >
+                  <option value="any">Qualquer</option>
+                  <option value="tcp">TCP</option>
+                  <option value="udp">UDP</option>
+                  <option value="icmp">ICMP</option>
+                </select>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <label className="flex flex-col gap-0.5">
+                <span className="text-slate-400">Ação</span>
+                <select
+                  value={newAction}
+                  onChange={(e) => setNewAction(e.target.value as AclAction)}
+                  className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
+                >
+                  <option value="ALLOW">ALLOW</option>
+                  <option value="DENY">DENY</option>
+                </select>
+              </label>
+              <div className="flex flex-col gap-1 pt-3">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={newStateful}
+                    onChange={(e) => setNewStateful(e.target.checked)}
+                    className="h-3 w-3 accent-blue-500"
+                  />
+                  <span className="text-slate-300">Stateful</span>
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={newBidirectional}
+                    onChange={(e) => setNewBidirectional(e.target.checked)}
+                    className="h-3 w-3 accent-sky-500"
+                  />
+                  <span className="text-slate-300">Bidirecional</span>
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setManualZoneFirst((v) => !v)}
-                title="Alternar posição das exceções manuais"
-                className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300 hover:border-slate-400 hover:text-slate-100"
+                onClick={() => setShowCreator(false)}
+                className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200"
               >
-                {manualZoneFirst ? 'exceções: antes ▼' : 'exceções: depois ▲'}
+                Cancelar
               </button>
               <button
                 type="button"
-                onClick={() => setShowCreator((v) => !v)}
-                className="rounded border border-violet-600 bg-violet-900/30 px-2 py-0.5 text-[10px] text-violet-300 hover:bg-violet-800/40 hover:text-violet-200"
+                onClick={handleAddCustomRule}
+                disabled={!newSrcNodeId || !newDstNodeId}
+                className="rounded border border-violet-600 bg-violet-900/40 px-2 py-1 text-[10px] text-violet-300 hover:bg-violet-800/50 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {showCreator ? '✕ Cancelar' : '+ Regra'}
+                Adicionar
               </button>
             </div>
           </div>
+        )}
 
-          {/* Custom rule creator */}
-          {showCreator && (
-            <div className="mb-2 rounded border border-violet-700/50 bg-violet-950/30 p-2 text-[11px]">
-              <p className="mb-1.5 font-semibold text-violet-300">
-                Nova regra manual
-              </p>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-slate-400">Origem (nó)</span>
-                  <TreePicker
-                    nodes={nodes}
-                    siteVlans={siteVlans}
-                    sites={sites}
-                    value={newSrcNodeId}
-                    onChange={setNewSrcNodeId}
-                    placeholder="— selecione origem —"
-                    excludeNodeId={newDstNodeId}
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-slate-400">Destino (nó)</span>
-                  <TreePicker
-                    nodes={nodes}
-                    siteVlans={siteVlans}
-                    sites={sites}
-                    value={newDstNodeId}
-                    onChange={setNewDstNodeId}
-                    placeholder="— selecione destino —"
-                    excludeNodeId={newSrcNodeId}
-                  />
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-slate-400">Serviço</span>
-                  <ServicePicker value={newService} onChange={setNewService} />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-slate-400">Protocolo</span>
-                  <select
-                    value={newProtocol}
-                    onChange={(e) =>
-                      setNewProtocol(
-                        e.target.value as 'tcp' | 'udp' | 'icmp' | 'any',
-                      )
-                    }
-                    className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
-                  >
-                    <option value="any">Qualquer</option>
-                    <option value="tcp">TCP</option>
-                    <option value="udp">UDP</option>
-                    <option value="icmp">ICMP</option>
-                  </select>
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-slate-400">Ação</span>
-                  <select
-                    value={newAction}
-                    onChange={(e) => setNewAction(e.target.value as AclAction)}
-                    className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
-                  >
-                    <option value="ALLOW">ALLOW</option>
-                    <option value="DENY">DENY</option>
-                  </select>
-                </label>
-                <div className="flex flex-col gap-1 pt-3">
-                  <label className="flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      checked={newStateful}
-                      onChange={(e) => setNewStateful(e.target.checked)}
-                      className="h-3 w-3 accent-blue-500"
-                    />
-                    <span className="text-slate-300">Stateful</span>
-                  </label>
-                  <label className="flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      checked={newBidirectional}
-                      onChange={(e) => setNewBidirectional(e.target.checked)}
-                      className="h-3 w-3 accent-sky-500"
-                    />
-                    <span className="text-slate-300">Bidirecional</span>
-                  </label>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreator(false)}
-                  className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200"
+        <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="w-7 border-b border-slate-700 px-1 py-1 text-center" />
+                <th
+                  className="w-[42px] border-b border-slate-700 px-1 py-1 text-center"
+                  title="Prioridade — menor valor = avaliado primeiro"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddCustomRule}
-                  disabled={!newSrcNodeId || !newDstNodeId}
-                  className="rounded border border-violet-600 bg-violet-900/40 px-2 py-1 text-[10px] text-violet-300 hover:bg-violet-800/50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Adicionar
-                </button>
-              </div>
-            </div>
-          )}
+                  Prio
+                </th>
+                <th className="w-[60px] border-b border-slate-700 px-1 py-1 text-center">
+                  {copy.action}
+                </th>
+                <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
+                  {copy.source}
+                </th>
+                <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
+                  {copy.destination}
+                </th>
+                <th className="w-[120px] border-b border-slate-700 px-1 py-1 text-center">
+                  {copy.portService}
+                </th>
+                <th className="w-[160px] border-b border-slate-700 px-1 py-1 text-center">
+                  Flags
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {manualGrouped.length === 0 &&
+                topologyGrouped.length === 0 &&
+                natGrouped.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-1 py-2 text-slate-500">
+                      {copy.emptyRules}
+                    </td>
+                  </tr>
+                )}
 
-          <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-slate-400">
-                  <th className="w-7 border-b border-slate-700 px-1 py-1 text-center" />
-                  <th
-                    className="w-[42px] border-b border-slate-700 px-1 py-1 text-center"
-                    title="Prioridade — menor valor = avaliado primeiro"
-                  >
-                    Prio
-                  </th>
-                  <th className="w-[60px] border-b border-slate-700 px-1 py-1 text-center">
-                    {copy.action}
-                  </th>
-                  <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
-                    {copy.source}
-                  </th>
-                  <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
-                    {copy.destination}
-                  </th>
-                  <th className="w-[120px] border-b border-slate-700 px-1 py-1 text-center">
-                    {copy.portService}
-                  </th>
-                  <th className="w-[160px] border-b border-slate-700 px-1 py-1 text-center">
-                    Flags
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {manualGrouped.length === 0 &&
-                  topologyGrouped.length === 0 &&
-                  natGrouped.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-1 py-2 text-slate-500">
-                        {copy.emptyRules}
-                      </td>
-                    </tr>
+              {manualZoneFirst ? (
+                <>
+                  {firewallZoneB}
+                  {firewallZoneA}
+                </>
+              ) : (
+                <>
+                  {firewallZoneA}
+                  {firewallZoneB}
+                </>
+              )}
+
+              {natGrouped.length > 0 && (
+                <>
+                  <ZoneHeader
+                    label="NAT Exempt"
+                    count={natGrouped.length}
+                    color="text-emerald-300"
+                  />
+                  {natGrouped.map(({ parent, children }, idx) =>
+                    renderRuleGroup(
+                      parent,
+                      children,
+                      idx,
+                      natGrouped.length,
+                      false,
+                      [],
+                    ),
                   )}
+                </>
+              )}
 
-                {manualZoneFirst ? (
-                  <>
-                    {firewallZoneB}
-                    {firewallZoneA}
-                  </>
-                ) : (
-                  <>
-                    {firewallZoneA}
-                    {firewallZoneB}
-                  </>
-                )}
-
-                {natGrouped.length > 0 && (
-                  <>
-                    <ZoneHeader
-                      label="NAT Exempt"
-                      count={natGrouped.length}
-                      color="text-emerald-300"
-                    />
-                    {natGrouped.map(({ parent, children }, idx) =>
-                      renderRuleGroup(
-                        parent,
-                        children,
-                        idx,
-                        natGrouped.length,
-                        false,
-                        [],
-                      ),
-                    )}
-                  </>
-                )}
-
-                {/* Implicit deny footer */}
-                <tr className="bg-red-950/20">
-                  <td
-                    colSpan={2}
-                    className="border-t border-slate-700 px-1 py-1"
-                  />
-                  <td className="border-t border-slate-700 px-1 py-1">
-                    <span className="rounded bg-red-900/60 px-1 py-0.5 text-[10px] text-red-400 font-semibold">
-                      DENY
-                    </span>
-                  </td>
-                  <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                    any
-                  </td>
-                  <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                    any
-                  </td>
-                  <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                    *
-                  </td>
-                  <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-600 italic">
-                    implicit deny
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              {/* Implicit deny footer */}
+              <tr className="bg-red-950/20">
+                <td
+                  colSpan={2}
+                  className="border-t border-slate-700 px-1 py-1"
+                />
+                <td className="border-t border-slate-700 px-1 py-1">
+                  <span className="rounded bg-red-900/60 px-1 py-0.5 text-[10px] text-red-400 font-semibold">
+                    DENY
+                  </span>
+                </td>
+                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
+                  any
+                </td>
+                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
+                  any
+                </td>
+                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
+                  *
+                </td>
+                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-600 italic">
+                  implicit deny
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         {/* fim card firewall */}
       </div>
+
+      {/* ── Roteamento por Protocolo ─────────────────────────────────────── */}
+      <RoutingProtocolTable language={language} />
+
       {/* fim grid linha 2 */}
     </section>
   );

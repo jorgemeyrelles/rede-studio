@@ -104,6 +104,36 @@ export function normalizeTechProfile(
   const ensured = ensureTechProfile(category, profile, context);
   const nextFields = { ...ensured.fields };
 
+  if (ensured.kind === 'router') {
+    const routingMode = String(nextFields.routingMode ?? 'static');
+
+    // static — limpa campos ospf e bgp para não poluir a tabela
+    if (routingMode === 'static') {
+      nextFields.ospfArea = '0.0.0.0';
+      nextFields.ospfHello = 10;
+      nextFields.ospfDead = 40;
+      nextFields.bgpAsn = '';
+      nextFields.bgpNeighbors = '';
+      nextFields.bgpPrefixListIn = '';
+      nextFields.bgpPrefixListOut = '';
+      nextFields.bgpMd5 = false;
+    }
+
+    // ospf — garante dead >= 4× hello
+    if (routingMode === 'ospf' || routingMode === 'mixed') {
+      const hello = Number(nextFields.ospfHello ?? 10);
+      const dead = Number(nextFields.ospfDead ?? 40);
+      if (dead < hello * 4) nextFields.ospfDead = hello * 4;
+    }
+
+    // bgp — garante que ASN não fique undefined
+    if (routingMode === 'bgp' || routingMode === 'mixed') {
+      if (!String(nextFields.bgpAsn ?? '').trim()) {
+        nextFields.bgpAsn = '';
+      }
+    }
+  }
+
   if (ensured.kind === 'vpn') {
     const tunnelType = String(nextFields.tunnelType ?? 'ipsec-site-to-site');
     if (tunnelType === 'gre' || tunnelType === 'mpls') {
@@ -114,11 +144,38 @@ export function normalizeTechProfile(
     } else if (tunnelType === 'wireguard') {
       nextFields.ikeVersion = 'n-a';
       nextFields.authMethod = 'keypair';
+      nextFields.encryptionSuite = 'chacha20-poly1305';
+      nextFields.integrity = 'n-a';
     } else {
       if (nextFields.ikeVersion === 'n-a') nextFields.ikeVersion = 'ikev2';
       if (nextFields.authMethod === 'none') nextFields.authMethod = 'psk';
       if (nextFields.encryptionSuite === 'n-a') {
         nextFields.encryptionSuite = 'aes-256-gcm';
+      }
+
+      // IKEv1 não suporta cifras AEAD — forçar para AES-CBC
+      const AEAD_CIPHERS = new Set([
+        'aes-256-gcm',
+        'aes-128-gcm',
+        'chacha20-poly1305',
+      ]);
+      const cipher = String(nextFields.encryptionSuite ?? 'aes-256-gcm');
+      const ikeVersion = String(nextFields.ikeVersion ?? 'ikev2');
+
+      if (ikeVersion === 'ikev1' && AEAD_CIPHERS.has(cipher)) {
+        nextFields.encryptionSuite = 'aes-256-cbc';
+      }
+
+      // Cifras AEAD já autenticam — integridade separada deve ser n-a
+      // Cifras não-AEAD precisam de integridade explícita
+      const resolvedCipher = String(nextFields.encryptionSuite ?? 'aes-256-gcm');
+      if (AEAD_CIPHERS.has(resolvedCipher)) {
+        nextFields.integrity = 'n-a';
+      } else if (
+        nextFields.integrity === 'n-a' ||
+        nextFields.integrity === undefined
+      ) {
+        nextFields.integrity = 'sha-256';
       }
     }
   }
@@ -174,6 +231,22 @@ export function getTechProfileWarnings(
     warnings.push(
       'Gateway padrao fora da Camada 1 pode gerar roteamento inconsistente.',
     );
+  }
+
+  if (category === 'router') {
+    const routingMode = String(normalized.fields.routingMode ?? 'static');
+    if (
+      (routingMode === 'bgp' || routingMode === 'mixed') &&
+      !String(normalized.fields.bgpAsn ?? '').trim()
+    ) {
+      warnings.push('BGP configurado sem ASN local definido.');
+    }
+    if (
+      (routingMode === 'bgp' || routingMode === 'mixed') &&
+      !String(normalized.fields.bgpNeighbors ?? '').trim()
+    ) {
+      warnings.push('BGP sem vizinhos (neighbors) configurados.');
+    }
   }
 
   if (normalized.kind === 'vpn') {

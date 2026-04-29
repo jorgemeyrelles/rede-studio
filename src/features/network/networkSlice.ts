@@ -60,6 +60,7 @@ import {
   assignNodeIpOutsideVlans,
   buildNodeHostAllocations,
   buildIpFromSiteAndRadical,
+  buildIpFromNetworkAndRadical,
   buildNodeIp,
   buildNodeLabel,
   getCategoryCode,
@@ -69,6 +70,7 @@ import {
   makeLayerId,
   makeNodeId,
   makeSiteId,
+  networkRangeBounds,
   parseTrailingNumber,
   reconcileAclRules,
   siteOwnsVlan,
@@ -216,6 +218,12 @@ function inferLinkKind(
   if (categories.has('vpn') || categories.has('wireguard')) return 'vpn';
   if (categories.has('wan')) return 'wan';
   if (fromNode?.siteId && toNode?.siteId && fromNode.siteId === toNode.siteId) {
+    // Mesmo site — verifica se os nós pertencem a redes diferentes (inter-lan)
+    const fromNetId = fromNode.networkId;
+    const toNetId = toNode.networkId;
+    if (fromNetId && toNetId && fromNetId !== toNetId) {
+      return 'inter-lan';
+    }
     return 'lan';
   }
 
@@ -621,7 +629,7 @@ export const networkSlice = createSlice({
       }
     },
     addSiteVlan: (state, action: PayloadAction<AddSiteVlanPayload>) => {
-      const { siteId } = action.payload;
+      const { siteId, networkId } = action.payload;
       const vlanId = toValidVlanId(action.payload.vlanId);
       const site = state.sites.find((item) => item.id === siteId);
       if (!site) return;
@@ -635,10 +643,20 @@ export const networkSlice = createSlice({
       }
 
       const capacity = Math.max(1, Math.trunc(action.payload.capacity));
-      const startIp = buildIpFromSiteAndRadical(
-        site.ipOctet,
-        action.payload.startRadical,
-      );
+
+      // Fase 2: quando networkId fornecido, usa endereçamento da rede
+      const network = networkId
+        ? state.siteNetworks.find((n) => n.id === networkId)
+        : undefined;
+
+      const startIp = network
+        ? buildIpFromNetworkAndRadical(
+            network,
+            action.payload.startRadical,
+            site.ipOctet,
+          )
+        : buildIpFromSiteAndRadical(site.ipOctet, action.payload.startRadical);
+
       if (!startIp) {
         state.meta.persistWarning =
           'Radical inicial invalido para o range da VLAN.';
@@ -653,10 +671,13 @@ export const networkSlice = createSlice({
       }
 
       const endNumber = startNumber + capacity - 1;
-      const { min: siteMin, max: siteMax } = siteRangeBounds(site.ipOctet);
-      if (endNumber > siteMax || startNumber < siteMin) {
+      const { min: rangeMin, max: rangeMax } = network
+        ? networkRangeBounds(network, site.ipOctet)
+        : siteRangeBounds(site.ipOctet);
+
+      if (endNumber > rangeMax || startNumber < rangeMin) {
         state.meta.persistWarning =
-          'Range da VLAN ultrapassa os limites de endereco do site.';
+          'Range da VLAN ultrapassa os limites de endereco do site/rede.';
         return;
       }
 
@@ -684,6 +705,7 @@ export const networkSlice = createSlice({
         startRadical: action.payload.startRadical,
         startIp,
         endIp,
+        networkId,
       });
 
       // Dispositivos que cairam por acaso no novo range e nao pertencem a VLAN
@@ -874,9 +896,14 @@ export const networkSlice = createSlice({
     },
 
     addLayer: (state, action: PayloadAction<AddLayerPayload>) => {
-      const { siteId, tier, name } = action.payload;
+      const { siteId, tier, name, networkId } = action.payload;
       const siteExists = state.sites.some((site) => site.id === siteId);
       if (!siteExists) return;
+
+      // Fase 2: valida que a rede existe, se fornecida
+      if (networkId && !state.siteNetworks.some((n) => n.id === networkId)) {
+        return;
+      }
 
       const order = getLayerOrder(state.layers, siteId);
       const layerId = makeLayerId(siteId, order);
@@ -905,9 +932,10 @@ export const networkSlice = createSlice({
         height: 180,
         minWidth: 286,
         maxWidth: 884,
-        minHeight: 180, // mínimo = altura na criação
-        maxHeight: 300, // máximo ≈ 3 nós empilhados (3×76 + margens)
+        minHeight: 180,
+        maxHeight: 300,
         tier,
+        networkId,
       });
       state.counters.layer += 1;
     },
@@ -955,6 +983,11 @@ export const networkSlice = createSlice({
       const layer = state.layers.find((item) => item.id === layerId);
       if (!site || !layer) return;
 
+      // Fase 2: resolve a rede l\u00f3gica da camada para endere\u00e7amento correto
+      const network = layer.networkId
+        ? state.siteNetworks.find((n) => n.id === layer.networkId)
+        : undefined;
+
       const categoryCount = getNextNodeSequence(
         state.nodes,
         category,
@@ -967,6 +1000,7 @@ export const networkSlice = createSlice({
         layer.order,
         category,
         categoryCount,
+        network,
       );
       const position = getInitialNodePosition(
         state,
@@ -979,6 +1013,7 @@ export const networkSlice = createSlice({
         id: nodeId,
         siteId,
         layerId,
+        networkId: layer.networkId,
         category,
         label: buildNodeLabel(category, siteId, layer.order, categoryCount),
         ip: nodeIp,
@@ -987,6 +1022,7 @@ export const networkSlice = createSlice({
           layer.order,
           category,
           categoryCount,
+          network,
         ),
         hostCount: 1,
         hostAllocations: [{ id: nodeId, ip: nodeIp }],

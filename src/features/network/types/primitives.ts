@@ -25,6 +25,6 @@ export type NodeCategory =
   | 'smartphone'
   | 'server';
 
-export type LinkKind = 'lan' | 'wan' | 'vpn' | 'ipsec' | 'other';
+export type LinkKind = 'lan' | 'wan' | 'vpn' | 'ipsec' | 'inter-lan' | 'other';
 
 export type AclAction = 'ALLOW' | 'DENY';

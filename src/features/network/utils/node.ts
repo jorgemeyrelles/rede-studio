@@ -1,6 +1,6 @@
 import { CATEGORY_CODE_MAP, CATEGORY_HOST_BASE_MAP } from '../constants';
-import type { NodeCategory, NodeItem } from '../types';
-import { ipToNumber, numberToIp } from './ip';
+import type { NodeCategory, NodeItem, SiteNetwork } from '../types';
+import { buildNetworkAddress, ipToNumber, numberToIp } from './ip';
 
 export function makeSiteId(index: number) {
   return `S${index}`;
@@ -115,9 +115,26 @@ export function buildNodeIp(
   layerOrder: number,
   category: NodeCategory,
   categoryCount: number,
+  network?: Pick<SiteNetwork, 'addressFamily' | 'thirdOctet'>,
 ) {
-  const third = Math.max(1, Math.min(254, layerOrder));
   const hostBase = getCategoryHostBase(category);
   const fourth = Math.max(1, Math.min(254, hostBase + categoryCount - 1));
-  return `200.${siteOctet}.${third}.${fourth}`;
+
+  if (!network) {
+    const third = Math.max(1, Math.min(254, layerOrder));
+    return `200.${siteOctet}.${third}.${fourth}`;
+  }
+
+  // Com rede definida: 3º octeto fixo da rede, 4º octeto por categoria
+  const base = buildNetworkAddress(
+    network.addressFamily,
+    network.thirdOctet,
+    siteOctet,
+  );
+  const baseParts = base.split('.').map(Number);
+  if (baseParts.length !== 4 || baseParts.some((p) => !Number.isFinite(p))) {
+    const third = Math.max(1, Math.min(254, layerOrder));
+    return `200.${siteOctet}.${third}.${fourth}`;
+  }
+  return `${baseParts[0]}.${baseParts[1]}.${baseParts[2]}.${fourth}`;
 }

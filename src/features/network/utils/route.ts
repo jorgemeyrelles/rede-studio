@@ -6,10 +6,29 @@ export function resolveRouteType(
   toSiteId: string | undefined,
   fromCategory: string | undefined,
   toCategory: string | undefined,
+  fromRoutingMode?: string,
 ): RouteType {
   if (linkKind === 'vpn' || linkKind === 'ipsec') return 'VPN';
   if (linkKind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
+    // Se o roteador usa BGP ou mixed e o link é inter-site, classificar como BGP
+    if (
+      (fromRoutingMode === 'bgp' || fromRoutingMode === 'mixed') &&
+      fromSiteId &&
+      toSiteId &&
+      fromSiteId !== toSiteId
+    ) {
+      return 'BGP';
+    }
     return 'Default';
+  }
+  // Link inter-site com BGP habilitado
+  if (
+    (fromRoutingMode === 'bgp' || fromRoutingMode === 'mixed') &&
+    fromSiteId &&
+    toSiteId &&
+    fromSiteId !== toSiteId
+  ) {
+    return 'BGP';
   }
   if (fromSiteId && toSiteId && fromSiteId === toSiteId) return 'Direta';
   return 'Estática';

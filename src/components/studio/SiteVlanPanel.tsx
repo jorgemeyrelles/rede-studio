@@ -24,9 +24,8 @@ type SiteVlanPanelProps = {
 
 export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   const dispatch = useAppDispatch();
-  const { sites, nodes, links, siteVlans, ui, meta } = useAppSelector(
-    (state) => state.network,
-  );
+  const { sites, nodes, links, siteVlans, ui, meta, siteNetworks } =
+    useAppSelector((state) => state.network);
   const copy = getSiteVlanCopy(language);
   const [vlanDraftBySite, setVlanDraftBySite] = useState<
     Record<string, SiteVlanDraft>
@@ -37,6 +36,9 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
   const [openCapacitySiteId, setOpenCapacitySiteId] = useState<string | null>(
     null,
   );
+  const [selectedNetworkBySite, setSelectedNetworkBySite] = useState<
+    Record<string, string | null>
+  >({});
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({
     open: false,
     message: '',
@@ -158,6 +160,10 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
             const siteVlanItems = siteVlans
               .filter((item) => item.siteId === site.id)
               .sort((a, b) => a.vlanId - b.vlanId);
+            const siteNets = (siteNetworks ?? []).filter(
+              (n) => n.siteId === site.id,
+            );
+            const selectedNetworkId = selectedNetworkBySite[site.id] ?? null;
             const radicalOptions = getSiteRadicalOptions(
               site.id,
               site.ipOctet,
@@ -183,6 +189,31 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
                 </summary>
 
                 <div className="space-y-2 px-2 pb-2">
+                  {/* Seletor de rede — aparece somente se o site tiver redes cadastradas */}
+                  {siteNets.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                        Rede:
+                      </span>
+                      <select
+                        value={selectedNetworkId ?? ''}
+                        onChange={(e) =>
+                          setSelectedNetworkBySite((prev) => ({
+                            ...prev,
+                            [site.id]: e.target.value || null,
+                          }))
+                        }
+                        className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      >
+                        <option value="">— sem rede —</option>
+                        {siteNets.map((net) => (
+                          <option key={net.id} value={net.id}>
+                            {net.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="grid gap-2 md:grid-cols-[76px_110px_120px_1fr_auto]">
                     <input
                       type="number"
@@ -306,6 +337,7 @@ export default function SiteVlanPanel({ language }: SiteVlanPanelProps) {
                             capacity,
                             startRadical: draft.startRadical,
                             name: draft.name,
+                            networkId: selectedNetworkId ?? undefined,
                           }),
                         );
                         setOpenRadicalSiteId(null);

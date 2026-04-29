@@ -113,7 +113,7 @@ export default function StudioPage({ language }: StudioPageProps) {
           />
         )}
         <div
-          className={`absolute left-0 top-0 z-50 h-full w-[300px] shadow-2xl transition-transform duration-200 ${
+          className={`absolute left-0 top-0 z-50 h-full w-[390px] shadow-2xl transition-transform duration-200 ${
             isLegendOpen ? 'translate-x-0' : '-translate-x-[110%]'
           }`}
         >

@@ -1,9 +1,10 @@
-import type { NetworkState, NodeItem, SiteVlan } from '../types';
+import type { NetworkState, NodeItem, SiteNetwork, SiteVlan } from '../types';
 import {
   ipToNumber,
   isIpInAnyVlan,
   getVlanRange,
   isIpInVlan,
+  networkRangeBounds,
   numberToIp,
   siteRangeBounds,
 } from './ip';
@@ -125,13 +126,16 @@ export function findNextFreeIpBlock(
   blockSize: number,
   predicate: (ipNumber: number) => boolean,
   preferredStartIp?: string,
+  network?: Pick<SiteNetwork, 'addressFamily' | 'thirdOctet' | 'cidr'>,
 ) {
   const site = state.sites.find((item) => item.id === siteId);
   if (!site) return null;
 
   const used = buildOccupiedIpSet(state, siteId, excludeNodeId);
 
-  const { min, max } = siteRangeBounds(site.ipOctet);
+  const { min, max } = network
+    ? networkRangeBounds(network, site.ipOctet)
+    : siteRangeBounds(site.ipOctet);
 
   const resolveCandidate = (candidate: number | null) => {
     if (candidate === null) return null;
@@ -147,11 +151,20 @@ export function findNextFreeIpBlock(
   const preferredIp = resolveCandidate(preferred);
   if (preferredIp) return preferredIp;
 
-  for (let third = 1; third <= 254; third += 1) {
-    for (let fourth = 1; fourth <= 254; fourth += 1) {
-      const ipNumber = ipToNumber(`200.${site.ipOctet}.${third}.${fourth}`);
-      const nextIp = resolveCandidate(ipNumber);
+  if (network) {
+    // Iteração genérica dentro do range da rede (min+1 a max-1 usável)
+    for (let ipNum = min + 1; ipNum <= max - 1; ipNum += 1) {
+      const nextIp = resolveCandidate(ipNum);
       if (nextIp) return nextIp;
+    }
+  } else {
+    // Iteração legada: padrão 200.x
+    for (let third = 1; third <= 254; third += 1) {
+      for (let fourth = 1; fourth <= 254; fourth += 1) {
+        const ipNumber = ipToNumber(`200.${site.ipOctet}.${third}.${fourth}`);
+        const nextIp = resolveCandidate(ipNumber);
+        if (nextIp) return nextIp;
+      }
     }
   }
 

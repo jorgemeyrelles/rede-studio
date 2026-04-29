@@ -4,6 +4,7 @@ export type LanguageOption = {
   value: StudioLanguage;
   label: string;
   flag: string;
+  flagSrc: string; // caminho para o SVG em public/images/flags/
 };
 
 export type StudioToolbarCopy = {
@@ -103,12 +104,20 @@ export type LegendPanelCopy = {
   delete: string;
   emptySites: string;
   addLayer: string;
+  addNetwork: string;
   addIcon: string;
   addComponentLayer: string;
   last: string;
   searchTypePlaceholder: string;
   default: string;
   noComponents: string;
+  networkNamePlaceholder: string;
+  networkPurposeLabel: string;
+  networkFamilyLabel: string;
+  networkOctetLabel: string;
+  networkCidrLabel: string;
+  networkConfirm: string;
+  networkCancel: string;
 };
 
 export type SiteVlanPanelCopy = {
@@ -188,4 +197,9 @@ export type NetworkDiagramCopy = {
   octet: string;
   reserveMargin: string;
   reserveRange: string;
+  networkDetails: string;
+  addressBlock: string;
+  addressFamily: string;
+  hosts: string;
+  layers: string;
 };

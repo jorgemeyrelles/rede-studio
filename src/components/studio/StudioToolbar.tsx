@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addFloatingNode, addSite } from '../../features/network/networkSlice';
 import type { NodeCategory } from '../../features/network/types';
@@ -9,6 +9,7 @@ import {
   RELATION_OPTION_CATEGORIES,
   type StudioLanguage,
 } from './catalog';
+import LinkInspectorTooltip from './LinkInspectorTooltip';
 
 type StudioToolbarProps = {
   language: StudioLanguage;
@@ -24,7 +25,9 @@ export default function StudioToolbar({
   const dispatch = useAppDispatch();
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;
+  const activeLinkId = useAppSelector((state) => state.network.ui.activeLinkId);
 
+  const inspectorAnchorRef = useRef<HTMLButtonElement>(null);
   const [floatingCategory, setFloatingCategory] = useState<NodeCategory>('vpn');
   const [openFloatingPicker, setOpenFloatingPicker] = useState(false);
   const [floatingSearch, setFloatingSearch] = useState('');
@@ -34,6 +37,35 @@ export default function StudioToolbar({
     <section className="rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
         <div className="flex items-center gap-2">
+          {/* Âncora do inspector de link — não clicável, apenas ponto de referência visual */}
+          <button
+            ref={inspectorAnchorRef}
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            title="Inspector de conexão"
+            className={`flex shrink-0 cursor-default items-center justify-center rounded border px-2 py-1.5 transition-colors ${
+              activeLinkId && !isLegendOpen
+                ? 'border-cyan-500/60 bg-cyan-900/30 text-cyan-400'
+                : 'border-slate-700/50 bg-slate-800/30 text-slate-600'
+            }`}
+          >
+            {/* Ícone: dois nós ligados por uma linha */}
+            <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+              <circle cx="2" cy="5" r="2" fill="currentColor" />
+              <line
+                x1="4"
+                y1="5"
+                x2="12"
+                y2="5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <circle cx="14" cy="5" r="2" fill="currentColor" />
+            </svg>
+          </button>
+
           {/* Hamburguer — abre/fecha legenda */}
           {onToggleLegend && (
             <button
@@ -168,6 +200,11 @@ export default function StudioToolbar({
           </button>
         </div>
       </div>
+
+      <LinkInspectorTooltip
+        isLegendOpen={isLegendOpen ?? false}
+        anchorRef={inspectorAnchorRef}
+      />
     </section>
   );
 }

@@ -3,4 +3,5 @@ export const ROUTE_TYPE_CLASS: Record<string, string> = {
   Estática: 'text-amber-300',
   Default: 'text-orange-400',
   VPN: 'text-cyan-300',
+  BGP: 'text-violet-400',
 };

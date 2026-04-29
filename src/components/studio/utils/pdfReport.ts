@@ -71,6 +71,7 @@ function resolveRouteTypeLabel(
     Estática: routeCopy.routeTypeStatic,
     Default: routeCopy.routeTypeDefault,
     VPN: routeCopy.routeTypeVpn,
+    BGP: 'BGP',
   };
   return labels[tipo] ?? tipo;
 }

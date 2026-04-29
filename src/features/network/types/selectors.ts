@@ -1,7 +1,7 @@
 import type { AclAction } from './primitives';
 import type { AclEndpointScope } from './entities';
 
-export type RouteType = 'Direta' | 'Estática' | 'Default' | 'VPN';
+export type RouteType = 'Direta' | 'Estática' | 'Default' | 'VPN' | 'BGP';
 
 export type RouteRow = {
   siteId: string;
@@ -60,4 +60,32 @@ export type FirewallGroupedResult = {
   manualRules: FirewallRuleRow[];
   topologyRules: FirewallRuleRow[];
   natExemptRules: FirewallRuleRow[];
+};
+
+// ── Routing Protocol Table ────────────────────────────────────────────────────
+
+export type BgpNeighborEntry = {
+  ip: string;
+  remoteAsn: string;
+};
+
+export type RoutingProtocolRow = {
+  nodeId: string;
+  nodeLabel: string;
+  siteId: string;
+  siteName: string;
+  mode: 'static' | 'ospf' | 'bgp' | 'mixed';
+  // OSPF
+  ospfArea?: string;
+  ospfHello?: number;
+  ospfDead?: number;
+  // BGP
+  bgpAsn?: string;
+  bgpNeighborsParsed?: BgpNeighborEntry[];
+  bgpNeighborsRaw?: string;
+  bgpPrefixListIn?: string;
+  bgpPrefixListOut?: string;
+  bgpMd5?: boolean;
+  // Warnings
+  warnings: string[];
 };

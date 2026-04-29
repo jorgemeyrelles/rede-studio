@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   NavLink,
   Navigate,
@@ -19,6 +19,19 @@ export default function App() {
   const [studioLanguage, setStudioLanguage] = useState<StudioLanguage>('pt');
   const isStudioRoute = location.pathname.startsWith('/studio');
   const appCopy = getStudioAppCopy(studioLanguage);
+
+  // Bloqueia ↑/↓ em todos os inputs numéricos do app
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const t = e.target as HTMLElement;
+      if (t instanceof HTMLInputElement && t.type === 'number') {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -67,12 +80,19 @@ export default function App() {
                       onClick={() => setStudioLanguage(option.value)}
                       aria-label={option.label}
                       title={option.label}
-                      className={`rounded px-2 py-1 text-[11px] font-bold tracking-wide transition ${
+                      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-bold tracking-wide transition ${
                         isActive
                           ? 'bg-cyan-400/90 text-slate-950'
                           : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700'
                       }`}
                     >
+                      <img
+                        src={option.flagSrc}
+                        width={20}
+                        height={15}
+                        alt={option.label}
+                        className="rounded-[1px] object-cover"
+                      />
                       {option.flag}
                     </button>
                   );

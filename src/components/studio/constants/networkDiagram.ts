@@ -1,6 +1,7 @@
 export const BASE_Y = 120;
-export const SITE_CONTAINER_WIDTH = 468;
-export const DEFAULT_DIAGRAM_WIDTH = 1240;
+export const SITE_CONTAINER_WIDTH = 655;
+export const DEFAULT_DIAGRAM_WIDTH = 1736;
+export const INTER_NETWORK_GAP = 28;
 export const WAN_Y = 46;
 export const DIAGRAM_SIDE_PADDING = 16;
 export const GRID_COLUMN_GAP = 26;

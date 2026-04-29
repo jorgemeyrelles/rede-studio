@@ -23,7 +23,8 @@ export function isAclEligibleLink(nodes: NodeItem[], link: LinkItem) {
     link.kind === 'wan' ||
     link.kind === 'vpn' ||
     link.kind === 'ipsec' ||
-    link.kind === 'lan'
+    link.kind === 'lan' ||
+    link.kind === 'inter-lan'
   );
 }
 

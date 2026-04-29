@@ -13,6 +13,12 @@ export type SiteTooltip = {
   y: number;
 };
 
+export type NetworkTooltip = {
+  networkId: string;
+  x: number;
+  y: number;
+};
+
 export type GridLayoutResult = {
   sitePositions: Map<string, { x: number; y: number }>;
   layerPositions: Map<string, { x: number; y: number }>;

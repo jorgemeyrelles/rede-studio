@@ -31,6 +31,8 @@ import {
   getAvailableVlanCapacityForNode,
   getNodeReservedRange,
   getSiteReserveRange,
+  buildNetworkAddress,
+  cidrToHostCount,
 } from '../../features/network/utils';
 import {
   BASE_Y,
@@ -50,6 +52,7 @@ import {
   resolveLinkVisual,
   type DiagramTooltip,
   type SiteTooltip,
+  type NetworkTooltip,
   type StudioLanguage,
 } from './catalog';
 
@@ -80,11 +83,12 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     );
     const [activeSiteTooltip, setActiveSiteTooltip] =
       useState<SiteTooltip | null>(null);
+    const [activeNetworkTooltip, setActiveNetworkTooltip] =
+      useState<NetworkTooltip | null>(null);
     const [fitCenterRequest, setFitCenterRequest] = useState(0);
 
-    const { sites, layers, nodes, links, siteVlans, ui } = useAppSelector(
-      (state) => state.network,
-    );
+    const { sites, layers, nodes, links, siteVlans, ui, siteNetworks } =
+      useAppSelector((state) => state.network);
     const copy = getNetworkDiagramCopy(language);
 
     const layout = useMemo(
@@ -102,7 +106,24 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       return sites.find((site) => site.id === activeSiteTooltip.siteId) ?? null;
     }, [activeSiteTooltip, sites]);
 
+    const tooltipNetwork = useMemo(() => {
+      if (!activeNetworkTooltip) return null;
+      return (
+        siteNetworks.find((n) => n.id === activeNetworkTooltip.networkId) ??
+        null
+      );
+    }, [activeNetworkTooltip, siteNetworks]);
+
     const nodeData = useMemo(() => {
+      const NETWORK_PURPOSE_COLORS: Record<string, string> = {
+        principal: '#3b82f6',
+        dmz: '#f97316',
+        gestao: '#8b5cf6',
+        cliente: '#22c55e',
+        backup: '#f59e0b',
+        custom: '#64748b',
+      };
+
       const items: Array<Record<string, unknown>> = [];
       const limitedSites = sites.slice(0, 4);
       const sitePalette = ['#38bdf8', '#22c55e', '#f59e0b', '#f43f5e'];
@@ -160,6 +181,25 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           loc: `${layout.sitePositions.get(site.id)?.x ?? 16} ${layout.sitePositions.get(site.id)?.y ?? BASE_Y}`,
         });
 
+        // Fase 2: sub-containers de rede dentro do site
+        (siteNetworks ?? [])
+          .filter((n) => n.siteId === site.id)
+          .forEach((net) => {
+            const baseAddr = buildNetworkAddress(
+              net.addressFamily,
+              net.thirdOctet,
+              site.ipOctet,
+            );
+            items.push({
+              key: net.id,
+              text: `${net.name} — ${baseAddr}/${net.cidr}`,
+              group: site.id,
+              isGroup: true,
+              category: 'network',
+              networkColor: NETWORK_PURPOSE_COLORS[net.purpose] ?? '#64748b',
+            });
+          });
+
         const siteLayers = layers
           .filter((layer) => layer.siteId === site.id)
           .sort((a, b) => a.order - b.order);
@@ -171,7 +211,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           items.push({
             key: layer.id,
             text: layer.name,
-            group: site.id,
+            group: layer.networkId ?? site.id,
             isGroup: true,
             category: 'layer',
             layerStroke: visual.stroke,
@@ -237,6 +277,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       layers,
       nodes,
       sites,
+      siteNetworks,
     ]);
 
     const linkData = useMemo(() => {
@@ -333,6 +374,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         if (event.key === 'Escape') {
           setActiveTooltip(null);
           setActiveSiteTooltip(null);
+          setActiveNetworkTooltip(null);
         }
       };
       document.addEventListener('keydown', handleEscape);
@@ -393,7 +435,103 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           y: viewPoint.y,
         });
         setActiveTooltip(null);
+        setActiveNetworkTooltip(null);
       };
+
+      const openTooltipForNetwork = (
+        group: go.Group,
+        anchor?: go.GraphObject,
+      ) => {
+        const networkId = group.data?.key;
+        if (typeof networkId !== 'string') return;
+        const diagramRefLocal = group.diagram;
+        if (!diagramRefLocal) return;
+        const anchorPoint = anchor
+          ? anchor.getDocumentPoint(go.Spot.TopRight)
+          : group.getDocumentPoint(go.Spot.TopRight);
+        const viewPoint = diagramRefLocal.transformDocToView(anchorPoint);
+        setActiveNetworkTooltip({
+          networkId,
+          x: viewPoint.x,
+          y: viewPoint.y,
+        });
+        setActiveTooltip(null);
+        setActiveSiteTooltip(null);
+      };
+
+      diagram.groupTemplateMap.add(
+        'network',
+        $(
+          go.Group,
+          'Vertical',
+          {
+            movable: false,
+            locationSpot: go.Spot.TopLeft,
+            computesBoundsAfterDrag: true,
+            computesBoundsIncludingLinks: false,
+          },
+          $(
+            go.Panel,
+            'Horizontal',
+            {
+              defaultAlignment: go.Spot.Center,
+              margin: new go.Margin(0, 0, 2, 0),
+            },
+            $(
+              go.TextBlock,
+              {
+                stroke: '#7dd3fc',
+                font: '600 11px Barlow',
+                margin: new go.Margin(0, 4, 0, 6),
+              },
+              new go.Binding('text', 'text'),
+            ),
+            $(
+              go.Panel,
+              'Auto',
+              {
+                name: 'NETWORKINFOBTN',
+                width: 14,
+                height: 14,
+                cursor: 'pointer',
+                click: (_event, obj) => {
+                  const group = obj.part as go.Group | null;
+                  if (!group) return;
+                  openTooltipForNetwork(group, obj);
+                },
+              },
+              $(go.Shape, 'Circle', {
+                fill: '#3b82f6',
+                stroke: '#1d4ed8',
+                strokeWidth: 1,
+              }),
+              $(go.TextBlock, {
+                text: 'i',
+                font: 'bold 9px sans-serif',
+                stroke: '#fff',
+                textAlign: 'center',
+                verticalAlignment: go.Spot.Center,
+              }),
+            ),
+          ),
+          $(
+            go.Panel,
+            'Auto',
+            $(
+              go.Shape,
+              'RoundedRectangle',
+              {
+                fill: 'rgba(30,60,100,0.15)',
+                stroke: '#1e3a5f',
+                strokeWidth: 1,
+                strokeDashArray: [6, 3],
+              },
+              new go.Binding('stroke', 'networkColor'),
+            ),
+            $(go.Placeholder, { padding: 10 }),
+          ),
+        ),
+      );
 
       diagram.groupTemplateMap.add(
         'site',
@@ -512,8 +650,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   fill: 'rgba(2, 6, 23, 0.55)',
                   stroke: '#475569',
                   strokeDashArray: [5, 4],
-                  // Fundo não intercepta cliques — permite selecionar links abaixo
-                  pickable: false,
                 },
                 new go.Binding('fill', 'layerFill'),
                 new go.Binding('stroke', 'layerStroke'),
@@ -722,9 +858,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       diagram.linkTemplate = $(
         go.Link,
         {
-          // Camada padrão (Default) — links ficam acima do Background dos Groups
-          // e são encontrados pelo hit-test
-          layerName: '',
+          // Camada Foreground — links sempre acima de Groups/Nodes no hit-test
+          layerName: 'Foreground',
           routing: go.Routing.AvoidsNodes,
           curve: go.Curve.JumpGap,
           corner: 8,
@@ -733,9 +868,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           fromEndSegmentLength: 14,
           toEndSegmentLength: 14,
         },
-        new go.Binding('layerName', 'isHighlighted', (h) =>
-          h ? 'Foreground' : '',
-        ).ofObject(),
         // Área de hit invisível — facilita clicar em linhas finas
         $(go.Shape, {
           isPanelMain: true,
@@ -812,27 +944,28 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       });
 
       diagram.addDiagramListener('ObjectSingleClicked', (event) => {
-        const clickPt = event.diagram.lastInput.documentPoint;
+        // Tenta o objeto clicado diretamente; caso um Group (camada) tenha
+        // interceptado o clique, faz fallback via findObjectsAt para encontrar
+        // qualquer link exatamente na posição do clique.
+        let link: go.Link | null = null;
 
-        // Coleta todos os objetos na posição e verifica se há link entre eles.
-        // Links têm prioridade — um Group por cima não bloqueia a seleção da linha.
-        const objs: go.GraphObject[] = [];
-        event.diagram.findObjectsAt(clickPt).each((obj) => {
-          objs.push(obj);
-        });
-        const foundObj = objs.find((obj) => obj.part instanceof go.Link);
-
-        if (!foundObj) {
-          // Nenhum link na posição — mantém estado atual
-          return;
+        const subjectPart = (event.subject as go.GraphObject).part;
+        if (subjectPart instanceof go.Link) {
+          link = subjectPart;
+        } else {
+          const clickPt = event.diagram.lastInput.documentPoint;
+          event.diagram.findObjectsAt(clickPt).each((obj: go.GraphObject) => {
+            if (!link && obj.part instanceof go.Link) {
+              link = obj.part as go.Link;
+            }
+          });
         }
 
-        // Link encontrado: garante que camadas não fiquem selecionadas
-        event.diagram.clearSelection();
+        if (!link) return;
 
-        const link = foundObj.part as go.Link;
+        event.diagram.clearSelection();
         const linkId = String(
-          (link.data as Record<string, unknown>)?.key ?? '',
+          ((link as go.Link).data as Record<string, unknown>)?.key ?? '',
         );
         if (!linkId) return;
         const current = activeLinkIdRef.current;
@@ -944,7 +1077,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         hasInitialFitDoneRef.current = true;
         lastFitCenterRequestHandledRef.current = fitCenterRequest;
       } else {
-        // Keep the user's current viewport when data updates recreate the model.
+        // Mantém o viewport do usuário quando o modelo é recriado
         diagram.scale = previousScale;
         diagram.position = previousPosition;
       }
@@ -1403,11 +1536,29 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }
 
                           if (field.type === 'select') {
-                            const options = field.options ?? [];
-                            const selected =
+                            // Resolve opções: se optionsWhen definido, filtra pelo valor do campo-dependência
+                            let options = field.options ?? [];
+                            if (field.optionsWhen) {
+                              for (const [depKey, mapping] of Object.entries(
+                                field.optionsWhen,
+                              )) {
+                                const depValue = String(
+                                  techProfile.fields[depKey] ?? '',
+                                );
+                                if (mapping[depValue]) {
+                                  options = mapping[depValue];
+                                  break;
+                                }
+                              }
+                            }
+                            // Se o valor atual não está nas opções filtradas, usa o primeiro da lista
+                            const currentStr =
                               typeof value === 'string' && value.length > 0
                                 ? value
-                                : (options[0] ?? '');
+                                : '';
+                            const selected = options.includes(currentStr)
+                              ? currentStr
+                              : (options[0] ?? '');
                             return (
                               <label
                                 key={field.key}
@@ -1614,6 +1765,107 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                         ? `${siteReserveRange.startIp} - ${siteReserveRange.endIp} (${siteReserveRange.count})`
                         : '0'}
                     </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+        {activeNetworkTooltip &&
+          tooltipNetwork &&
+          diagramDivRef.current &&
+          (() => {
+            const rect = diagramDivRef.current!.getBoundingClientRect();
+            const position = calculateTooltipPosition({
+              iconX: activeNetworkTooltip.x,
+              iconY: activeNetworkTooltip.y,
+              containerWidth: rect.width,
+              containerHeight: rect.height,
+              tooltipWidth: 260,
+              tooltipHeight: 180,
+            });
+            const netSite = sites.find(
+              (s) => s.id === tooltipNetwork.siteId,
+            );
+            const baseAddr = netSite
+              ? buildNetworkAddress(
+                  tooltipNetwork.addressFamily,
+                  tooltipNetwork.thirdOctet,
+                  netSite.ipOctet,
+                )
+              : '—';
+            const hostCount = cidrToHostCount(tooltipNetwork.cidr);
+            const vlanCount = siteVlans.filter(
+              (v) => v.networkId === tooltipNetwork.id,
+            ).length;
+            const layerCount = layers.filter(
+              (l) => l.networkId === tooltipNetwork.id,
+            ).length;
+
+            return (
+              <div
+                className="gojs-tooltip-modal"
+                style={{
+                  position: 'absolute',
+                  left: `${position.left}px`,
+                  top: `${position.top}px`,
+                  zIndex: 16,
+                }}
+              >
+                <div className="gojs-tooltip-header">
+                  <div className="gojs-tooltip-head-main">
+                    <div className="gojs-tooltip-title">
+                      {copy.networkDetails}
+                    </div>
+                  </div>
+                  <button
+                    className="gojs-tooltip-close-btn"
+                    onClick={() => setActiveNetworkTooltip(null)}
+                    aria-label={copy.close}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="gojs-tooltip-body">
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">{copy.name}:</span>
+                    <span className="gojs-tooltip-value">
+                      {tooltipNetwork.name}
+                    </span>
+                  </div>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">
+                      {copy.addressBlock}:
+                    </span>
+                    <span className="gojs-tooltip-value">
+                      {baseAddr}/{tooltipNetwork.cidr}
+                    </span>
+                  </div>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">
+                      {copy.addressFamily}:
+                    </span>
+                    <span className="gojs-tooltip-value">
+                      {tooltipNetwork.addressFamily}
+                    </span>
+                  </div>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">{copy.hosts}:</span>
+                    <span className="gojs-tooltip-value">{hostCount}</span>
+                  </div>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">{copy.vlans}:</span>
+                    <span className="gojs-tooltip-value">{vlanCount}</span>
+                  </div>
+
+                  <div className="gojs-tooltip-row">
+                    <span className="gojs-tooltip-label">{copy.layers}:</span>
+                    <span className="gojs-tooltip-value">{layerCount}</span>
                   </div>
                 </div>
               </div>

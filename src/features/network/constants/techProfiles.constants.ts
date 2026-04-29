@@ -46,6 +46,96 @@ export const TECH_SCHEMA: Record<TechKind, TechFieldSchema[]> = {
       labels: { pt: 'Uplink WAN', en: 'WAN Uplink', es: 'Enlace WAN' },
       type: 'text',
     },
+    // ── OSPF (visível em 'ospf' e 'mixed') ───────────────────────────────
+    {
+      key: 'ospfArea',
+      label: 'OSPF Area',
+      labels: { pt: 'Área OSPF', en: 'OSPF Area', es: 'Área OSPF' },
+      type: 'text',
+      visibleWhen: { routingMode: ['ospf', 'mixed'] },
+    },
+    {
+      key: 'ospfHello',
+      label: 'OSPF Hello (s)',
+      labels: {
+        pt: 'Hello OSPF (s)',
+        en: 'OSPF Hello (s)',
+        es: 'Hello OSPF (s)',
+      },
+      type: 'number',
+      min: 1,
+      max: 65535,
+      visibleWhen: { routingMode: ['ospf', 'mixed'] },
+    },
+    {
+      key: 'ospfDead',
+      label: 'OSPF Dead (s)',
+      labels: {
+        pt: 'Dead OSPF (s)',
+        en: 'OSPF Dead (s)',
+        es: 'Dead OSPF (s)',
+      },
+      type: 'number',
+      min: 1,
+      max: 65535,
+      visibleWhen: { routingMode: ['ospf', 'mixed'] },
+    },
+    // ── BGP (visível em 'bgp' e 'mixed') ─────────────────────────────────
+    {
+      key: 'bgpAsn',
+      label: 'BGP ASN Local',
+      labels: {
+        pt: 'ASN Local',
+        en: 'Local ASN',
+        es: 'ASN Local',
+      },
+      type: 'text',
+      visibleWhen: { routingMode: ['bgp', 'mixed'] },
+    },
+    {
+      key: 'bgpNeighbors',
+      label: 'BGP Neighbors',
+      labels: {
+        pt: 'Vizinhos BGP',
+        en: 'BGP Neighbors',
+        es: 'Vecinos BGP',
+      },
+      type: 'text',
+      visibleWhen: { routingMode: ['bgp', 'mixed'] },
+    },
+    {
+      key: 'bgpPrefixListIn',
+      label: 'BGP Prefix-List IN',
+      labels: {
+        pt: 'Prefixos Aceitos (IN)',
+        en: 'Accepted Prefixes (IN)',
+        es: 'Prefijos Aceptados (IN)',
+      },
+      type: 'text',
+      visibleWhen: { routingMode: ['bgp', 'mixed'] },
+    },
+    {
+      key: 'bgpPrefixListOut',
+      label: 'BGP Prefix-List OUT',
+      labels: {
+        pt: 'Prefixos Anunciados (OUT)',
+        en: 'Announced Prefixes (OUT)',
+        es: 'Prefijos Anunciados (OUT)',
+      },
+      type: 'text',
+      visibleWhen: { routingMode: ['bgp', 'mixed'] },
+    },
+    {
+      key: 'bgpMd5',
+      label: 'BGP MD5',
+      labels: {
+        pt: 'Auth MD5',
+        en: 'MD5 Auth',
+        es: 'Auth MD5',
+      },
+      type: 'boolean',
+      visibleWhen: { routingMode: ['bgp', 'mixed'] },
+    },
     {
       key: 'qosEnabled',
       label: 'QoS',
@@ -155,7 +245,35 @@ export const TECH_SCHEMA: Record<TechKind, TechFieldSchema[]> = {
       key: 'encryptionSuite',
       label: 'Criptografia',
       labels: { pt: 'Criptografia', en: 'Encryption', es: 'Cifrado' },
-      type: 'text',
+      type: 'select',
+      // Lista completa — ikeVersion filtra em runtime via optionsWhen
+      options: [
+        'aes-256-gcm',
+        'aes-128-gcm',
+        'chacha20-poly1305',
+        'aes-256-cbc',
+        'aes-128-cbc',
+        '3des',
+        'n-a',
+      ],
+      optionsWhen: {
+        ikeVersion: {
+          // IKEv1: sem suporte a AEAD (RFC 2401/2409)
+          ikev1: ['aes-256-cbc', 'aes-128-cbc', '3des', 'n-a'],
+          // IKEv2: suporte completo
+          ikev2: [
+            'aes-256-gcm',
+            'aes-128-gcm',
+            'chacha20-poly1305',
+            'aes-256-cbc',
+            'aes-128-cbc',
+            '3des',
+            'n-a',
+          ],
+          // GRE/MPLS/WireGuard não usam IKE
+          'n-a': ['n-a'],
+        },
+      },
     },
     {
       key: 'authMethod',
@@ -253,7 +371,8 @@ export const TECH_SCHEMA: Record<TechKind, TechFieldSchema[]> = {
       label: 'Integridade',
       labels: { pt: 'Integridade', en: 'Integrity', es: 'Integridad' },
       type: 'select',
-      options: ['sha-256', 'sha-384', 'sha-512', 'md5'],
+      // n-a obrigatório para cifras AEAD (incluído automaticamente por normalizeTechProfile)
+      options: ['sha-256', 'sha-384', 'sha-512', 'md5', 'n-a'],
     },
     {
       key: 'prf',
@@ -496,6 +615,16 @@ export const DEFAULT_TECH_FIELDS_BY_KIND: Record<
     wanUplink: 'ethernet-1g',
     qosEnabled: false,
     dscpMarking: false,
+    // OSPF defaults
+    ospfArea: '0.0.0.0',
+    ospfHello: 10,
+    ospfDead: 40,
+    // BGP defaults
+    bgpAsn: '',
+    bgpNeighbors: '',
+    bgpPrefixListIn: '',
+    bgpPrefixListOut: '',
+    bgpMd5: false,
   }),
   firewall: (context) => ({
     gatewayDefault: context.shouldBeGateway,

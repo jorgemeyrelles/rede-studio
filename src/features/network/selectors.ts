@@ -1,6 +1,12 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
-import type { FirewallGroupedResult, FirewallRuleRow, RouteRow } from './types';
+import type {
+  BgpNeighborEntry,
+  FirewallGroupedResult,
+  FirewallRuleRow,
+  RouteRow,
+  RoutingProtocolRow,
+} from './types';
 import { getNodeReservedRange, getSiteReserveRange } from './utils';
 import { resolveGateway, resolveInterface, resolveRouteType } from './utils';
 
@@ -9,32 +15,50 @@ export const selectNetworkState = (state: RootState) => state.network;
 export const selectLegendTree = createSelector(
   [selectNetworkState],
   (network) => {
-    const { sites, layers, nodes, links } = network;
+    const { sites, layers, nodes, links, siteNetworks } = network;
+
+    const buildLayerEntry = (layer: (typeof layers)[0]) => {
+      const layerNodes = nodes.filter((node) => node.layerId === layer.id);
+      return {
+        ...layer,
+        nodes: layerNodes.map((node) => ({
+          ...node,
+          children: links
+            .filter((link) => link.from === node.id || link.to === node.id)
+            .map((link) => {
+              const childId = link.from === node.id ? link.to : link.from;
+              const child = nodes.find((item) => item.id === childId);
+              return {
+                linkId: link.id,
+                id: childId,
+                label: child?.label ?? childId,
+              };
+            }),
+        })),
+      };
+    };
 
     return sites.map((site) => {
       const siteLayers = layers.filter((layer) => layer.siteId === site.id);
+      const siteNets = (siteNetworks ?? []).filter((n) => n.siteId === site.id);
+
+      // Camadas sem networkId (legado ou n\u00e3o agrupadas)
+      const ungroupedLayers = siteLayers
+        .filter((layer) => !layer.networkId)
+        .map(buildLayerEntry);
+
+      // Redes com suas camadas aninhadas
+      const networks = siteNets.map((net) => ({
+        ...net,
+        layers: siteLayers
+          .filter((layer) => layer.networkId === net.id)
+          .map(buildLayerEntry),
+      }));
+
       return {
         ...site,
-        layers: siteLayers.map((layer) => {
-          const layerNodes = nodes.filter((node) => node.layerId === layer.id);
-          return {
-            ...layer,
-            nodes: layerNodes.map((node) => ({
-              ...node,
-              children: links
-                .filter((link) => link.from === node.id || link.to === node.id)
-                .map((link) => {
-                  const childId = link.from === node.id ? link.to : link.from;
-                  const child = nodes.find((item) => item.id === childId);
-                  return {
-                    linkId: link.id,
-                    id: childId,
-                    label: child?.label ?? childId,
-                  };
-                }),
-            })),
-          };
-        }),
+        networks,
+        layers: ungroupedLayers,
       };
     });
   },
@@ -67,12 +91,17 @@ export const selectRouteTable = createSelector(
       }
       const counters = ifaceCountersBySite[ownerSiteId];
 
+      const fromRoutingMode = String(
+        from?.techProfile?.fields?.routingMode ?? 'static',
+      );
+
       const tipo = resolveRouteType(
         link.kind,
         fromSiteId,
         toSiteId,
         from?.category,
         to?.category,
+        fromRoutingMode,
       );
       const vlan =
         from && from.category !== 'wan' && (from.vlans ?? []).length > 0
@@ -415,5 +444,89 @@ export const selectFirewallRulesGrouped = createSelector(
       topologyRules: sortedGroupedRows(topology),
       natExemptRules: sortedGroupedRows(natExempt),
     };
+  },
+);
+
+// ── Routing Protocol Table ────────────────────────────────────────────────────
+
+function parseBgpNeighbors(raw: string): BgpNeighborEntry[] {
+  if (!raw.trim()) return [];
+  return raw.split(',').map((entry) => {
+    const parts = entry.trim().split('/');
+    return { ip: parts[0]?.trim() ?? '', remoteAsn: parts[1]?.trim() ?? '' };
+  });
+}
+
+export const selectRoutingProtocolRows = createSelector(
+  [selectNetworkState],
+  (network): RoutingProtocolRow[] => {
+    const { nodes, sites } = network;
+
+    return nodes
+      .filter((node) => node.category === 'router')
+      .map((node) => {
+        const site = sites.find((s) => s.id === node.siteId);
+        const fields = node.techProfile?.fields ?? {};
+        const mode = (String(fields.routingMode ?? 'static') as
+          | 'static'
+          | 'ospf'
+          | 'bgp'
+          | 'mixed');
+
+        const warnings: string[] = [];
+        if (mode === 'bgp' || mode === 'mixed') {
+          if (!String(fields.bgpAsn ?? '').trim())
+            warnings.push('ASN local não definido');
+          if (!String(fields.bgpNeighbors ?? '').trim())
+            warnings.push('Nenhum neighbor configurado');
+        }
+
+        const bgpNeighborsRaw = String(fields.bgpNeighbors ?? '');
+
+        return {
+          nodeId: node.id,
+          nodeLabel: node.label,
+          siteId: node.siteId,
+          siteName: site?.name ?? '—',
+          mode,
+          // OSPF
+          ospfArea:
+            mode === 'ospf' || mode === 'mixed'
+              ? String(fields.ospfArea ?? '0.0.0.0')
+              : undefined,
+          ospfHello:
+            mode === 'ospf' || mode === 'mixed'
+              ? Number(fields.ospfHello ?? 10)
+              : undefined,
+          ospfDead:
+            mode === 'ospf' || mode === 'mixed'
+              ? Number(fields.ospfDead ?? 40)
+              : undefined,
+          // BGP
+          bgpAsn:
+            mode === 'bgp' || mode === 'mixed'
+              ? String(fields.bgpAsn ?? '')
+              : undefined,
+          bgpNeighborsParsed:
+            mode === 'bgp' || mode === 'mixed'
+              ? parseBgpNeighbors(bgpNeighborsRaw)
+              : undefined,
+          bgpNeighborsRaw:
+            mode === 'bgp' || mode === 'mixed' ? bgpNeighborsRaw : undefined,
+          bgpPrefixListIn:
+            mode === 'bgp' || mode === 'mixed'
+              ? String(fields.bgpPrefixListIn ?? '')
+              : undefined,
+          bgpPrefixListOut:
+            mode === 'bgp' || mode === 'mixed'
+              ? String(fields.bgpPrefixListOut ?? '')
+              : undefined,
+          bgpMd5:
+            mode === 'bgp' || mode === 'mixed'
+              ? Boolean(fields.bgpMd5)
+              : undefined,
+          warnings,
+        };
+      });
   },
 );

@@ -27,6 +27,8 @@ export type AddLayerPayload = {
   tier?: LayerTier;
   /** Nome personalizado; se omitido, usa nome padrão baseado no tier */
   name?: string;
+  /** Fase 2 — rede lógica à qual esta camada pertence */
+  networkId?: string;
 };
 
 export type UpdateNodePayload = {
@@ -178,6 +180,8 @@ export type AddSiteVlanPayload = {
   name?: string;
   capacity: number;
   startRadical: string;
+  /** Fase 2 — rede lógica à qual esta VLAN pertence */
+  networkId?: string;
 };
 
 export type RemoveSiteVlanPayload = {
