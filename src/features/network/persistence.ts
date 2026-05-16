@@ -1,3 +1,7 @@
-import type { NetworkState } from './types';
+import { servicesRoutes } from '../../services';
 
-export { clearNetworkState, loadNetworkState, saveNetworkState } from './utils';
+// Metodo legado direto (mantido como referencia):
+// export { clearNetworkState, loadNetworkState, saveNetworkState } from './utils';
+
+export const { clearNetworkState, loadNetworkState, saveNetworkState } =
+	servicesRoutes.persistence;

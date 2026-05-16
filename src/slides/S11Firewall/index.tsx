@@ -1,5 +1,5 @@
 import { getSlidePagination } from "../pagination";
-import { ACL_RULES, ACTION_CLASS, ACTION_LABEL } from './constants'
+import { ACL_RULES, ACTION_CLASS, ACTION_LABEL } from './constants';
 
 export default function S11Firewall() {
   return (
@@ -12,8 +12,8 @@ export default function S11Firewall() {
           Firewall &amp; <span>Regras ACL</span>
         </div>
         <div className="slide-subtitle">
-          Controle de acesso assimétrico entre Matriz e Filial · stateful
-          inspection
+          FortiGate 600F em HA Active-Passive · stateful inspection ·
+          contingencia IPsec IKEv2 (AES-256-GCM / SHA-384 / DH Group 20)
         </div>
 
         <div
@@ -55,13 +55,13 @@ export default function S11Firewall() {
               pública (untrusted)
               <br />
               <span style={{ color: "var(--yellow)" }}>■ DMZ</span> → Entre
-              roteador e firewall
+              internet e servicos publicados (zona de borda controlada)
               <br />
               <span style={{ color: "var(--blue)" }}>■ LAN</span> → Rede interna
-              10.0.1.0/24 (trusted)
+              10.10.0.0/16 (trusted)
               <br />
               <span style={{ color: "#aa88ff" }}>■ SVR</span> → VLAN servidores
-              10.0.1.200–.202
+              10.10.10.0/24
             </div>
           </div>
           <div
@@ -95,15 +95,32 @@ export default function S11Firewall() {
               pública (untrusted)
               <br />
               <span style={{ color: "var(--yellow)" }}>■ DMZ</span> → Entre
-              roteador e firewall
+              internet e servicos publicados (zona de borda controlada)
               <br />
               <span style={{ color: "var(--green)" }}>■ LAN</span> → Rede
-              interna 10.0.2.0/25 (trusted)
+              interna segmentada por VLANs (trusted)
               <br />
               <span style={{ color: "#aa88ff" }}>■ SVR</span> → VLAN servidores
-              10.0.2.200–.201
+              local /28 (6-8 servidores)
             </div>
           </div>
+        </div>
+
+        <div
+          style={{
+            background: "#0a121f",
+            border: "1px solid #1a2a40",
+            borderRadius: "8px",
+            padding: "8px 12px",
+            marginBottom: "10px",
+            fontSize: "8.2px",
+            color: "var(--text)",
+            lineHeight: "1.8",
+          }}
+        >
+          Politicas obrigatorias aplicadas: isolamento total da VLAN de
+          visitantes, acesso de gerencia restrito a TI, default deny de borda e
+          failover automatico para VPN IPsec em falha MPLS (15-30s).
         </div>
 
         <table>

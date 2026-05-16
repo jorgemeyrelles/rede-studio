@@ -1,28 +1,27 @@
 import { useRef, useState } from 'react';
-import NetworkDiagram from '../components/studio/NetworkDiagram';
-import type { NetworkDiagramHandle } from '../components/studio/NetworkDiagram';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import CertificatePanel from '../components/studio/CertificatePanel';
+import CustomServicePanel from '../components/studio/CustomServicePanel';
 import LegendPanel from '../components/studio/LegendPanel';
+import type { NetworkDiagramHandle } from '../components/studio/NetworkDiagram';
+import NetworkDiagram from '../components/studio/NetworkDiagram';
 import RouteFirewallPanel from '../components/studio/RouteFirewallPanel';
 import SiteVlanPanel from '../components/studio/SiteVlanPanel';
 import StudioToolbar from '../components/studio/StudioToolbar';
-import CustomServicePanel from '../components/studio/CustomServicePanel';
-import CertificatePanel from '../components/studio/CertificatePanel';
 import {
   generateStudioPdfReport,
   getStudioPageCopy,
-  type StudioLanguage,
+  type StudioPageProps
 } from '../components/studio/catalog';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { resetNetworkState } from '../features/network/networkSlice';
-import { clearNetworkState } from '../features/network/persistence';
 import {
   selectFirewallRules,
   selectRouteTable,
 } from '../features/network/selectors';
+import { servicesRoutes } from '../services';
 
-type StudioPageProps = {
-  language: StudioLanguage;
-};
+// Metodo legado direto (mantido como referencia):
+// import { clearNetworkState } from '../features/network/persistence';
 
 export default function StudioPage({ language }: StudioPageProps) {
   const dispatch = useAppDispatch();
@@ -34,6 +33,8 @@ export default function StudioPage({ language }: StudioPageProps) {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [printShowLinkDescriptions, setPrintShowLinkDescriptions] =
+    useState(true);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const diagramCaptureRef = useRef<HTMLDivElement | null>(null);
   const networkDiagramRef = useRef<NetworkDiagramHandle | null>(null);
@@ -44,12 +45,14 @@ export default function StudioPage({ language }: StudioPageProps) {
   }
 
   function confirmReset() {
-    clearNetworkState();
+    servicesRoutes.persistence.clearNetworkState();
+    // clearNetworkState();
     dispatch(resetNetworkState());
     setIsResetModalOpen(false);
   }
 
   function handleOpenPrintModal() {
+    setPrintShowLinkDescriptions(true);
     setIsPrintModalOpen(true);
   }
 
@@ -76,11 +79,15 @@ export default function StudioPage({ language }: StudioPageProps) {
 
     try {
       const diagramImageData =
-        networkDiagramRef.current?.exportImageDataForPdf();
+        networkDiagramRef.current?.exportImageDataForPdf({
+          showLinkDescriptions: printShowLinkDescriptions,
+        });
 
       await generateStudioPdfReport({
         language,
         projectName: meta.projectName || 'Studio',
+        documentVersion: `v${meta.schemaVersion}`,
+        lastSavedAt: meta.lastSavedAt,
         sites,
         nodes,
         links,
@@ -235,6 +242,19 @@ export default function StudioPage({ language }: StudioPageProps) {
               {copy.confirmPrint}
             </h3>
             <p className="mt-2 text-sm text-slate-200">{copy.printWarning}</p>
+
+            <label className="mt-3 flex items-start gap-2 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={printShowLinkDescriptions}
+                onChange={(event) =>
+                  setPrintShowLinkDescriptions(event.target.checked)
+                }
+                disabled={isGeneratingPdf}
+                className="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-900 text-emerald-400 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <span>{copy.printShowLinkDescriptions}</span>
+            </label>
 
             <div className="mt-4 flex items-center justify-end gap-2">
               <button

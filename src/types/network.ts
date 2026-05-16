@@ -29,6 +29,7 @@ export interface RouteEntry {
   destination: string;
   mask: string;
   gateway: string;
+  metric: string;
   iface: string;
   ifaceColor: string;
 }

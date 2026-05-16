@@ -1,16 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
 import networkReducer, {
-  hydrateNetworkState,
-  markSaved,
-  setPersistWarning,
+    hydrateNetworkState,
+    markSaved,
+    setPersistWarning,
 } from '../features/network/networkSlice';
-import {
-  loadNetworkState,
-  saveNetworkState,
-} from '../features/network/persistence';
 import type { NetworkState } from '../features/network/types';
+import { servicesRoutes } from '../services';
 
-const preloadedNetwork = loadNetworkState();
+// Metodo legado direto (mantido como referencia):
+// import { loadNetworkState, saveNetworkState } from '../features/network/persistence';
+
+const preloadedNetwork = servicesRoutes.persistence.loadNetworkState();
+// const preloadedNetwork = loadNetworkState();
 
 export const store = configureStore({
   reducer: {
@@ -27,7 +28,8 @@ store.subscribe(() => {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const state = store.getState().network as NetworkState;
-    const result = saveNetworkState(state);
+    const result = servicesRoutes.persistence.saveNetworkState(state);
+    // const result = saveNetworkState(state);
     if (!result.ok) {
       store.dispatch(setPersistWarning(result.warning));
       return;

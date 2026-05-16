@@ -41,12 +41,12 @@ export default function S06Enderecamento() {
                 lineHeight: "1.7",
               }}
             >
-              ▸ Ambiente &lt;500 hosts — IPv4 RFC-1918 suficiente
+              ▸ Bloco privado corporativo da Matriz: 10.10.0.0/16
               <br />
-              ▸ Compatibilidade total com todos os equipamentos atuais
+              ▸ WAN primaria em dual-stack no MPLS (IPv4 + IPv6)
               <br />
-              ▸ NAT nas bordas protege os endereços internos
-              <br />▸ IPv6 recomendado em expansão futura ou acesso público
+              ▸ Contingencia via VPN IPsec em link IPv4-only
+              <br />▸ Segmentacao por VLAN reduz broadcast e facilita governanca
             </div>
           </div>
           <div
@@ -68,7 +68,7 @@ export default function S06Enderecamento() {
                 marginBottom: "6px",
               }}
             >
-              Cálculo — Filial /25
+              Cálculo — Filial (exemplo Desenvolvimento /24)
             </div>
             <div
               style={{
@@ -78,14 +78,13 @@ export default function S06Enderecamento() {
                 lineHeight: "1.8",
               }}
             >
-              18 PCs + 4 impressoras + 8 VoIP
+              Usuarios atuais: 200
               <br />
-              + 4 APs + 2 Servidores + infra = ~40
+              Projecao em 3 anos: 300 (+50%)
               <br />
-              40 × 1,20 (reserva 20%) = 48 hosts mín
-              <br />→ /25 ={" "}
-              <strong style={{ color: "var(--green)" }}>126 hosts</strong> ✅
-              escalável
+              Reserva operacional: +20% (alvo 360)
+              <br />Desenvolvimento: 80 → 120 → 144
+              <br />→ /24 = <strong style={{ color: "var(--green)" }}>254 hosts</strong> ✅
             </div>
           </div>
           <div
@@ -117,14 +116,13 @@ export default function S06Enderecamento() {
                 lineHeight: "1.8",
               }}
             >
-              21 PCs + 3 impressoras + 6 VoIP
+              Capacidade projetada: ~1.000 usuarios
               <br />
-              + 3 Servidores + infra = ~35 hosts
+              Core L3 Catalyst 9500 + distribuicao 9300
               <br />
-              35 × 1,20 = 42 hosts mínimo
-              <br />→ /24 ={" "}
-              <strong style={{ color: "var(--green)" }}>254 hosts</strong> ✅
-              folga ampla
+              VLANs oficiais: 10,20,30,40,50,60,70,80,99
+              <br />Bloco base: <strong style={{ color: "var(--green)" }}>10.10.0.0/16</strong> ✅
+              segmentado por perfil
             </div>
           </div>
         </div>

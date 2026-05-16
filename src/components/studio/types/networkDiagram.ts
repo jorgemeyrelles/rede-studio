@@ -27,3 +27,12 @@ export type GridLayoutResult = {
   siteMaxLayerWidths: Map<string, number>;
   wanPosition: { x: number; y: number };
 };
+
+export type NetworkDiagramProps = {
+  language: import('./i18n').StudioLanguage;
+};
+
+export type CreatableOption = {
+  value: string;
+  label: string;
+};

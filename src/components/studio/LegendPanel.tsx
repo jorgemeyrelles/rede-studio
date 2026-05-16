@@ -1,33 +1,40 @@
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
-  addNode,
-  addLayer,
-  removeLayer,
-  removeNode,
-  removeSite,
-  addSiteNetwork,
-  removeSiteNetwork,
+    addLayer,
+    addNode,
+    addSiteNetwork,
+    removeLayer,
+    removeNode,
+    removeSite,
+    removeSiteNetwork,
 } from '../../features/network/networkSlice';
+import {
+    selectLegendTree,
+    selectNetworkReadiness,
+} from '../../features/network/selectors';
 import type {
-  AddressFamily,
-  LayerTier,
-  NetworkPurpose,
-  NodeCategory,
-  SiteNetwork,
+    AddressFamily,
+    LayerTier,
+    NetworkDnsPolicy,
+    NetworkGatewayMode,
+    NetworkPurpose,
+    NetworkStackMode,
+    NetworkTrafficPreference,
+    NodeCategory,
+    SiteNetwork,
 } from '../../features/network/types';
 import {
-  buildNetworkAddress,
-  cidrToHostCount,
+    buildNetworkAddress,
+    cidrToHostCount,
 } from '../../features/network/utils';
-import { selectLegendTree } from '../../features/network/selectors';
 import {
-  getLegendPanelCopy,
-  getNodeIconSrc,
-  getNodeVisual,
-  NODE_OPTION_CATEGORIES,
-  RELATION_OPTION_CATEGORIES,
-  type StudioLanguage,
+    getLegendPanelCopy,
+    getNodeIconSrc,
+    getNodeVisual,
+    NODE_OPTION_CATEGORIES,
+    RELATION_OPTION_CATEGORIES,
+    type StudioLanguage,
 } from './catalog';
 
 type LegendPanelProps = {
@@ -127,6 +134,25 @@ const NETWORK_FAMILY_OPTIONS: { value: AddressFamily; label: string }[] = [
   { value: '192.168.x', label: '192.168.x (privado)' },
 ];
 
+const NETWORK_STACK_OPTIONS: { value: NetworkStackMode; label: string }[] = [
+  { value: 'ipv4', label: 'IPv4 only' },
+  { value: 'dual-stack', label: 'Dual-stack' },
+  { value: 'ipv6-ready', label: 'IPv6 ready' },
+];
+
+const NETWORK_GATEWAY_OPTIONS: {
+  value: NetworkGatewayMode;
+  label: string;
+}[] = [
+  { value: 'ipv4-only', label: 'IPv4 only' },
+  { value: 'dual-gateway', label: 'Dual gateway (v4+v6)' },
+];
+
+const NETWORK_DNS_OPTIONS: { value: NetworkDnsPolicy; label: string }[] = [
+  { value: 'a-only', label: 'A only' },
+  { value: 'a-aaaa', label: 'A + AAAA' },
+];
+
 /** Cor da borda do container de rede por finalidade */
 const NETWORK_PURPOSE_BORDER: Record<NetworkPurpose, string> = {
   principal: 'border-blue-700/60',
@@ -155,6 +181,11 @@ type NetworkDraft = {
   name: string;
   purpose: NetworkPurpose;
   addressFamily: AddressFamily;
+  stackMode: NetworkStackMode;
+  trafficPreference: NetworkTrafficPreference;
+  gatewayMode: NetworkGatewayMode;
+  dnsPolicy: NetworkDnsPolicy;
+  ipv6Prefix: string;
   thirdOctet: string;
   cidr: string;
 };
@@ -163,6 +194,11 @@ const DEFAULT_NETWORK_DRAFT: NetworkDraft = {
   name: '',
   purpose: 'principal',
   addressFamily: '200.x',
+  stackMode: 'ipv4',
+  trafficPreference: 'ipv4-preferred',
+  gatewayMode: 'ipv4-only',
+  dnsPolicy: 'a-only',
+  ipv6Prefix: '',
   thirdOctet: '1',
   cidr: '24',
 };
@@ -187,12 +223,30 @@ function suggestNextThirdOctet(
   return Math.min(255, maxEnd);
 }
 
+function suggestNetworkIpv6Prefix(siteOctet: number, thirdOctet: number): string {
+  const safeSite = Math.max(0, Math.min(255, siteOctet));
+  const safeThird = Math.max(0, Math.min(255, thirdOctet));
+  const siteHex = safeSite.toString(16).padStart(2, '0');
+  const thirdHex = safeThird.toString(16).padStart(2, '0');
+  return `2001:db8:${siteHex}:${thirdHex}::/56`;
+}
+
 export default function LegendPanel({ language }: LegendPanelProps) {
   const dispatch = useAppDispatch();
   const legendTree = useAppSelector(selectLegendTree);
+  const readinessRows = useAppSelector(selectNetworkReadiness);
   const { nodes, links, sites, siteVlans, layers, siteNetworks } =
     useAppSelector((state) => state.network);
   const copy = getLegendPanelCopy(language);
+  const NETWORK_TRAFFIC_OPTIONS: {
+    value: NetworkTrafficPreference;
+    label: string;
+  }[] = [
+    { value: 'ipv4-preferred', label: copy.networkTrafficIpv4Preferred },
+    { value: 'balanced', label: copy.networkTrafficBalanced },
+    { value: 'ipv6-preferred', label: copy.networkTrafficIpv6Preferred },
+    { value: 'ipv6-strict', label: copy.networkTrafficIpv6Strict },
+  ];
 
   const [categoryByLayer, setCategoryByLayer] = useState<
     Record<string, NodeCategory>
@@ -258,10 +312,12 @@ export default function LegendPanel({ language }: LegendPanelProps) {
       DEFAULT_NETWORK_DRAFT.addressFamily,
       siteNetworks ?? [],
     );
+    const siteOctet = sites.find((s) => s.id === siteId)?.ipOctet ?? 0;
     setNetworkPickerSiteId(siteId);
     setNetworkDraft({
       ...DEFAULT_NETWORK_DRAFT,
       thirdOctet: String(suggested),
+      ipv6Prefix: suggestNetworkIpv6Prefix(siteOctet, suggested),
     });
   }
 
@@ -279,6 +335,12 @@ export default function LegendPanel({ language }: LegendPanelProps) {
         name: networkDraft.name.trim() || 'Rede',
         purpose: networkDraft.purpose,
         addressFamily: networkDraft.addressFamily,
+        stackMode: networkDraft.stackMode,
+        trafficPreference: networkDraft.trafficPreference,
+        gatewayMode: networkDraft.gatewayMode,
+        dnsPolicy: networkDraft.dnsPolicy,
+        ipv6Prefix: networkDraft.ipv6Prefix.trim() || undefined,
+        ipv6VlanPrefixLength: 64,
         thirdOctet,
         cidr,
       }),
@@ -528,7 +590,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
             onClick={handleConfirmAddLayer}
             className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-emerald-500"
           >
-            + Adicionar Camada
+            + Adicionar Nível
           </button>
         </div>
       </div>
@@ -621,20 +683,36 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 <button
                   onClick={(event) => {
                     event.preventDefault();
+                    const lanCount = (siteNetworks ?? []).filter(
+                      (n) => n.siteId === site.id,
+                    ).length;
+                    if (lanCount >= 2) return;
                     openNetworkPicker(site.id);
                   }}
-                  className="rounded bg-sky-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:bg-sky-500"
+                  disabled={
+                    (siteNetworks ?? []).filter((n) => n.siteId === site.id)
+                      .length >= 2
+                  }
+                  title={
+                    (siteNetworks ?? []).filter((n) => n.siteId === site.id)
+                      .length >= 2
+                      ? copy.lanLimitReached
+                      : copy.addLan
+                  }
+                  className="rounded bg-sky-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {copy.addNetwork}
+                  {copy.addLan}
                 </button>
                 <button
                   onClick={(event) => {
                     event.preventDefault();
                     openTierPicker(site.id);
                   }}
-                  className="rounded bg-emerald-400 px-2 py-1 text-[10px] font-bold uppercase text-slate-950"
+                  disabled
+                  title="Adicionar nível manualmente desabilitado — use a barra de ferramentas"
+                  className="rounded bg-emerald-400 px-2 py-1 text-[10px] font-bold uppercase text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {copy.addLayer}
+                  {copy.addLevel}
                 </button>
                 <button
                   onClick={(event) => {
@@ -720,6 +798,117 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   </label>
                   <label className="flex flex-col gap-0.5">
                     <span className="text-[10px] text-slate-400">
+                      {copy.networkStackLabel}
+                    </span>
+                    <select
+                      value={networkDraft.stackMode}
+                      onChange={(e) => {
+                        const nextStack = e.target.value as NetworkStackMode;
+                        const suggestedPreference: NetworkTrafficPreference =
+                          nextStack === 'dual-stack'
+                            ? 'balanced'
+                            : nextStack === 'ipv6-ready'
+                              ? 'ipv6-preferred'
+                              : 'ipv4-preferred';
+
+                        setNetworkDraft((d) => ({
+                          ...d,
+                          stackMode: nextStack,
+                          trafficPreference: suggestedPreference,
+                        }));
+                      }}
+                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                    >
+                      {NETWORK_STACK_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400">
+                      {copy.networkTrafficPreferenceLabel}
+                    </span>
+                    <select
+                      value={networkDraft.trafficPreference}
+                      onChange={(e) =>
+                        setNetworkDraft((d) => ({
+                          ...d,
+                          trafficPreference:
+                            e.target.value as NetworkTrafficPreference,
+                        }))
+                      }
+                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                    >
+                      {NETWORK_TRAFFIC_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400">
+                      {copy.networkGatewayModeLabel}
+                    </span>
+                    <select
+                      value={networkDraft.gatewayMode}
+                      onChange={(e) =>
+                        setNetworkDraft((d) => ({
+                          ...d,
+                          gatewayMode: e.target.value as NetworkGatewayMode,
+                        }))
+                      }
+                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                    >
+                      {NETWORK_GATEWAY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400">
+                      {copy.networkDnsPolicyLabel}
+                    </span>
+                    <select
+                      value={networkDraft.dnsPolicy}
+                      onChange={(e) =>
+                        setNetworkDraft((d) => ({
+                          ...d,
+                          dnsPolicy: e.target.value as NetworkDnsPolicy,
+                        }))
+                      }
+                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                    >
+                      {NETWORK_DNS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400">
+                      {copy.networkIpv6PrefixLabel}
+                    </span>
+                    <input
+                      type="text"
+                      value={networkDraft.ipv6Prefix}
+                      onChange={(e) =>
+                        setNetworkDraft((d) => ({
+                          ...d,
+                          ipv6Prefix: e.target.value,
+                        }))
+                      }
+                      placeholder={copy.networkIpv6PrefixPlaceholder}
+                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400">
                       {copy.networkOctetLabel}
                     </span>
                     <input
@@ -728,10 +917,27 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                       max={255}
                       value={networkDraft.thirdOctet}
                       onChange={(e) =>
-                        setNetworkDraft((d) => ({
-                          ...d,
-                          thirdOctet: e.target.value,
-                        }))
+                        setNetworkDraft((d) => {
+                          const nextThirdRaw = e.target.value;
+                          const nextThird = Number(nextThirdRaw);
+                          const prevThird = Number(d.thirdOctet);
+                          const prevSuggested = Number.isFinite(prevThird)
+                            ? suggestNetworkIpv6Prefix(site.ipOctet, prevThird)
+                            : '';
+                          const nextSuggested = Number.isFinite(nextThird)
+                            ? suggestNetworkIpv6Prefix(site.ipOctet, nextThird)
+                            : d.ipv6Prefix;
+                          const shouldAutoUpdatePrefix =
+                            d.ipv6Prefix.trim() === '' || d.ipv6Prefix === prevSuggested;
+
+                          return {
+                            ...d,
+                            thirdOctet: nextThirdRaw,
+                            ipv6Prefix: shouldAutoUpdatePrefix
+                              ? nextSuggested
+                              : d.ipv6Prefix,
+                          };
+                        })
                       }
                       className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 [appearance:textfield]"
                     />
@@ -772,6 +978,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   return (
                     <div className="mt-1 rounded border border-sky-800/40 bg-sky-950/20 px-2 py-1 font-mono text-[10px] text-sky-300">
                       {addr}/{cidr}
+                      <span className="ml-2 font-sans text-[9px] text-slate-400">
+                        [{networkDraft.stackMode} | GW: {networkDraft.gatewayMode}
+                        {' '}| DNS: {networkDraft.dnsPolicy}
+                        {' '}| TRF: {networkDraft.trafficPreference}]
+                      </span>
                       <span className="ml-2 font-sans text-[9px] text-slate-400">
                         ({hosts.toLocaleString('pt-BR')} hosts)
                       </span>
@@ -872,6 +1083,15 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                       const layerCount = (layers ?? []).filter(
                         (l) => l.networkId === network.id,
                       ).length;
+                      const readiness = readinessRows.find(
+                        (item) => item.networkId === network.id,
+                      );
+                      const readinessLabel =
+                        readiness?.level === 'critical'
+                          ? copy.networkReadinessCritical
+                          : readiness?.level === 'warning'
+                            ? copy.networkReadinessWarning
+                            : copy.networkReadinessReady;
                       return (
                         <div
                           className="mx-2 mb-1 mt-0.5 rounded border border-sky-700/40 bg-sky-950/30 p-2 text-[10px]"
@@ -892,6 +1112,32 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               <span>{network.addressFamily}</span>
                             </div>
                             <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Stack</span>
+                              <span>{network.stackMode ?? 'ipv4'}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">
+                                {copy.networkTrafficPreferenceLabel}
+                              </span>
+                              <span>{network.trafficPreference ?? 'ipv4-preferred'}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">Gateway</span>
+                              <span>{network.gatewayMode ?? 'ipv4-only'}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">DNS</span>
+                              <span>{network.dnsPolicy ?? 'a-only'}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">IPv6 Prefix</span>
+                              <span>{network.ipv6Prefix || '—'}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-slate-500">IPv6 VLAN</span>
+                              <span>/{network.ipv6VlanPrefixLength ?? 64}</span>
+                            </div>
+                            <div className="flex justify-between gap-2">
                               <span className="text-slate-500">Hosts</span>
                               <span>{hosts.toLocaleString('pt-BR')}</span>
                             </div>
@@ -902,6 +1148,31 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                             <div className="flex justify-between gap-2">
                               <span className="text-slate-500">Camadas</span>
                               <span>{layerCount}</span>
+                            </div>
+                            <div className="mt-1 border-t border-slate-700/50 pt-1">
+                              <div className="flex justify-between gap-2">
+                                <span className="text-slate-500">
+                                  {copy.networkReadinessLabel}
+                                </span>
+                                <span
+                                  className={`font-semibold ${
+                                    readiness?.level === 'critical'
+                                      ? 'text-rose-300'
+                                      : readiness?.level === 'warning'
+                                        ? 'text-amber-300'
+                                        : 'text-emerald-300'
+                                  }`}
+                                >
+                                  {readinessLabel}
+                                </span>
+                              </div>
+                              {(readiness?.issues.length ?? 0) > 0 && (
+                                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[10px] text-amber-200">
+                                  {readiness?.issues.slice(0, 4).map((issue) => (
+                                    <li key={issue}>{issue}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                           </div>
                         </div>

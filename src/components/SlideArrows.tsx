@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   getNextSlide,
   getPreviousSlide,
@@ -6,31 +7,23 @@ import {
 } from "../slides/pagination";
 import type { SlideId } from "../types/slide";
 
-function getHashSlideId(): SlideId {
-  const hash = window.location.hash.replace("#", "") as SlideId;
+function getSearchSlideId(search: string): SlideId {
+  const params = new URLSearchParams(search);
+  const slide = params.get("slide") as SlideId | null;
 
-  if (SLIDE_ORDER.includes(hash)) {
-    return hash;
+  if (slide && SLIDE_ORDER.includes(slide)) {
+    return slide;
   }
 
   return "s1";
 }
 
 export default function SlideArrows() {
-  const [currentSlide, setCurrentSlide] = useState<SlideId>("s1");
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      setCurrentSlide(getHashSlideId());
-    };
-
-    handleHashChange();
-    window.addEventListener("hashchange", handleHashChange);
-
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-    };
-  }, []);
+  const location = useLocation();
+  const currentSlide = useMemo(
+    () => getSearchSlideId(location.search),
+    [location.search],
+  );
 
   const prevSlide = useMemo(
     () => getPreviousSlide(currentSlide),
@@ -40,9 +33,9 @@ export default function SlideArrows() {
 
   return (
     <div className="slide-arrows" aria-label="Navegação entre slides">
-      <a
+      <Link
         className={`slide-arrow ${!prevSlide ? "disabled" : ""}`}
-        href={prevSlide ? `#${prevSlide}` : "#"}
+        to={prevSlide ? `/slides?slide=${prevSlide}` : location.pathname + location.search}
         aria-disabled={!prevSlide}
         aria-label="Slide anterior"
         onClick={(event) => {
@@ -52,10 +45,10 @@ export default function SlideArrows() {
         }}
       >
         ↑
-      </a>
-      <a
+      </Link>
+      <Link
         className={`slide-arrow ${!nextSlide ? "disabled" : ""}`}
-        href={nextSlide ? `#${nextSlide}` : "#"}
+        to={nextSlide ? `/slides?slide=${nextSlide}` : location.pathname + location.search}
         aria-disabled={!nextSlide}
         aria-label="Próximo slide"
         onClick={(event) => {
@@ -65,7 +58,7 @@ export default function SlideArrows() {
         }}
       >
         ↓
-      </a>
+      </Link>
     </div>
   );
 }

@@ -1,16 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { QOSCLASS_LABEL } from '../../features/network/constants';
 import {
-  setActiveLinkId,
-  updateLink,
-  addIpsecSa,
-  updateIpsecSa,
-  removeIpsecSa,
-  addSslVpnProfile,
-  updateSslVpnProfile,
-  removeSslVpnProfile,
+    addIpsecSa,
+    addSslVpnProfile,
+    removeIpsecSa,
+    removeSslVpnProfile,
+    setActiveLinkId,
+    updateIpsecSa,
+    updateLink,
+    updateLinkWanQos,
+    updateSslVpnProfile,
 } from '../../features/network/networkSlice';
+import type { QosClass } from '../../features/network/types/entities';
+import { getDefaultAclService, resolveGateway, resolveRouteType } from '../../features/network/utils';
 
 // ── Metadados visuais por tipo de link ─────────────────────────────────────────
 const KIND_META: Record<string, { label: string; color: string }> = {
@@ -37,6 +41,8 @@ export default function LinkInspectorTooltip({
   const activeLinkId = useAppSelector((state) => state.network.ui.activeLinkId);
   const links = useAppSelector((state) => state.network.links);
   const nodes = useAppSelector((state) => state.network.nodes);
+  const sites = useAppSelector((state) => state.network.sites);
+  const aclRules = useAppSelector((state) => state.network.aclRules);
   const ipsecSas = useAppSelector((state) => state.network.ipsecSas);
   const sslVpnProfiles = useAppSelector(
     (state) => state.network.sslVpnProfiles,
@@ -96,11 +102,75 @@ export default function LinkInspectorTooltip({
   if (!visible || !activeLink || !pos) return null;
 
   const kindMeta = KIND_META[activeLink.kind] ?? KIND_META.other;
+  const isBidirectional = activeLink.bidirectional ?? true;
   const isVpnish = activeLink.kind === 'ipsec' || activeLink.kind === 'vpn';
+  const isWanLink = activeLink.kind === 'wan';
   const linkIpsecSas = ipsecSas.filter((s) => s.linkId === activeLinkId);
   const linkSslProfiles = sslVpnProfiles.filter(
     (p) => p.linkId === activeLinkId,
   );
+  const wanPolicy = activeLink.wanQosPolicy;
+  const allQosClasses = Object.keys(QOSCLASS_LABEL) as QosClass[];
+
+  const linkedTunnelExists = isWanLink
+    ? links.some((link) => {
+        if (link.id === activeLink.id) return false;
+        if (link.kind !== 'ipsec' && link.kind !== 'vpn') return false;
+        const tFrom = nodes.find((n) => n.id === link.from);
+        const tTo = nodes.find((n) => n.id === link.to);
+        if (!tFrom || !tTo) return false;
+
+        // WAN↔edge: mark when the edge node itself participates in tunnel links.
+        if (fromNode?.category === 'wan' && toNode?.category !== 'wan') {
+          return link.from === toNode?.id || link.to === toNode?.id;
+        }
+        if (toNode?.category === 'wan' && fromNode?.category !== 'wan') {
+          return link.from === fromNode?.id || link.to === fromNode?.id;
+        }
+
+        // Generic fallback: if both endpoints have siteIds, match same site pair.
+        if (fromNode?.siteId && toNode?.siteId) {
+          return (
+            (tFrom.siteId === fromNode.siteId && tTo.siteId === toNode.siteId) ||
+            (tFrom.siteId === toNode.siteId && tTo.siteId === fromNode.siteId)
+          );
+        }
+        return false;
+      })
+    : false;
+
+  const fromRoutingMode = String(
+    fromNode?.techProfile?.fields?.routingMode ?? 'static',
+  );
+  const routeType = resolveRouteType(
+    activeLink.kind,
+    fromNode?.siteId,
+    toNode?.siteId,
+    fromNode?.category,
+    toNode?.category,
+    fromRoutingMode,
+  );
+  const routeOwnerSiteId = fromNode?.siteId ?? toNode?.siteId ?? 'global';
+  const routeOwnerSiteName =
+    sites.find((s) => s.id === routeOwnerSiteId)?.name ?? 'Global / Inter-site';
+  const inferredGateway = resolveGateway(routeType, fromNode?.ip, toNode?.ip);
+
+  const linkedManagedAcl = aclRules.find(
+    (rule) =>
+      rule.linkId === activeLink.id &&
+      rule.managed &&
+      !rule.natExempt &&
+      !rule.isReturnRule,
+  );
+  const effectiveSrcNode = linkedManagedAcl
+    ? (nodes.find((n) => n.id === linkedManagedAcl.sourceNodeId) ?? null)
+    : fromNode;
+  const effectiveDstNode = linkedManagedAcl
+    ? (nodes.find((n) => n.id === linkedManagedAcl.destinationNodeId) ?? null)
+    : toNode;
+  const derivedDefaultService = linkedManagedAcl?.service
+    ? linkedManagedAcl.service
+    : getDefaultAclService(activeLink.kind, fromNode?.category, toNode?.category);
 
   return createPortal(
     <div
@@ -176,21 +246,9 @@ export default function LinkInspectorTooltip({
             />
             <div className="flex items-center gap-1 px-8">
               <div className="h-px flex-1 bg-slate-700/70" />
-              <svg
-                width="11"
-                height="7"
-                viewBox="0 0 11 7"
-                className="shrink-0 text-slate-600"
-                fill="none"
-              >
-                <path
-                  d="M0 3.5h9M6.5 1l3 2.5-3 2.5"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <span className="text-[10px] font-semibold text-slate-500">
+                {isBidirectional ? '↔' : '→'}
+              </span>
               <div className="h-px flex-1 bg-slate-700/70" />
             </div>
             <EndpointRow
@@ -251,6 +309,50 @@ export default function LinkInspectorTooltip({
               </span>
             </label>
 
+            {/* Direção do link */}
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={activeLink.bidirectional ?? true}
+                onChange={(e) =>
+                  dispatch(
+                    updateLink({
+                      id: activeLinkId!,
+                      changes: { bidirectional: e.target.checked },
+                    }),
+                  )
+                }
+                className="h-3 w-3 accent-blue-500"
+              />
+              <span className="text-[10px] text-slate-300">
+                Link bidirecional
+              </span>
+            </label>
+
+            {/* Duplex físico */}
+            <label className="flex flex-col gap-1">
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                Modo duplex
+              </span>
+              <select
+                value={activeLink.duplexMode ?? 'full'}
+                onChange={(e) =>
+                  dispatch(
+                    updateLink({
+                      id: activeLinkId!,
+                      changes: {
+                        duplexMode: e.target.value as 'full' | 'half',
+                      },
+                    }),
+                  )
+                }
+                className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200"
+              >
+                <option value="full">Full-duplex</option>
+                <option value="half">Half-duplex</option>
+              </select>
+            </label>
+
             {/* Descrição */}
             <label className="flex flex-col gap-1">
               <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
@@ -271,6 +373,218 @@ export default function LinkInspectorTooltip({
                 className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200 placeholder-slate-600"
               />
             </label>
+
+            {/* ── Perfil WAN do link ───────────────────────────────────── */}
+            {isWanLink && (
+              <details className="rounded border border-cyan-700/40 bg-cyan-950/20" open>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-cyan-300">
+                  <span>🔷 Perfil WAN do Link</span>
+                  <span className="text-slate-500">QoS</span>
+                </summary>
+                <div className="space-y-2 px-2 pb-2 pt-1">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] text-slate-500">Banda total (kbps)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={wanPolicy?.totalBandwidthKbps ?? ''}
+                      onChange={(e) =>
+                        dispatch(
+                          updateLinkWanQos({
+                            linkId: activeLink.id,
+                            policy: {
+                              totalBandwidthKbps:
+                                e.target.value !== ''
+                                  ? Number(e.target.value)
+                                  : undefined,
+                            },
+                          }),
+                        )
+                      }
+                      placeholder="Ex: 100000"
+                      className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200 placeholder-slate-600"
+                    />
+                  </label>
+
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={linkedTunnelExists}
+                        disabled
+                        className="h-3 w-3 accent-cyan-500"
+                      />
+                      <span className="text-[10px] text-slate-300">Túnel VPN/IPsec</span>
+                    </label>
+                    <label
+                      className={`flex items-center gap-2 ${
+                        !linkedTunnelExists ? 'opacity-40' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={!linkedTunnelExists}
+                        checked={wanPolicy?.dscpCopyToOuter ?? true}
+                        onChange={(e) =>
+                          dispatch(
+                            updateLinkWanQos({
+                              linkId: activeLink.id,
+                              policy: { dscpCopyToOuter: e.target.checked },
+                            }),
+                          )
+                        }
+                        className="h-3 w-3 accent-cyan-500"
+                      />
+                      <span className="text-[10px] text-slate-300">Preservar DSCP no túnel</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1 text-[9px] text-slate-500">Classes garantidas</p>
+                      <div className="flex flex-wrap gap-1">
+                        {allQosClasses.map((cls) => {
+                          const current = wanPolicy?.guaranteedClasses ?? [];
+                          const selected = current.includes(cls);
+                          return (
+                            <button
+                              key={`g-${cls}`}
+                              type="button"
+                              onClick={() => {
+                                const next = selected
+                                  ? current.filter((c) => c !== cls)
+                                  : [...current, cls];
+                                dispatch(
+                                  updateLinkWanQos({
+                                    linkId: activeLink.id,
+                                    policy: { guaranteedClasses: next },
+                                  }),
+                                );
+                              }}
+                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold transition ${
+                                selected
+                                  ? 'border border-emerald-600/60 bg-emerald-900/30 text-emerald-300'
+                                  : 'border border-slate-700 text-slate-500 hover:text-slate-300'
+                              }`}
+                            >
+                              {QOSCLASS_LABEL[cls]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[9px] text-slate-500">Classes suprimidas</p>
+                      <div className="flex flex-wrap gap-1">
+                        {allQosClasses.map((cls) => {
+                          const current = wanPolicy?.suppressedClasses ?? [];
+                          const selected = current.includes(cls);
+                          return (
+                            <button
+                              key={`s-${cls}`}
+                              type="button"
+                              onClick={() => {
+                                const next = selected
+                                  ? current.filter((c) => c !== cls)
+                                  : [...current, cls];
+                                dispatch(
+                                  updateLinkWanQos({
+                                    linkId: activeLink.id,
+                                    policy: { suppressedClasses: next },
+                                  }),
+                                );
+                              }}
+                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold transition ${
+                                selected
+                                  ? 'border border-rose-600/60 bg-rose-900/30 text-rose-300'
+                                  : 'border border-slate-700 text-slate-500 hover:text-slate-300'
+                              }`}
+                            >
+                              {QOSCLASS_LABEL[cls]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            )}
+
+            {/* ── Metadados de rota derivados ──────────────────────────── */}
+            {isWanLink && (
+              <details className="rounded border border-sky-700/40 bg-sky-950/15" open>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-sky-300">
+                  <span>🧭 Metadados de Rota (Derivados)</span>
+                  <span className="text-slate-500">Read-only</span>
+                </summary>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 pb-2 pt-1 text-[10px]">
+                  <span className="text-slate-500">Site owner</span>
+                  <span className="text-slate-200">{routeOwnerSiteName}</span>
+
+                  <span className="text-slate-500">Tipo</span>
+                  <span className="text-slate-200">{routeType}</span>
+
+                  <span className="text-slate-500">Gateway inferido</span>
+                  <span className="font-mono text-slate-200">{inferredGateway}</span>
+
+                  <span className="text-slate-500">Destino inferido</span>
+                  <span className="font-mono text-slate-200">
+                    {routeType === 'Default'
+                      ? '0.0.0.0/0'
+                      : `${toNode?.ip ?? '0.0.0.0'}/${toNode?.cidr ?? 0}`}
+                  </span>
+                </div>
+              </details>
+            )}
+
+            {/* ── Resumo ACL derivado do link ──────────────────────────── */}
+            {isWanLink && (
+              <details className="rounded border border-amber-700/40 bg-amber-950/15" open>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-amber-300">
+                  <span>🛡 Resumo ACL Derivado</span>
+                  <span className="text-slate-500">Topologia</span>
+                </summary>
+                <div className="space-y-1 px-2 pb-2 pt-1 text-[10px]">
+                  {!linkedManagedAcl && (
+                    <p className="text-slate-500">
+                      Nenhuma regra ACL gerenciada encontrada para este link.
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                    <span className="text-slate-500">Origem efetiva</span>
+                    <span className="text-slate-200">
+                      {effectiveSrcNode?.label ?? linkedManagedAcl?.sourceNodeId ?? activeLink.from}
+                    </span>
+
+                    <span className="text-slate-500">Destino efetivo</span>
+                    <span className="text-slate-200">
+                      {effectiveDstNode?.label ?? linkedManagedAcl?.destinationNodeId ?? activeLink.to}
+                    </span>
+
+                    <span className="text-slate-500">Serviço padrão</span>
+                    <span className="text-slate-200">{derivedDefaultService}</span>
+
+                    <span className="text-slate-500">Gerar ACL</span>
+                    <span className="text-slate-200">
+                      {(activeLink.generateAcl ?? true) ? 'Sim' : 'Não'}
+                    </span>
+
+                    <span className="text-slate-500">Bidirecional</span>
+                    <span className="text-slate-200">
+                      {(activeLink.bidirectional ?? true) ? 'Sim' : 'Não'}
+                    </span>
+
+                    <span className="text-slate-500">Duplex</span>
+                    <span className="text-slate-200">
+                      {(activeLink.duplexMode ?? 'full') === 'half'
+                        ? 'Half-duplex'
+                        : 'Full-duplex'}
+                    </span>
+                  </div>
+                </div>
+              </details>
+            )}
 
             {/* ── IPsec SAs ────────────────────────────────────────────── */}
             {isVpnish && (

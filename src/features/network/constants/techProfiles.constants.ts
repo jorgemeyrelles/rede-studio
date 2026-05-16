@@ -1,9 +1,19 @@
 import type {
-  TechFieldSchema,
-  TechKind,
-  TechProfileContext,
-  TechValue,
+    NodeCategory,
+    TechFieldSchema,
+    TechKind,
+    TechProfileContext,
+    TechValue,
 } from '../types';
+
+const TUNNEL_TYPE_BY_CATEGORY: Partial<Record<NodeCategory, string>> = {
+  vpn: 'ipsec-site-to-site',
+  ipsec: 'ipsec-site-to-site',
+  wireguard: 'wireguard',
+  sdwan: 'sdwan',
+  mpls: 'mpls',
+  gre: 'gre',
+};
 
 export const TECH_PROFILE_VERSION = 1;
 
@@ -488,6 +498,28 @@ export const TECH_SCHEMA: Record<TechKind, TechFieldSchema[]> = {
   ],
   'access-point': [
     {
+      key: 'apInterfaceMode',
+      label: 'Modo de Interface',
+      labels: {
+        pt: 'Modo de Interface',
+        en: 'Interface Mode',
+        es: 'Modo de Interfaz',
+      },
+      type: 'select',
+      options: ['l2-bridge', 'l3-routed'],
+    },
+    {
+      key: 'apManagementVlanId',
+      label: 'VLAN de Gerencia',
+      labels: {
+        pt: 'VLAN de Gerência',
+        en: 'Management VLAN',
+        es: 'VLAN de Gestión',
+      },
+      type: 'text',
+      visibleWhen: { apInterfaceMode: 'l2-bridge' },
+    },
+    {
       key: 'ssid',
       label: 'SSID',
       labels: { pt: 'SSID', en: 'SSID', es: 'SSID' },
@@ -637,14 +669,7 @@ export const DEFAULT_TECH_FIELDS_BY_KIND: Record<
   }),
   vpn: (context) => ({
     tunnelType:
-      {
-        vpn: 'ipsec-site-to-site',
-        ipsec: 'ipsec-site-to-site',
-        wireguard: 'wireguard',
-        sdwan: 'sdwan',
-        mpls: 'mpls',
-        gre: 'gre',
-      }[context.category] ?? 'ipsec-site-to-site',
+      TUNNEL_TYPE_BY_CATEGORY[context.category] ?? 'ipsec-site-to-site',
     encryptionSuite: 'aes-256-gcm',
     authMethod: 'psk',
     ikeVersion:
@@ -677,6 +702,8 @@ export const DEFAULT_TECH_FIELDS_BY_KIND: Record<
     feedUpdate: 'auto',
   }),
   'access-point': () => ({
+    apInterfaceMode: 'l2-bridge',
+    apManagementVlanId: '',
     ssid: 'CorpWiFi',
     band: 'dual-band',
     channelWidth: '40MHz',

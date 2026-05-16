@@ -2,15 +2,15 @@ import type { GojsNoteItem } from '../types'
 
 export const S15_DEFAULT_NOTES: GojsNoteItem[] = [
   {
-    title: 'Estrutura Lateral',
-    text: 'Dois grupos principais, um para Matriz e outro para Filial, com os ativos internos.',
+    title: 'Dominios Matriz e Filial',
+    text: 'A Matriz opera com bloco corporativo 10.10.0.0/16 e a Filial segue subnetting por crescimento +50% e reserva de 20%.',
   },
   {
-    title: 'Centro de Tunelamento',
-    text: 'WAN, VPN site-to-site e SSL-VPN no centro conectando os dois dominios.',
+    title: 'WAN Primaria e Backup',
+    text: 'MPLS dual-stack como primario e VPN IPsec IKEv2 sobre internet como contingencia (15-30s de convergencia).',
   },
   {
-    title: 'Expander de Inventario',
-    text: 'Seta nativa GoJS no canto superior direito de cada icone: clique para expandir/recolher dados de IP e VLAN.',
+    title: 'Leitura do Diagrama',
+    text: 'Use o icone de informacao em cada ativo para abrir detalhes de IP, VLAN, papel de seguranca e conectividade.',
   },
 ]

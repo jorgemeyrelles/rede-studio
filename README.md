@@ -58,11 +58,19 @@ Arquivos-chave:
 - [src/app/store.ts](src/app/store.ts): configuração da store, hidratação inicial e persistência com debounce.
 - [src/features/network/networkSlice.ts](src/features/network/networkSlice.ts): reducers, estado inicial e normalização do domínio.
 - [src/features/network/selectors.ts](src/features/network/selectors.ts): projeções derivadas para rotas, firewall, tabela de protocolos e árvore da legenda.
-- [src/features/network/persistence.ts](src/features/network/persistence.ts): ponte para carregamento, salvamento e limpeza do estado persistido.
+- [src/services/routes/distributor.ts](src/services/routes/distributor.ts): distribuidor central das rotas de serviço (state, topology, addressing, security, qos, catalog, vpn, sessions).
+- [src/services/routes/persistenceRoutes.ts](src/services/routes/persistenceRoutes.ts): contrato de compatibilidade para persistência (`loadNetworkState`, `saveNetworkState`, `clearNetworkState`).
+- [src/features/network/persistence.ts](src/features/network/persistence.ts): fachada legada apontando para `servicesRoutes.persistence`.
 
 ### Persistência
 
-O estado é carregado na inicialização da aplicação e salvo automaticamente após alterações, com debounce de 350 ms. Em caso de falha de persistência, o slice registra um aviso em `meta.persistWarning` para feedback na interface.
+O estado é carregado na inicialização da aplicação e salvo automaticamente após alterações, com debounce de 350 ms. O acesso ao localStorage acontece via camada de serviços, usando o distribuidor de rotas em `src/services/routes`.
+
+Fluxo oficial:
+
+`store/components -> servicesRoutes.persistence -> stateRoutes -> services/_core/statePersistence -> localStorage`
+
+Em caso de falha de persistência, o slice registra um aviso em `meta.persistWarning` para feedback na interface.
 
 ### Tech Profile
 
@@ -149,6 +157,16 @@ O gerador está em [src/components/studio/utils/pdfReport.ts](src/components/stu
 src/
   app/
     store.ts
+  services/
+    _core/
+    routes/
+    topology/
+    addressing/
+    security/
+    qos/
+    catalog/
+    vpn/
+    sessions/
   components/
     studio/
       constants/

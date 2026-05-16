@@ -1,86 +1,145 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type {
-  AclRule,
-  AddCustomAclRulePayload,
-  AddCustomServicePayload,
-  AddCertificatePayload,
-  AddIpsecSaPayload,
-  AddSslVpnProfilePayload,
-  AddFwPolicyPayload,
-  AddNatRulePayload,
-  AddActiveSessionPayload,
-  AddLayerPayload,
-  AddLinkPayload,
-  AddNodePayload,
-  AddSiteNetworkPayload,
-  AddSiteVlanPayload,
-  AddSubnetPayload,
-  ClearActiveSessionsPayload,
-  Layer,
-  NetworkState,
-  NodeCategory,
-  RemoveCertificatePayload,
-  RemoveCustomAclRulePayload,
-  RemoveCustomServicePayload,
-  RemoveFwPolicyPayload,
-  RemoveIpsecSaPayload,
-  RemoveNatRulePayload,
-  RemoveSiteNetworkPayload,
-  RemoveSiteVlanPayload,
-  RemoveSslVpnProfilePayload,
-  RemoveSubnetPayload,
-  ReorderCustomAclRulePayload,
-  SetVlanAssignmentPayload,
-  ToggleNodeVlanPayload,
-  UpdateAclRulePayload,
-  UpdateAclRuleQoSPayload,
-  SetAclChildOverridePayload,
-  UpdateCertificatePayload,
-  UpdateCustomServicePayload,
-  UpdateFwPolicyPayload,
-  UpdateIpsecSaPayload,
-  UpdateLayerTierPayload,
-  UpdateLinkPayload,
-  UpdateNatRulePayload,
-  UpdateNodePayload,
-  UpdateNodeTechFieldPayload,
-  UpdateNodeZonePayload,
-  UpdateSitePayload,
-  UpdateSslVpnProfilePayload,
-} from './types';
-import { SCHEMA_VERSION } from './constants';
+import { DEFAULT_QOS_TRUST, SCHEMA_VERSION, VLAN_COLOR_PALETTE } from './constants';
 import {
-  buildDefaultTechProfile,
-  ensureTechProfile,
-  normalizeTechProfile,
+    buildDefaultTechProfile,
+    ensureTechProfile,
+    normalizeTechProfile,
 } from './techProfiles';
+import type {
+    AclRule,
+    AddActiveSessionPayload,
+    AddCertificatePayload,
+    AddCustomAclRulePayload,
+    AddCustomServicePayload,
+    AddFwPolicyPayload,
+    AddIpsecSaPayload,
+    AddLayerPayload,
+    AddLinkPayload,
+    AddNatRulePayload,
+    AddNodePayload,
+    AddSiteNetworkPayload,
+    AddSiteVlanPayload,
+    AddSslVpnProfilePayload,
+    AddSubnetPayload,
+    ClearActiveSessionsPayload,
+    DhcpScope,
+    Layer,
+    LinkDuplexMode,
+    NetworkState,
+    NodeCategory,
+    NodeVlanInterface,
+    RemoveCertificatePayload,
+    RemoveCustomAclRulePayload,
+    RemoveCustomServicePayload,
+    RemoveDhcpScopePayload,
+    RemoveFwPolicyPayload,
+    RemoveIpsecSaPayload,
+    RemoveNatRulePayload,
+    RemoveSiteNetworkPayload,
+    RemoveSiteVlanPayload,
+    RemoveSslVpnProfilePayload,
+    RemoveSubnetPayload,
+    ReorderCustomAclRulePayload,
+    SetAclChildOverridePayload,
+    SetVlanAssignmentPayload,
+    ToggleNodeVlanPayload,
+    UpdateAclRulePayload,
+    UpdateAclRuleQoSPayload,
+    UpdateCertificatePayload,
+    UpdateCustomServicePayload,
+    UpdateFwPolicyPayload,
+    UpdateIpsecSaPayload,
+    UpdateLayerTierPayload,
+    UpdateLinkPayload,
+    UpdateNatRulePayload,
+    UpdateNodePayload,
+    UpdateNodeTechFieldPayload,
+    UpdateNodeZonePayload,
+    UpdateSitePayload,
+    UpdateSslVpnProfilePayload,
+    UpsertDhcpScopePayload,
+} from './types';
 import {
-  normalizeAclRule,
-  assignNodeIpInsideVlan,
-  assignNodeIpOutsideVlans,
-  buildNodeHostAllocations,
-  buildIpFromSiteAndRadical,
-  buildIpFromNetworkAndRadical,
-  buildNodeIp,
-  buildNodeLabel,
-  getCategoryCode,
-  getNextNodeSequence,
-  ipToNumber,
-  isIpInVlan,
-  makeLayerId,
-  makeNodeId,
-  makeSiteId,
-  networkRangeBounds,
-  parseTrailingNumber,
-  reconcileAclRules,
-  siteOwnsVlan,
-  siteRangeBounds,
-  toValidVlanId,
-  getCategoryHostBase,
-  getVlanRange,
-  normalizeNodeVlansForCatalog,
-  numberToIp,
+    assignNodeIpInsideVlan,
+    assignNodeIpOutsideVlans,
+    buildIpFromNetworkAndRadical,
+    buildIpFromSiteAndRadical,
+    buildNetworkAddress,
+    buildNodeHostAllocations,
+    buildNodeIp,
+    buildNodeIpv6,
+    buildNodeLabel,
+    getCategoryCode,
+    getCategoryHostBase,
+    getNextNodeSequence,
+    getVlanRange,
+    ipToNumber,
+    isIpInVlan,
+    makeLayerId,
+    makeNodeId,
+    makeSiteId,
+    networkRangeBounds,
+    normalizeAclRule,
+    normalizeNodeVlansForCatalog,
+    numberToIp,
+    parseTrailingNumber,
+    reconcileAclRules,
+    siteOwnsVlan,
+    siteRangeBounds,
+    suggestAclRuleQoS,
+    toValidVlanId,
 } from './utils';
+
+function defaultTrafficPreferenceByStack(
+  stackMode: import('./types/entities').NetworkStackMode | undefined,
+): import('./types/entities').NetworkTrafficPreference {
+  if (stackMode === 'dual-stack') return 'balanced';
+  if (stackMode === 'ipv6-ready') return 'ipv6-preferred';
+  return 'ipv4-preferred';
+}
+
+function isStaticAddressAllocation(
+  mode: import('./types/entities').AddressAllocationMode | undefined,
+) {
+  return (
+    mode === 'static-ipv4' ||
+    mode === 'static-ipv6' ||
+    mode === 'static-dual'
+  );
+}
+
+function defaultDhcpIpv6ModeByAllocation(
+  mode: import('./types/entities').AddressAllocationMode,
+): import('./types/entities').DhcpScopeIpv6Mode {
+  if (mode === 'slaac') return 'slaac';
+  if (mode === 'dhcpv6') return 'dhcpv6-stateful';
+  if (mode === 'dual-dhcp-slaac') return 'dhcpv6-stateless';
+  return 'none';
+}
+
+function buildDefaultDhcpScopeForVlan(
+  vlan: Pick<
+    import('./types/entities').SiteVlan,
+    'siteId' | 'vlanId' | 'startIp' | 'endIp' | 'addressAllocation'
+  >,
+): DhcpScope {
+  const allocationMode = vlan.addressAllocation ?? 'dhcpv4';
+  return {
+    id: `${vlan.siteId}-vlan-${vlan.vlanId}-dhcp`,
+    siteId: vlan.siteId,
+    vlanId: vlan.vlanId,
+    allocationMode,
+    providerType: 'node',
+    poolStartIp: vlan.startIp,
+    poolEndIp: vlan.endIp,
+    excludedIps: [],
+    leaseMinutes: 1440,
+    dnsServers: [],
+    ipv6Mode: defaultDhcpIpv6ModeByAllocation(allocationMode),
+    ipv6DnsServers: [],
+    notes: '',
+  };
+}
 
 const initialState: NetworkState = {
   sites: [],
@@ -110,6 +169,9 @@ const initialState: NetworkState = {
   siteVlans: [],
   siteNetworks: [],
   subnets: [],
+  nodeVlanInterfaces: [],
+  dhcpScopes: [],
+  nodeQosProfiles: [],
   // Fase 3
   customServices: [],
   certificates: [],
@@ -202,6 +264,70 @@ function shouldNodeBeGateway(
   return !hasGatewayInSite;
 }
 
+const ZONE_DIRECTION_RANK: Record<string, number> = {
+  wan: 0,
+  dmz: 1,
+  vpn: 2,
+  lan: 3,
+  guest: 4,
+  management: 5,
+  mgmt: 5,
+};
+
+const CATEGORY_DIRECTION_RANK: Partial<Record<NodeCategory, number>> = {
+  wan: 0,
+  mpls: 1,
+  vpn: 1,
+  ipsec: 1,
+  wireguard: 1,
+  sdwan: 1,
+  gre: 1,
+  firewall: 2,
+  router: 3,
+  proxy: 4,
+  ids: 4,
+  ips: 4,
+  switch: 5,
+};
+
+function compareNodesForDirection(
+  a: NetworkState['nodes'][number],
+  b: NetworkState['nodes'][number],
+) {
+  // WAN is always considered the external/source side.
+  if (a.category === 'wan' && b.category !== 'wan') return -1;
+  if (b.category === 'wan' && a.category !== 'wan') return 1;
+
+  const aZoneRank = ZONE_DIRECTION_RANK[(a.zone ?? '').toLowerCase()] ?? 99;
+  const bZoneRank = ZONE_DIRECTION_RANK[(b.zone ?? '').toLowerCase()] ?? 99;
+  if (aZoneRank !== bZoneRank) return aZoneRank - bZoneRank;
+
+  // Inter-site links keep a stable direction based on siteId.
+  if (a.siteId && b.siteId && a.siteId !== b.siteId) {
+    return a.siteId.localeCompare(b.siteId);
+  }
+
+  const aCategoryRank = CATEGORY_DIRECTION_RANK[a.category] ?? 99;
+  const bCategoryRank = CATEGORY_DIRECTION_RANK[b.category] ?? 99;
+  if (aCategoryRank !== bCategoryRank) return aCategoryRank - bCategoryRank;
+
+  return a.id.localeCompare(b.id);
+}
+
+function normalizeLinkDirection(
+  state: NetworkState,
+  fromNodeId: string,
+  toNodeId: string,
+) {
+  const fromNode = state.nodes.find((node) => node.id === fromNodeId);
+  const toNode = state.nodes.find((node) => node.id === toNodeId);
+  if (!fromNode || !toNode) return { from: fromNodeId, to: toNodeId };
+
+  return compareNodesForDirection(fromNode, toNode) <= 0
+    ? { from: fromNodeId, to: toNodeId }
+    : { from: toNodeId, to: fromNodeId };
+}
+
 function inferLinkKind(
   state: NetworkState,
   fromNodeId: string,
@@ -228,6 +354,220 @@ function inferLinkKind(
   }
 
   return 'other';
+}
+
+function inferLinkBidirectionalDefault(
+  nodes: NetworkState['nodes'],
+  fromNodeId: string,
+  toNodeId: string,
+  kind: AddLinkPayload['kind'] | NetworkState['links'][number]['kind'],
+) {
+  if (kind === 'vpn' || kind === 'ipsec') return true;
+
+  const fromNode = nodes.find((node) => node.id === fromNodeId);
+  const toNode = nodes.find((node) => node.id === toNodeId);
+  const hasDmz = [fromNode, toNode].some(
+    (node) => (node?.zone ?? '').toLowerCase() === 'dmz',
+  );
+
+  // Matrix 3 default: DMZ links start as directional; others bidirectional.
+  return !hasDmz;
+}
+
+function inferLinkDuplexModeDefault(
+  nodes: NetworkState['nodes'],
+  fromNodeId: string,
+  toNodeId: string,
+  kind: AddLinkPayload['kind'] | NetworkState['links'][number]['kind'],
+): LinkDuplexMode {
+  const fromNode = nodes.find((node) => node.id === fromNodeId);
+  const toNode = nodes.find((node) => node.id === toNodeId);
+
+  const isWirelessNode = (
+    node: NetworkState['nodes'][number] | undefined,
+  ) => {
+    if (!node) return false;
+    if (node.category === 'access-point') return true;
+
+    const fields = node.techProfile?.fields ?? {};
+    const band = String(fields.band ?? '').toLowerCase();
+    const ssid = String(fields.ssid ?? '').trim();
+    const wirelessSecurity = String(fields.wirelessSecurity ?? '').trim();
+    const channelWidth = String(fields.channelWidth ?? '').trim();
+    const role = String(fields.role ?? '').toLowerCase();
+
+    return (
+      ssid !== '' ||
+      wirelessSecurity !== '' ||
+      channelWidth !== '' ||
+      band.includes('ghz') ||
+      band.includes('dual') ||
+      role.includes('wireless') ||
+      role.includes('wifi') ||
+      role.includes('wlan') ||
+      role.includes('radio')
+    );
+  };
+
+  const hasWirelessHop =
+    isWirelessNode(fromNode) || isWirelessNode(toNode);
+  if (hasWirelessHop) return 'half';
+
+  if (kind === 'wan' || kind === 'vpn' || kind === 'ipsec') {
+    return 'full';
+  }
+
+  return 'full';
+}
+
+function collectScopedUsedHostIds(
+  nodes: NetworkState['nodes'],
+  target: Pick<
+    NetworkState['nodes'][number],
+    'id' | 'siteId' | 'layerId' | 'category'
+  >,
+) {
+  const usedIds = new Set<string>();
+
+  nodes
+    .filter(
+      (candidate) =>
+        candidate.id !== target.id &&
+        candidate.category === target.category &&
+        candidate.siteId === target.siteId &&
+        candidate.layerId === target.layerId,
+    )
+    .forEach((candidate) => {
+      usedIds.add(candidate.id);
+      (candidate.hostAllocations ?? []).forEach((allocation) => {
+        usedIds.add(allocation.id);
+      });
+    });
+
+  return usedIds;
+}
+
+function isAccessPointL3Mode(
+  node: Pick<NetworkState['nodes'][number], 'category' | 'techProfile'>,
+) {
+  if (node.category !== 'access-point') return false;
+  return String(node.techProfile?.fields?.apInterfaceMode ?? 'l2-bridge') === 'l3-routed';
+}
+
+function resolveAccessPointManagementVlanId(
+  node: Pick<NetworkState['nodes'][number], 'category' | 'techProfile'>,
+) {
+  if (node.category !== 'access-point') return null;
+  const raw = String(node.techProfile?.fields?.apManagementVlanId ?? '').trim();
+  if (raw === '') return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  const vlanId = Math.trunc(parsed);
+  if (vlanId < 1 || vlanId > 4094) return null;
+  return vlanId;
+}
+
+function findNextFreeGatewayIpInVlan(
+  state: NetworkState,
+  node: NetworkState['nodes'][number],
+  vlan: NetworkState['siteVlans'][number],
+) {
+  const range = getVlanRange(vlan);
+  if (!range) return null;
+
+  const occupied = new Set<number>();
+
+  state.nodes
+    .filter((candidate) => candidate.siteId === vlan.siteId && candidate.category !== 'wan')
+    .forEach((candidate) => {
+      const allocationIps =
+        (candidate.hostAllocations ?? []).length > 0
+          ? candidate.hostAllocations.map((allocation) => allocation.ip)
+          : [candidate.ip];
+
+      allocationIps.forEach((ip) => {
+        const value = ipToNumber(ip);
+        if (value !== null) {
+          occupied.add(value);
+        }
+      });
+    });
+
+  state.nodeVlanInterfaces.forEach((iface) => {
+    if (iface.siteId !== vlan.siteId) return;
+    if (iface.nodeId === node.id && iface.vlanId === vlan.vlanId) return;
+
+    const value = ipToNumber(iface.gatewayIp);
+    if (value !== null) {
+      occupied.add(value);
+    }
+  });
+
+  for (let candidate = range.start; candidate <= range.end; candidate += 1) {
+    if (!occupied.has(candidate)) {
+      return numberToIp(candidate);
+    }
+  }
+
+  return null;
+}
+
+function ensureNodeVlanInterfaceForNode(
+  state: NetworkState,
+  node: NetworkState['nodes'][number],
+  vlan: NetworkState['siteVlans'][number],
+) {
+  const alreadyHasIface = state.nodeVlanInterfaces.some(
+    (iface) => iface.nodeId === node.id && iface.vlanId === vlan.vlanId,
+  );
+  if (alreadyHasIface) {
+    return true;
+  }
+
+  const nextGatewayIp = findNextFreeGatewayIpInVlan(state, node, vlan);
+  if (!nextGatewayIp) {
+    state.meta.persistWarning = `VLAN ${vlan.vlanId} sem IP livre para interface de ${node.label}.`;
+    return false;
+  }
+
+  state.nodeVlanInterfaces.push({
+    id: `nvif-${node.id}-${vlan.vlanId}-${Date.now()}`,
+    nodeId: node.id,
+    siteId: vlan.siteId,
+    vlanId: vlan.vlanId,
+    gatewayIp: nextGatewayIp,
+  });
+
+  return true;
+}
+
+function syncAccessPointVlanInterfacesByMode(
+  state: NetworkState,
+  node: NetworkState['nodes'][number],
+) {
+  if (node.category !== 'access-point' || !node.siteId) return;
+
+  if (!isAccessPointL3Mode(node)) {
+    state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
+      (iface) => iface.nodeId !== node.id,
+    );
+    return;
+  }
+
+  const vlanIds = new Set((node.vlans ?? []).map((value) => toValidVlanId(Number(value))));
+
+  state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
+    (iface) => iface.nodeId !== node.id || vlanIds.has(iface.vlanId),
+  );
+
+  (node.vlans ?? []).forEach((vlanId) => {
+    const vlan = state.siteVlans.find(
+      (item) => item.siteId === node.siteId && item.vlanId === vlanId,
+    );
+    if (!vlan) return;
+
+    ensureNodeVlanInterfaceForNode(state, node, vlan);
+  });
 }
 
 function normalizeState(input: NetworkState): NetworkState {
@@ -285,6 +625,16 @@ function normalizeState(input: NetworkState): NetworkState {
           const site = normalizedSites.find(
             (siteItem) => siteItem.id === mappedSiteId,
           );
+          const normalizedNetworkId =
+            typeof item.networkId === 'string' &&
+            item.networkId.trim() !== '' &&
+            Array.isArray(input.siteNetworks) &&
+            input.siteNetworks.some((network) => {
+              const networkSiteId = siteIdMap.get(network.siteId) ?? network.siteId;
+              return network.id === item.networkId && networkSiteId === mappedSiteId;
+            })
+              ? item.networkId
+              : undefined;
           const vlanId = toValidVlanId(Number(item.vlanId));
 
           const vlanNodes = input.nodes.filter(
@@ -343,6 +693,13 @@ function normalizeState(input: NetworkState): NetworkState {
             startRadical,
             startIp: rawStartIp,
             endIp: rawEndIpFromItem ?? computedEndIp,
+            networkId: normalizedNetworkId,
+            ipv6Prefix: item.ipv6Prefix?.trim() || undefined,
+            addressAllocation: item.addressAllocation ?? 'dhcpv4',
+            // P2 — preserva cor existente; se ausente, atribui pela paleta
+            color: typeof item.color === 'string' && item.color
+              ? item.color
+              : undefined,
           };
         })
     : [];
@@ -385,12 +742,13 @@ function normalizeState(input: NetworkState): NetworkState {
         id: compactId,
         siteId: mappedSiteId,
         layerId: mappedLayerId,
+        ipv6: node.ipv6?.trim() || undefined,
         hostCount:
           node.category === 'wan'
             ? 1
             : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
         hostAllocations: buildNodeHostAllocations({
-          id: node.id,
+          id: compactId,
           ip: node.ip,
           hostCount:
             node.category === 'wan'
@@ -403,6 +761,10 @@ function normalizeState(input: NetworkState): NetworkState {
             : node.originalIp && ipToNumber(node.originalIp) !== null
               ? node.originalIp
               : node.ip,
+        originalIpv6:
+          node.category === 'wan'
+            ? undefined
+            : node.originalIpv6?.trim() || node.ipv6?.trim() || undefined,
         techProfile: ensureTechProfile(node.category, node.techProfile, {
           layerOrder,
           shouldBeGateway: Boolean(shouldBeGateway),
@@ -419,11 +781,40 @@ function normalizeState(input: NetworkState): NetworkState {
     normalizedSiteVlans,
   );
 
-  const normalizedLinks = (input.links ?? []).map((link) => ({
-    ...link,
-    from: nodeIdMap.get(link.from) ?? link.from,
-    to: nodeIdMap.get(link.to) ?? link.to,
-  }));
+  normalizedNodes.forEach((node) => {
+    if (node.category === 'wan') {
+      node.hostAllocations = [{ id: node.id, ip: node.ip }];
+      return;
+    }
+
+    const usedIds = collectScopedUsedHostIds(normalizedNodes, node);
+    node.hostAllocations = buildNodeHostAllocations(node, { usedIds });
+  });
+
+  const normalizedLinks = (input.links ?? []).map((link) => {
+    const from = nodeIdMap.get(link.from) ?? link.from;
+    const to = nodeIdMap.get(link.to) ?? link.to;
+    const defaultBidirectional = inferLinkBidirectionalDefault(
+      normalizedNodes,
+      from,
+      to,
+      link.kind,
+    );
+    const defaultDuplexMode = inferLinkDuplexModeDefault(
+      normalizedNodes,
+      from,
+      to,
+      link.kind,
+    );
+
+    return {
+      ...link,
+      from,
+      to,
+      bidirectional: link.bidirectional ?? defaultBidirectional,
+      duplexMode: link.duplexMode ?? defaultDuplexMode,
+    };
+  });
 
   const remappedAclRules = (input.aclRules ?? []).map((rule) => ({
     ...rule,
@@ -434,11 +825,86 @@ function normalizeState(input: NetworkState): NetworkState {
 
   const fallbackUi = input.ui ?? { inspectorNodeId: null, zoom: 1 };
 
+  // P2 — backfill de cores: VLANs sem cor recebem cor da paleta pelo índice no site
+  const siteVlanColorCounters = new Map<string, number>();
+  const coloredSiteVlans = normalizedSiteVlans.map((vlan) => {
+    if (vlan.color) return vlan;
+    const idx = siteVlanColorCounters.get(vlan.siteId) ?? 0;
+    siteVlanColorCounters.set(vlan.siteId, idx + 1);
+    return { ...vlan, color: VLAN_COLOR_PALETTE[idx % VLAN_COLOR_PALETTE.length] };
+  });
+
+  const normalizedDhcpScopes = (() => {
+    const sourceScopes = Array.isArray(input.dhcpScopes) ? input.dhcpScopes : [];
+
+    const remappedScopes = sourceScopes
+      .map((scope) => {
+        const siteId = siteIdMap.get(scope.siteId) ?? scope.siteId;
+        const vlanId = toValidVlanId(Number(scope.vlanId));
+        const vlan = coloredSiteVlans.find(
+          (item) => item.siteId === siteId && item.vlanId === vlanId,
+        );
+        if (!vlan) return null;
+
+        const allocationMode =
+          scope.allocationMode ?? vlan.addressAllocation ?? 'dhcpv4';
+        if (isStaticAddressAllocation(allocationMode)) return null;
+
+        const cleanList = (values: string[] | undefined) =>
+          (values ?? [])
+            .map((value) => value.trim())
+            .filter((value, index, self) => value !== '' && self.indexOf(value) === index);
+
+        return {
+          id: scope.id || `${siteId}-vlan-${vlanId}-dhcp`,
+          siteId,
+          vlanId,
+          allocationMode,
+          providerType: scope.providerType ?? 'node',
+          providerNodeId: scope.providerNodeId
+            ? nodeIdMap.get(scope.providerNodeId) ?? scope.providerNodeId
+            : undefined,
+          relayNodeId: scope.relayNodeId
+            ? nodeIdMap.get(scope.relayNodeId) ?? scope.relayNodeId
+            : undefined,
+          poolStartIp: scope.poolStartIp?.trim() || vlan.startIp,
+          poolEndIp: scope.poolEndIp?.trim() || vlan.endIp,
+          excludedIps: cleanList(scope.excludedIps),
+          leaseMinutes: Math.max(
+            1,
+            Math.min(43200, Math.trunc(Number(scope.leaseMinutes ?? 1440))),
+          ),
+          dnsServers: cleanList(scope.dnsServers),
+          ipv6Mode:
+            scope.ipv6Mode ?? defaultDhcpIpv6ModeByAllocation(allocationMode),
+          ipv6DnsServers: cleanList(scope.ipv6DnsServers),
+          notes: scope.notes?.trim() ?? '',
+        } as DhcpScope;
+      })
+      .filter((scope): scope is DhcpScope => Boolean(scope));
+
+    const keyedScopes = new Map<string, DhcpScope>();
+    remappedScopes.forEach((scope) => {
+      keyedScopes.set(`${scope.siteId}|${scope.vlanId}`, scope);
+    });
+
+    coloredSiteVlans.forEach((vlan) => {
+      const allocationMode = vlan.addressAllocation ?? 'dhcpv4';
+      if (isStaticAddressAllocation(allocationMode)) return;
+      const key = `${vlan.siteId}|${vlan.vlanId}`;
+      if (!keyedScopes.has(key)) {
+        keyedScopes.set(key, buildDefaultDhcpScopeForVlan(vlan));
+      }
+    });
+
+    return Array.from(keyedScopes.values());
+  })();
+
   return {
     ...input,
     sites: normalizedSites,
     layers: normalizedLayers,
-    siteVlans: normalizedSiteVlans,
+    siteVlans: coloredSiteVlans,
     // Fase 2 — preserva ou inicializa arrays; filtra orphans (siteId inválido)
     siteNetworks: Array.isArray(input.siteNetworks)
       ? input.siteNetworks
@@ -447,7 +913,21 @@ function normalizeState(input: NetworkState): NetworkState {
               (s) => s.id === (siteIdMap.get(n.siteId) ?? n.siteId),
             ),
           )
-          .map((n) => ({ ...n, siteId: siteIdMap.get(n.siteId) ?? n.siteId }))
+          .map((n) => ({
+            ...n,
+            siteId: siteIdMap.get(n.siteId) ?? n.siteId,
+            stackMode: n.stackMode ?? 'ipv4',
+            gatewayMode: n.gatewayMode ?? 'ipv4-only',
+            dnsPolicy: n.dnsPolicy ?? 'a-only',
+            ipv6Prefix: n.ipv6Prefix?.trim() || undefined,
+            ipv6VlanPrefixLength: Math.max(
+              48,
+              Math.min(64, Math.trunc(n.ipv6VlanPrefixLength ?? 64)),
+            ),
+            trafficPreference:
+              n.trafficPreference ??
+              defaultTrafficPreferenceByStack(n.stackMode),
+          }))
       : [],
     subnets: Array.isArray(input.subnets)
       ? input.subnets
@@ -456,7 +936,11 @@ function normalizeState(input: NetworkState): NetworkState {
               (site) => site.id === (siteIdMap.get(s.siteId) ?? s.siteId),
             ),
           )
-          .map((s) => ({ ...s, siteId: siteIdMap.get(s.siteId) ?? s.siteId }))
+          .map((s) => ({
+            ...s,
+            siteId: siteIdMap.get(s.siteId) ?? s.siteId,
+            ipv6Prefix: s.ipv6Prefix?.trim() || undefined,
+          }))
       : [],
     // Fase 3 — preservar como estão (não dependem de IDs normalizados)
     customServices: Array.isArray(input.customServices)
@@ -487,6 +971,24 @@ function normalizeState(input: NetworkState): NetworkState {
       ? input.activeSessions.filter((s) =>
           normalizedNodes.some((n) => n.id === s.nodeId),
         )
+      : [],
+    // P11 — preservar interfaces VLAN (remapear nodeId se necessário)
+    nodeVlanInterfaces: Array.isArray(input.nodeVlanInterfaces)
+      ? input.nodeVlanInterfaces
+          .map((i) => ({
+            ...i,
+            nodeId: nodeIdMap.get(i.nodeId) ?? i.nodeId,
+            siteId: siteIdMap.get(i.siteId) ?? i.siteId,
+            gatewayIpv6: i.gatewayIpv6?.trim() || undefined,
+          }))
+          .filter((i) => normalizedNodes.some((n) => n.id === i.nodeId))
+      : [],
+    dhcpScopes: normalizedDhcpScopes,
+    // P16 — preservar perfis QoS, remapeando nodeId
+    nodeQosProfiles: Array.isArray(input.nodeQosProfiles)
+      ? input.nodeQosProfiles
+          .map((p) => ({ ...p, nodeId: nodeIdMap.get(p.nodeId) ?? p.nodeId }))
+          .filter((p) => normalizedNodes.some((n) => n.id === p.nodeId))
       : [],
     nodes: normalizedNodes,
     links: normalizedLinks,
@@ -534,6 +1036,8 @@ export const networkSlice = createSlice({
       siteVlans: [],
       siteNetworks: [],
       subnets: [],
+      nodeVlanInterfaces: [],
+      dhcpScopes: [],
       customServices: [],
       certificates: [],
       ipsecSas: [],
@@ -578,6 +1082,9 @@ export const networkSlice = createSlice({
       state.sites = state.sites.filter((site) => site.id !== siteId);
       state.layers = state.layers.filter((layer) => layer.siteId !== siteId);
       state.siteVlans = state.siteVlans.filter(
+        (item) => item.siteId !== siteId,
+      );
+      state.dhcpScopes = state.dhcpScopes.filter(
         (item) => item.siteId !== siteId,
       );
       state.nodes = state.nodes.filter((node) => node.siteId !== siteId);
@@ -695,8 +1202,25 @@ export const networkSlice = createSlice({
       }
 
       const endIp = numberToIp(endNumber);
+      const suggestedIpv6Prefix = (() => {
+        const basePrefix = network?.ipv6Prefix?.trim();
+        if (!basePrefix) return undefined;
+        const [base] = basePrefix.split('/');
+        if (!base) return undefined;
+        const compactBase = base.replace(/::+$/, '').replace(/:$/, '');
+        const vlanHex = vlanId.toString(16);
+        return `${compactBase}:${vlanHex}::/64`;
+      })();
 
-      state.siteVlans.push({
+      // P2 — cor por paleta circular (contador de VLANs do site)
+      const siteVlanCount = state.siteVlans.filter(
+        (item) => item.siteId === siteId,
+      ).length;
+      const color =
+        VLAN_COLOR_PALETTE[siteVlanCount % VLAN_COLOR_PALETTE.length];
+
+      const allocationMode = action.payload.addressAllocation ?? 'dhcpv4';
+      const createdVlan = {
         id: `${siteId}-vlan-${vlanId}`,
         siteId,
         vlanId,
@@ -705,8 +1229,22 @@ export const networkSlice = createSlice({
         startRadical: action.payload.startRadical,
         startIp,
         endIp,
+        color,
         networkId,
-      });
+        ipv6Prefix: action.payload.ipv6Prefix?.trim() || suggestedIpv6Prefix,
+        addressAllocation: allocationMode,
+      };
+
+      state.siteVlans.push(createdVlan);
+
+      if (!isStaticAddressAllocation(allocationMode)) {
+        const existingScope = state.dhcpScopes.find(
+          (scope) => scope.siteId === siteId && scope.vlanId === vlanId,
+        );
+        if (!existingScope) {
+          state.dhcpScopes.push(buildDefaultDhcpScopeForVlan(createdVlan));
+        }
+      }
 
       // Dispositivos que cairam por acaso no novo range e nao pertencem a VLAN
       // sao movidos para IP livre fora das VLANs.
@@ -725,6 +1263,9 @@ export const networkSlice = createSlice({
 
       state.siteVlans = state.siteVlans.filter(
         (item) => !(item.siteId === siteId && item.vlanId === vlanId),
+      );
+      state.dhcpScopes = state.dhcpScopes.filter(
+        (scope) => !(scope.siteId === siteId && scope.vlanId === vlanId),
       );
 
       state.nodes.forEach((node) => {
@@ -756,22 +1297,116 @@ export const networkSlice = createSlice({
         state.ui.vlanAssignment = null;
       }
     },
+    upsertDhcpScope: (
+      state,
+      action: PayloadAction<UpsertDhcpScopePayload>,
+    ) => {
+      const siteId = action.payload.siteId;
+      const vlanId = toValidVlanId(action.payload.vlanId);
+      const vlan = state.siteVlans.find(
+        (item) => item.siteId === siteId && item.vlanId === vlanId,
+      );
+      if (!vlan) return;
+
+      const allocationMode =
+        action.payload.allocationMode ?? vlan.addressAllocation ?? 'dhcpv4';
+      if (isStaticAddressAllocation(allocationMode)) {
+        state.dhcpScopes = state.dhcpScopes.filter(
+          (scope) => !(scope.siteId === siteId && scope.vlanId === vlanId),
+        );
+        return;
+      }
+
+      const cleanList = (values: string[] | undefined) =>
+        (values ?? [])
+          .map((value) => value.trim())
+          .filter((value, index, self) => value !== '' && self.indexOf(value) === index);
+
+      const candidateId = action.payload.id || `${siteId}-vlan-${vlanId}-dhcp`;
+      const existing = state.dhcpScopes.find(
+        (scope) =>
+          scope.id === candidateId ||
+          (scope.siteId === siteId && scope.vlanId === vlanId),
+      );
+
+      const nextScope: DhcpScope = {
+        id: existing?.id ?? candidateId,
+        siteId,
+        vlanId,
+        allocationMode,
+        providerType:
+          action.payload.providerType ?? existing?.providerType ?? 'node',
+        providerNodeId:
+          action.payload.providerNodeId ?? existing?.providerNodeId,
+        relayNodeId: action.payload.relayNodeId ?? existing?.relayNodeId,
+        poolStartIp:
+          action.payload.poolStartIp?.trim() ||
+          existing?.poolStartIp ||
+          vlan.startIp,
+        poolEndIp:
+          action.payload.poolEndIp?.trim() || existing?.poolEndIp || vlan.endIp,
+        excludedIps: cleanList(action.payload.excludedIps ?? existing?.excludedIps),
+        leaseMinutes: Math.max(
+          1,
+          Math.min(
+            43200,
+            Math.trunc(
+              Number(
+                action.payload.leaseMinutes ?? existing?.leaseMinutes ?? 1440,
+              ),
+            ),
+          ),
+        ),
+        dnsServers: cleanList(action.payload.dnsServers ?? existing?.dnsServers),
+        ipv6Mode:
+          action.payload.ipv6Mode ??
+          existing?.ipv6Mode ??
+          defaultDhcpIpv6ModeByAllocation(allocationMode),
+        ipv6DnsServers: cleanList(
+          action.payload.ipv6DnsServers ?? existing?.ipv6DnsServers,
+        ),
+        notes: action.payload.notes?.trim() ?? existing?.notes ?? '',
+      };
+
+      if (existing) {
+        Object.assign(existing, nextScope);
+      } else {
+        state.dhcpScopes.push(nextScope);
+      }
+    },
+    removeDhcpScope: (
+      state,
+      action: PayloadAction<RemoveDhcpScopePayload>,
+    ) => {
+      if ('id' in action.payload) {
+        state.dhcpScopes = state.dhcpScopes.filter(
+          (scope) => scope.id !== action.payload.id,
+        );
+        return;
+      }
+
+      const siteId = action.payload.siteId;
+      const vlanId = toValidVlanId(action.payload.vlanId);
+      state.dhcpScopes = state.dhcpScopes.filter(
+        (scope) => !(scope.siteId === siteId && scope.vlanId === vlanId),
+      );
+    },
     setVlanAssignmentMode: (
       state,
       action: PayloadAction<SetVlanAssignmentPayload>,
     ) => {
-      if (!action.payload) {
+      const payload = action.payload;
+      if (!payload) {
         state.ui.vlanAssignment = null;
         return;
       }
 
-      const vlanId = toValidVlanId(action.payload.vlanId);
+      const vlanId = toValidVlanId(payload.vlanId);
       const exists = state.siteVlans.some(
-        (item) =>
-          item.siteId === action.payload.siteId && item.vlanId === vlanId,
+        (item) => item.siteId === payload.siteId && item.vlanId === vlanId,
       );
       state.ui.vlanAssignment = exists
-        ? { siteId: action.payload.siteId, vlanId }
+        ? { siteId: payload.siteId, vlanId }
         : null;
     },
     toggleNodeVlanAssignment: (
@@ -798,6 +1433,41 @@ export const networkSlice = createSlice({
             item.siteId === action.payload.siteId && item.vlanId === vlanId,
         );
         if (!vlan) return;
+
+        if (isAccessPointL3Mode(node)) {
+          ensureNodeVlanInterfaceForNode(state, node, vlan);
+          return;
+        }
+
+        // Verifica se o nó já tem IP dentro de alguma VLAN existente
+        // (node.vlans já inclui o novo vlanId pois foi atualizado acima)
+        const previousVlans = state.siteVlans.filter(
+          (item) =>
+            item.siteId === action.payload.siteId &&
+            (node.vlans ?? []).includes(item.vlanId) &&
+            item.vlanId !== vlanId,
+        );
+        const ipAlreadyInSomeVlan = previousVlans.some((v) =>
+          isIpInVlan(node.ip, v),
+        );
+
+        const isRoutingDevice =
+          node.category === 'router' ||
+          node.category === 'firewall' ||
+          node.category === 'switch';
+
+        if (ipAlreadyInSomeVlan && isRoutingDevice) {
+          // Dispositivo de rede multi-VLAN: mantém node.ip como IP de gerência
+          // e cria automaticamente um NodeVlanInterface com IP dentro desta VLAN
+          ensureNodeVlanInterfaceForNode(state, node, vlan);
+          return;
+        }
+
+        if (ipAlreadyInSomeVlan) {
+          // Nó terminal (pc/server/etc.) em múltiplas VLANs: mantém IP atual
+          return;
+        }
+
         if (!node.originalIp && node.ip) {
           node.originalIp = node.ip;
         }
@@ -805,6 +1475,15 @@ export const networkSlice = createSlice({
         if (!moved) {
           state.meta.persistWarning = `VLAN ${vlanId} sem IP livre para o elemento ${node.label}.`;
         }
+        return;
+      }
+
+      // Removendo da VLAN — limpar NodeVlanInterface associada, se existir
+      state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
+        (i) => !(i.nodeId === node.id && i.vlanId === vlanId),
+      );
+
+      if (isAccessPointL3Mode(node)) {
         return;
       }
 
@@ -825,9 +1504,31 @@ export const networkSlice = createSlice({
 
     // ── Fase 2 — SiteNetwork ────────────────────────────────────────────────
     addSiteNetwork: (state, action: PayloadAction<AddSiteNetworkPayload>) => {
-      const { siteId, name, purpose, addressFamily, thirdOctet, cidr } =
-        action.payload;
+      const {
+        siteId,
+        name,
+        purpose,
+        addressFamily,
+        thirdOctet,
+        cidr,
+        stackMode,
+        gatewayMode,
+        dnsPolicy,
+        ipv6Prefix,
+        ipv6VlanPrefixLength,
+        trafficPreference,
+      } = action.payload;
       if (!state.sites.some((s) => s.id === siteId)) return;
+
+      // P4 — máximo de 2 LANs por site
+      const existingCount = state.siteNetworks.filter(
+        (n) => n.siteId === siteId,
+      ).length;
+      if (existingCount >= 2) {
+        state.meta.persistWarning =
+          'Limite de 2 LANs por site atingido. Remova uma LAN para adicionar outra.';
+        return;
+      }
 
       const id = `${siteId}-net-${Date.now()}`;
       state.siteNetworks.push({
@@ -838,6 +1539,16 @@ export const networkSlice = createSlice({
         addressFamily,
         thirdOctet: Math.max(0, Math.min(255, Math.trunc(thirdOctet))),
         cidr: Math.max(8, Math.min(30, Math.trunc(cidr))),
+        stackMode: stackMode ?? 'ipv4',
+        gatewayMode: gatewayMode ?? 'ipv4-only',
+        dnsPolicy: dnsPolicy ?? 'a-only',
+        ipv6Prefix: ipv6Prefix?.trim() || undefined,
+        ipv6VlanPrefixLength: Math.max(
+          48,
+          Math.min(64, Math.trunc(ipv6VlanPrefixLength ?? 64)),
+        ),
+        trafficPreference:
+          trafficPreference ?? defaultTrafficPreferenceByStack(stackMode),
       });
     },
     removeSiteNetwork: (
@@ -874,10 +1585,128 @@ export const networkSlice = createSlice({
         name: name.trim() || 'Sub-rede',
         cidr: Math.max(8, Math.min(30, Math.trunc(cidr))),
         networkAddress,
+        ipv6Prefix: action.payload.ipv6Prefix?.trim() || undefined,
       });
     },
     removeSubnet: (state, action: PayloadAction<RemoveSubnetPayload>) => {
       state.subnets = state.subnets.filter((s) => s.id !== action.payload.id);
+    },
+
+    // ── P11 — interfaces VLAN em roteadores / firewalls / switches ───────────
+    addNodeVlanInterface: (
+      state,
+      action: PayloadAction<Omit<NodeVlanInterface, 'id'>>,
+    ) => {
+      const { nodeId, siteId, vlanId, gatewayIp, gatewayIpv6, description } =
+        action.payload;
+      const already = state.nodeVlanInterfaces.find(
+        (i) => i.nodeId === nodeId && i.vlanId === vlanId,
+      );
+      if (already) return; // idempotente — sem duplicatas
+      const id = `nvif-${nodeId}-${vlanId}-${Date.now()}`;
+      state.nodeVlanInterfaces.push({
+        id,
+        nodeId,
+        siteId,
+        vlanId,
+        gatewayIp,
+        gatewayIpv6: gatewayIpv6?.trim() || undefined,
+        description,
+      });
+    },
+    removeNodeVlanInterface: (
+      state,
+      action: PayloadAction<{ id: string }>,
+    ) => {
+      state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
+        (i) => i.id !== action.payload.id,
+      );
+    },
+
+    // ── P13 — QoS Class por VLAN ──────────────────────────────────────────
+    updateSiteVlanQos: (
+      state,
+      action: PayloadAction<{ siteId: string; vlanId: number; qosClass: import('./types/entities').QosClass | undefined }>,
+    ) => {
+      const vlan = state.siteVlans.find(
+        (v) => v.siteId === action.payload.siteId && v.vlanId === action.payload.vlanId,
+      );
+      if (!vlan) return;
+      vlan.qosClass = action.payload.qosClass;
+    },
+
+    // ── P14 — Trust Boundary por Nó ───────────────────────────────────────
+    updateNodeQosTrust: (
+      state,
+      action: PayloadAction<{ nodeId: string; qosTrust: import('./types/entities').QosTrust }>,
+    ) => {
+      const node = state.nodes.find((n) => n.id === action.payload.nodeId);
+      if (!node) return;
+      node.qosTrust = action.payload.qosTrust;
+    },
+
+    // ── P16 — QoS Profile por Nó (filas de scheduling) ───────────────────
+    addQosQueue: (
+      state,
+      action: PayloadAction<{
+        nodeId: string;
+        queue: Omit<import('./types/entities').QosQueue, 'id'>;
+      }>,
+    ) => {
+      const { nodeId, queue } = action.payload;
+      let profile = state.nodeQosProfiles.find((p) => p.nodeId === nodeId);
+      if (!profile) {
+        state.nodeQosProfiles.push({ nodeId, queues: [] });
+        profile = state.nodeQosProfiles[state.nodeQosProfiles.length - 1];
+      }
+      profile.queues.push({ ...queue, id: `q-${nodeId}-${Date.now()}` });
+    },
+    updateQosQueue: (
+      state,
+      action: PayloadAction<{
+        nodeId: string;
+        queueId: string;
+        changes: Partial<Omit<import('./types/entities').QosQueue, 'id'>>;
+      }>,
+    ) => {
+      const profile = state.nodeQosProfiles.find((p) => p.nodeId === action.payload.nodeId);
+      if (!profile) return;
+      const queue = profile.queues.find((q) => q.id === action.payload.queueId);
+      if (!queue) return;
+      Object.assign(queue, action.payload.changes);
+    },
+    removeQosQueue: (
+      state,
+      action: PayloadAction<{ nodeId: string; queueId: string }>,
+    ) => {
+      const profile = state.nodeQosProfiles.find((p) => p.nodeId === action.payload.nodeId);
+      if (!profile) return;
+      profile.queues = profile.queues.filter((q) => q.id !== action.payload.queueId);
+    },
+
+    // ── P17 — QoS WAN por Link ────────────────────────────────────────────
+    updateLinkWanQos: (
+      state,
+      action: PayloadAction<{
+        linkId: string;
+        policy: Partial<import('./types/entities').WanQosPolicy> | null;
+      }>,
+    ) => {
+      const link = state.links.find((l) => l.id === action.payload.linkId);
+      if (!link) return;
+      if (action.payload.policy === null) {
+        delete link.wanQosPolicy;
+        return;
+      }
+      if (!link.wanQosPolicy) {
+        link.wanQosPolicy = {
+          guaranteedClasses: [],
+          suppressedClasses: [],
+          ipsecEncap: false,
+          dscpCopyToOuter: true,
+        };
+      }
+      Object.assign(link.wanQosPolicy, action.payload.policy);
     },
 
     // ── Fase 1 — updateLayerTier / updateNodeZone (exports aqui por ordem) ─
@@ -931,7 +1760,8 @@ export const networkSlice = createSlice({
         width: 416,
         height: 180,
         minWidth: 286,
-        maxWidth: 884,
+        // Sem teto fixo de largura; validacao dinamica ocorre no resize.
+        maxWidth: Number.MAX_SAFE_INTEGER,
         minHeight: 180,
         maxHeight: 300,
         tier,
@@ -962,15 +1792,25 @@ export const networkSlice = createSlice({
     },
     resizeLayer: (
       state,
-      action: PayloadAction<{ layerId: string; width: number; height: number }>,
+      action: PayloadAction<{
+        layerId: string;
+        width: number;
+        height: number;
+        maxWidth?: number;
+      }>,
     ) => {
       const layer = state.layers.find(
         (item) => item.id === action.payload.layerId,
       );
       if (!layer) return;
+      const dynamicMaxWidth =
+        typeof action.payload.maxWidth === 'number' &&
+        Number.isFinite(action.payload.maxWidth)
+          ? Math.max(layer.minWidth, action.payload.maxWidth)
+          : layer.maxWidth;
       layer.width = Math.max(
         layer.minWidth,
-        Math.min(layer.maxWidth, action.payload.width),
+        Math.min(dynamicMaxWidth, action.payload.width),
       );
       layer.height = Math.max(
         layer.minHeight,
@@ -1017,7 +1857,21 @@ export const networkSlice = createSlice({
         category,
         label: buildNodeLabel(category, siteId, layer.order, categoryCount),
         ip: nodeIp,
+        ipv6: buildNodeIpv6(
+          site.ipOctet,
+          layer.order,
+          category,
+          categoryCount,
+          network,
+        ),
         originalIp: buildNodeIp(
+          site.ipOctet,
+          layer.order,
+          category,
+          categoryCount,
+          network,
+        ),
+        originalIpv6: buildNodeIpv6(
           site.ipOctet,
           layer.order,
           category,
@@ -1031,6 +1885,8 @@ export const networkSlice = createSlice({
         x: position.x,
         y: position.y,
         description: 'Componente criado no Studio.',
+        // P14 — trust boundary padrão por categoria
+        qosTrust: DEFAULT_QOS_TRUST[category] ?? 'untrusted',
         techProfile: buildDefaultTechProfile(category, {
           layerOrder: layer.order,
           shouldBeGateway: shouldNodeBeGateway(
@@ -1059,7 +1915,9 @@ export const networkSlice = createSlice({
         category,
         label: `${category.toUpperCase()} ${categoryCount}`,
         ip: floatingIp,
+        ipv6: `fd00:200:1::${Math.max(1, Math.min(4095, nodeOrder)).toString(16)}`,
         originalIp: floatingIp,
+        originalIpv6: `fd00:200:1::${Math.max(1, Math.min(4095, nodeOrder)).toString(16)}`,
         hostCount: 1,
         hostAllocations: [{ id: nodeId, ip: floatingIp }],
         cidr: 30,
@@ -1114,6 +1972,24 @@ export const networkSlice = createSlice({
           needsAddressRefresh = true;
         }
       }
+      if (!isWan && typeof action.payload.changes.ipv6 === 'string') {
+        const layerNetworkId = node.layerId
+          ? state.layers.find((layer) => layer.id === node.layerId)?.networkId
+          : undefined;
+        const networkId = node.networkId ?? layerNetworkId;
+        const network = networkId
+          ? state.siteNetworks.find((n) => n.id === networkId)
+          : undefined;
+        const nextIpv6 = action.payload.changes.ipv6.trim();
+
+        if (network?.trafficPreference === 'ipv6-strict' && nextIpv6 === '') {
+          state.meta.persistWarning =
+            'Rede em modo IPv6 strict: o endereço IPv6 do nó não pode ser removido.';
+        } else {
+          node.ipv6 = nextIpv6 || undefined;
+          node.originalIpv6 = node.ipv6;
+        }
+      }
       if (!isWan && typeof action.payload.changes.hostCount === 'number') {
         node.hostCount = Math.max(
           1,
@@ -1161,6 +2037,9 @@ export const networkSlice = createSlice({
       }
 
       if (!isWan && needsAddressRefresh) {
+        if (isAccessPointL3Mode(node)) {
+          syncAccessPointVlanInterfacesByMode(state, node);
+        } else {
         const siteId = node.siteId;
         const targetVlan =
           node.vlans.length > 0 && siteId
@@ -1185,9 +2064,11 @@ export const networkSlice = createSlice({
             state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para reservar ${node.hostCount} IP(s) para ${node.label}.`;
           }
         }
+        }
       }
 
-      node.hostAllocations = buildNodeHostAllocations(node);
+      const usedIds = collectScopedUsedHostIds(state.nodes, node);
+      node.hostAllocations = buildNodeHostAllocations(node, { usedIds });
     },
     updateNodeTechField: (
       state,
@@ -1213,6 +2094,111 @@ export const networkSlice = createSlice({
       });
 
       profile.fields[action.payload.key] = action.payload.value;
+
+      if (node.category === 'access-point') {
+        const interfaceMode = String(
+          profile.fields.apInterfaceMode ?? 'l2-bridge',
+        );
+
+        if (
+          action.payload.key === 'apInterfaceMode' &&
+          interfaceMode === 'l2-bridge'
+        ) {
+          const managementVlan = String(
+            profile.fields.apManagementVlanId ?? '',
+          ).trim();
+          if (managementVlan === '' && (node.vlans ?? []).length > 0) {
+            profile.fields.apManagementVlanId = String(node.vlans[0]);
+          }
+        }
+      }
+
+      if (
+        node.category === 'router' &&
+        action.payload.key === 'routingMode'
+      ) {
+        const routingMode = String(action.payload.value ?? 'static');
+        if (routingMode === 'bgp' || routingMode === 'mixed') {
+          const dedupe = (items: string[]) =>
+            Array.from(
+              new Set(
+                items
+                  .map((item) => item.trim())
+                  .filter((item) => item !== ''),
+              ),
+            );
+
+          const site = node.siteId
+            ? state.sites.find((item) => item.id === node.siteId)
+            : undefined;
+
+          const directPeerIps = dedupe(
+            state.links
+              .filter((link) => link.from === node.id || link.to === node.id)
+              .map((link) => (link.from === node.id ? link.to : link.from))
+              .map(
+                (peerId) =>
+                  state.nodes.find((candidate) => candidate.id === peerId)?.ip ??
+                  '',
+              ),
+          );
+
+          const localSiteNetworks = dedupe(
+            state.siteNetworks
+              .filter((network) => network.siteId === node.siteId)
+              .map((network) => {
+                const address = buildNetworkAddress(
+                  network.addressFamily,
+                  network.thirdOctet,
+                  site?.ipOctet,
+                );
+                return `${address}/${network.cidr}`;
+              }),
+          );
+
+          const remoteSiteNetworks = dedupe(
+            state.siteNetworks
+              .filter((network) => network.siteId !== node.siteId)
+              .map((network) => {
+                const networkSite = state.sites.find(
+                  (item) => item.id === network.siteId,
+                );
+                const address = buildNetworkAddress(
+                  network.addressFamily,
+                  network.thirdOctet,
+                  networkSite?.ipOctet,
+                );
+                return `${address}/${network.cidr}`;
+              }),
+          );
+
+          const suggestedPrefixIn =
+            remoteSiteNetworks.length > 0
+              ? remoteSiteNetworks
+              : directPeerIps.map((ip) => `${ip}/32`);
+
+          const currentAsn = String(profile.fields.bgpAsn ?? '').trim();
+          if (!currentAsn && site?.ipOctet !== undefined) {
+            profile.fields.bgpAsn = String(65000 + site.ipOctet);
+          }
+
+          const currentNeighbors = String(profile.fields.bgpNeighbors ?? '').trim();
+          if (!currentNeighbors && directPeerIps.length > 0) {
+            profile.fields.bgpNeighbors = directPeerIps.join(', ');
+          }
+
+          const currentPrefixIn = String(profile.fields.bgpPrefixListIn ?? '').trim();
+          if (!currentPrefixIn && suggestedPrefixIn.length > 0) {
+            profile.fields.bgpPrefixListIn = suggestedPrefixIn.join(', ');
+          }
+
+          const currentPrefixOut = String(profile.fields.bgpPrefixListOut ?? '').trim();
+          if (!currentPrefixOut && localSiteNetworks.length > 0) {
+            profile.fields.bgpPrefixListOut = localSiteNetworks.join(', ');
+          }
+        }
+      }
+
       node.techProfile = normalizeTechProfile(node.category, profile, {
         layerOrder,
         shouldBeGateway: Boolean(shouldBeGateway),
@@ -1240,9 +2226,34 @@ export const networkSlice = createSlice({
           };
         });
       }
+
+      if (node.category === 'access-point') {
+        syncAccessPointVlanInterfacesByMode(state, node);
+
+        if (!isAccessPointL3Mode(node)) {
+          const managementVlanId = resolveAccessPointManagementVlanId(node);
+
+          if ((node.vlans ?? []).length > 0 && managementVlanId === null) {
+            state.meta.persistWarning =
+              'AP em modo L2 deve definir VLAN de gerenciamento.';
+          }
+
+          if (
+            managementVlanId !== null &&
+            !(node.vlans ?? []).includes(managementVlanId)
+          ) {
+            state.meta.persistWarning = `VLAN de gerenciamento ${managementVlanId} nao esta associada ao AP ${node.label}.`;
+          }
+        }
+      }
     },
     addLink: (state, action: PayloadAction<AddLinkPayload>) => {
-      const { from, to } = action.payload;
+      const normalized = normalizeLinkDirection(
+        state,
+        action.payload.from,
+        action.payload.to,
+      );
+      const { from, to } = normalized;
       if (from === to) return;
       const alreadyExists = state.links.some(
         (link) =>
@@ -1251,11 +2262,27 @@ export const networkSlice = createSlice({
       );
       if (alreadyExists) return;
 
+      const kind = inferLinkKind(state, from, to, action.payload.kind);
+      const defaultBidirectional = inferLinkBidirectionalDefault(
+        state.nodes,
+        from,
+        to,
+        kind,
+      );
+      const defaultDuplexMode = inferLinkDuplexModeDefault(
+        state.nodes,
+        from,
+        to,
+        kind,
+      );
+
       state.links.push({
         id: `link_${state.counters.link}`,
         from,
         to,
-        kind: inferLinkKind(state, from, to, action.payload.kind),
+        kind,
+        bidirectional: defaultBidirectional,
+        duplexMode: defaultDuplexMode,
       });
       state.counters.link += 1;
       state.aclRules = reconcileAclRules(state);
@@ -1335,6 +2362,42 @@ export const networkSlice = createSlice({
       const ruleId = `acl_manual_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
       const returnId = `acl_manual_ret_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
 
+      const sourceNode = state.nodes.find((node) => node.id === sourceNodeId);
+      const destinationNode = state.nodes.find(
+        (node) => node.id === destinationNodeId,
+      );
+      const linkedRule = state.links.find(
+        (link) =>
+          (link.from === sourceNodeId && link.to === destinationNodeId) ||
+          (link.from === destinationNodeId && link.to === sourceNodeId),
+      );
+
+      const qosSuggestion = suggestAclRuleQoS({
+        rule: {
+          action: action.payload.action,
+          service: action.payload.service,
+          protocol: action.payload.protocol,
+          natExempt: false,
+        },
+        linkKind: linkedRule?.kind,
+        linkBandwidthKbps: linkedRule?.wanQosPolicy?.totalBandwidthKbps,
+        sourceCategory: sourceNode?.category,
+        destinationCategory: destinationNode?.category,
+      });
+
+      const reverseQosSuggestion = suggestAclRuleQoS({
+        rule: {
+          action: action.payload.action,
+          service: action.payload.service,
+          protocol: action.payload.protocol,
+          natExempt: false,
+        },
+        linkKind: linkedRule?.kind,
+        linkBandwidthKbps: linkedRule?.wanQosPolicy?.totalBandwidthKbps,
+        sourceCategory: destinationNode?.category,
+        destinationCategory: sourceNode?.category,
+      });
+
       const newRule: AclRule = {
         id: ruleId,
         sourceNodeId,
@@ -1358,6 +2421,10 @@ export const networkSlice = createSlice({
         passthrough: false,
         natExempt: false,
         protocol: action.payload.protocol,
+        trafficClass: qosSuggestion.trafficClass,
+        dscpMark: qosSuggestion.dscpMark,
+        guaranteedBwKbps: qosSuggestion.guaranteedBwKbps,
+        maxBwKbps: qosSuggestion.maxBwKbps,
         // F — if bidirectional, link to auto-generated return rule
         returnRuleId: action.payload.bidirectional ? returnId : undefined,
       };
@@ -1389,6 +2456,10 @@ export const networkSlice = createSlice({
           passthrough: false,
           natExempt: false,
           protocol: action.payload.protocol,
+          trafficClass: reverseQosSuggestion.trafficClass,
+          dscpMark: reverseQosSuggestion.dscpMark,
+          guaranteedBwKbps: reverseQosSuggestion.guaranteedBwKbps,
+          maxBwKbps: reverseQosSuggestion.maxBwKbps,
           parentRuleId: ruleId,
           isReturnRule: true,
         };
@@ -1436,6 +2507,12 @@ export const networkSlice = createSlice({
       if (!link) return;
       if (typeof action.payload.changes.kind === 'string') {
         link.kind = action.payload.changes.kind;
+      }
+      if (typeof action.payload.changes.bidirectional === 'boolean') {
+        link.bidirectional = action.payload.changes.bidirectional;
+      }
+      if (typeof action.payload.changes.duplexMode === 'string') {
+        link.duplexMode = action.payload.changes.duplexMode;
       }
       if (typeof action.payload.changes.generateAcl === 'boolean') {
         link.generateAcl = action.payload.changes.generateAcl;
@@ -1655,12 +2732,23 @@ export const {
   updateSite,
   addSiteVlan,
   removeSiteVlan,
+  upsertDhcpScope,
+  removeDhcpScope,
   setVlanAssignmentMode,
   toggleNodeVlanAssignment,
   addSiteNetwork,
   removeSiteNetwork,
   addSubnet,
   removeSubnet,
+  addNodeVlanInterface,
+  removeNodeVlanInterface,
+  // P13–P17 — QoS
+  updateSiteVlanQos,
+  updateNodeQosTrust,
+  addQosQueue,
+  updateQosQueue,
+  removeQosQueue,
+  updateLinkWanQos,
   addLayer,
   removeLayer,
   updateLayerTier,

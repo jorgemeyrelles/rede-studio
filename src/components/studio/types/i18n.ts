@@ -40,6 +40,7 @@ export type StudioPageCopy = {
   printPdf: string;
   confirmPrint: string;
   printWarning: string;
+  printShowLinkDescriptions: string;
   exit: string;
   print: string;
   generatingPdf: string;
@@ -90,6 +91,10 @@ export type PdfReportCopy = {
   endIp: string;
   range: string;
   capacity: string;
+  item: string;
+  ipRange: string;
+  connections: string;
+  noElementsInVlan: string;
   componentsCount: string;
   configuredDevices: string;
   addressingConventions: string;
@@ -114,10 +119,28 @@ export type LegendPanelCopy = {
   networkNamePlaceholder: string;
   networkPurposeLabel: string;
   networkFamilyLabel: string;
+  networkStackLabel: string;
+  networkGatewayModeLabel: string;
+  networkDnsPolicyLabel: string;
+  networkTrafficPreferenceLabel: string;
+  networkTrafficIpv4Preferred: string;
+  networkTrafficBalanced: string;
+  networkTrafficIpv6Preferred: string;
+  networkTrafficIpv6Strict: string;
+  networkIpv6PrefixLabel: string;
+  networkIpv6PrefixPlaceholder: string;
+  networkReadinessLabel: string;
+  networkReadinessReady: string;
+  networkReadinessWarning: string;
+  networkReadinessCritical: string;
   networkOctetLabel: string;
   networkCidrLabel: string;
   networkConfirm: string;
   networkCancel: string;
+  /** P1 */
+  addLan: string;
+  addLevel: string;
+  lanLimitReached: string;
 };
 
 export type SiteVlanPanelCopy = {
@@ -125,7 +148,10 @@ export type SiteVlanPanelCopy = {
   createSiteFirst: string;
   vlanPlaceholder: string;
   vlanNamePlaceholder: string;
+  vlanNamePreset: string;
+  vlanNameCustomOption: string;
   addVlan: string;
+  addSubnet: string;
   noVlanSite: string;
   diagramModeOn: string;
   selectDiagram: string;
@@ -133,21 +159,44 @@ export type SiteVlanPanelCopy = {
   elementsSelected: string;
   noElementsSite: string;
   vlanTableBySite: string;
+  ipv6Prefix: string;
+  addressAllocation: string;
+  addressAllocationDhcpv4: string;
+  addressAllocationDhcpv6: string;
+  addressAllocationSlaac: string;
+  addressAllocationDual: string;
+  addressAllocationStaticIpv4: string;
+  addressAllocationStaticIpv6: string;
+  addressAllocationStaticDual: string;
+  addressAllocationProfile: string;
+  addressAllocationProfileDynamic: string;
+  addressAllocationProfileMixed: string;
+  addressAllocationProfileStatic: string;
   item: string;
   ipRange: string;
   type: string;
   connections: string;
   noElementsInVlan: string;
   footer: string;
+  /** P7 */
+  l2label: string;
+  l3label: string;
 };
 
 export type RouteFirewallCopy = {
   routeTableTitle: string;
+  vlanSubnetRouteTableTitle: string;
+  dhcpContainerTitle: string;
   type: string;
   destinationNetwork: string;
+  destinationNetworkIpv6: string;
+  subnetName: string;
   gateway: string;
+  gatewayIpv6: string;
+  gatewayNode: string;
   interface: string;
   emptyRoutes: string;
+  emptyVlanSubnetRoutes: string;
   otherIps: string;
   firewallTitle: string;
   action: string;
@@ -176,6 +225,36 @@ export type RouteFirewallCopy = {
   ipAddress: string;
   reserveSummary: string;
   reserveRange: string;
+  dhcpColumnSite: string;
+  dhcpColumnVlan: string;
+  dhcpColumnAllocation: string;
+  dhcpColumnProvider: string;
+  dhcpColumnServerRelay: string;
+  dhcpColumnPool: string;
+  dhcpColumnIpv6Policy: string;
+  dhcpColumnLease: string;
+  dhcpColumnDns: string;
+  dhcpColumnChangeRequired: string;
+  dhcpEmpty: string;
+  dhcpProviderNode: string;
+  dhcpProviderRelay: string;
+  dhcpProviderExternal: string;
+  dhcpChangeNone: string;
+  dhcpChangeStaticNoDhcp: string;
+  dhcpChangeCreateScope: string;
+  dhcpChangeSetDhcpServer: string;
+  dhcpChangeSetRelayNode: string;
+  dhcpChangeDefinePool: string;
+  dhcpDnsV4Placeholder: string;
+  dhcpDnsV6Placeholder: string;
+  dhcpActionApplyProposal: string;
+  dhcpActionRestoreDns: string;
+  dhcpActionRemoveScope: string;
+  dhcpSummaryTotal: string;
+  dhcpSummaryPending: string;
+  dhcpSummaryConfigured: string;
+  dhcpFilterPending: string;
+  dhcpFilterAll: string;
 };
 
 export type NetworkDiagramCopy = {
