@@ -149,6 +149,11 @@ export function suggestAclRuleQoS(params: {
   };
 }
 
+/** Convenção determinística do id da regra de ACL gerenciada (1 por link elegível). */
+export function managedAclRuleId(linkId: string): string {
+  return `acl_${linkId}`;
+}
+
 export function isAclEligibleLink(nodes: NodeItem[], link: LinkItem) {
   // If explicitly disabled via link inspector, skip
   if (link.generateAcl === false) return false;
@@ -389,7 +394,7 @@ export function reconcileAclRules(
 
     return normalizeAclRule(
       {
-        id: previousRule?.id ?? `acl_${link.id}`,
+        id: previousRule?.id ?? managedAclRuleId(link.id),
         linkId: link.id,
         sourceNodeId: link.from,
         destinationNodeId: link.to,

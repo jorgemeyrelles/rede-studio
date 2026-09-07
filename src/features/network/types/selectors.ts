@@ -78,6 +78,7 @@ export type FirewallRuleRow = {
   destinationVlanId?: number;
   destinationIp?: string;
   parentRuleId?: string;
+  linkId?: string;
   fwNatMode?: 'pat' | 'snat' | 'dnat' | 'hybrid' | 'none';
   ipsecAuthBadge?: 'PSK' | 'PKI' | 'EAP' | 'keypair' | '⚠ sem IKE';
 };

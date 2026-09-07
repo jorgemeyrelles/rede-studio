@@ -347,12 +347,6 @@ export const selectFirewallRules = createSelector(
                   ? 'PSK'
                   : undefined;
 
-      const swapVlanDirection = (value: string) => {
-        const match = value.match(/^O: (.*) \| D: (.*)$/);
-        if (!match) return value;
-        return `O: ${match[2]} | D: ${match[1]}`;
-      };
-
       const sourceAllocations =
         rule.sourceScope === 'vlan'
           ? getVlanHostAllocations(rule.sourceNodeId, rule.sourceVlanId)
@@ -441,6 +435,7 @@ export const selectFirewallRules = createSelector(
               destinationVlanId: rule.destinationVlanId,
               destinationIp: rule.destinationIp,
               parentRuleId: rule.parentRuleId,
+              linkId: rule.linkId,
               fwNatMode: fwNatMode !== 'none' ? fwNatMode : undefined,
               ipsecAuthBadge,
             };
@@ -451,29 +446,11 @@ export const selectFirewallRules = createSelector(
         },
       );
 
-      if (!effectiveBidirectional || rule.isReturnRule) {
-        return forwardRows;
-      }
-
-      const reverseRows = forwardRows.map((row) => ({
-        ...row,
-        id: `${row.id}#rev`,
-        origem: row.destino,
-        destino: row.origem,
-        vlan: swapVlanDirection(row.vlan),
-        sourceNodeId: row.destinationNodeId,
-        destinationNodeId: row.sourceNodeId,
-        sourceNodeSiteId: row.destinationNodeSiteId,
-        destinationNodeSiteId: row.sourceNodeSiteId,
-        sourceScope: row.destinationScope,
-        sourceVlanId: row.destinationVlanId,
-        sourceIp: row.destinationIp,
-        destinationScope: row.sourceScope,
-        destinationVlanId: row.sourceVlanId,
-        destinationIp: row.sourceIp,
-      }));
-
-      return [...forwardRows, ...reverseRows];
+      // A linha de volta de um link não-bidirecional agora é uma AclRule
+      // real (exceção manual gerada por updateLink, ver networkSlice.ts) —
+      // ela passa por este mesmo loop e vira sua própria linha, sem
+      // precisar duplicar nada aqui.
+      return forwardRows;
     });
   },
 );

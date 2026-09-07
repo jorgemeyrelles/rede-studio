@@ -11,6 +11,7 @@ import {
     setAclChildOverride,
     updateAclRule,
     updateAclRuleQoS,
+    updateLink,
     updateQosQueue,
     upsertDhcpScope,
 } from '../../features/network/networkSlice';
@@ -357,7 +358,7 @@ function RuleBadges({ rule }: { rule: FirewallRuleRow }) {
       )}
       {rule.isReturnRule && (
         <FlagBadge
-          tooltip="Regra de retorno gerada automaticamente para a regra bidirecional"
+          tooltip="Exceção de retorno — criada ao desligar o bidirecional da linha de ida. Remover esta linha religa o bidirecional."
           className="bg-purple-900/60 text-purple-300"
         >
           ←R
@@ -1224,34 +1225,32 @@ export default function RouteFirewallPanel({
               >
                 {hasQos ? '🔶' : '◇'} QoS
               </button>
-              {/* G — ↔ toggle bidirecional (topologia stateless) */}
-              {!isManual &&
-                !rule.isReturnRule &&
-                (rule.missingReturn || rule.bidirectional) && (
-                  <button
-                    type="button"
-                    title={
-                      rule.bidirectional
-                        ? 'Remover marcação bidirecional — o aviso de retorno reaparecerá'
-                        : 'Marcar como bidirecional — suprime aviso de regra de retorno'
-                    }
-                    onClick={() =>
-                      dispatch(
-                        updateAclRule({
-                          id: rule.aclRuleId,
-                          changes: { bidirectional: !rule.bidirectional },
-                        }),
-                      )
-                    }
-                    className={`ml-1 flex h-5 w-5 items-center justify-center rounded border text-[10px] transition ${
-                      rule.bidirectional
-                        ? 'border-sky-600/60 bg-sky-900/30 text-sky-300 hover:bg-red-900/30 hover:text-red-300 hover:border-red-600/60'
-                        : 'border-amber-700/60 bg-amber-900/20 text-amber-400 hover:bg-amber-800/40'
-                    }`}
-                  >
-                    ↔
-                  </button>
-                )}
+              {/* G — ↔ toggle bidirecional do link (1 linha ligado / cria exceção de retorno desligado) */}
+              {!isManual && !rule.isReturnRule && rule.linkId && (
+                <button
+                  type="button"
+                  title={
+                    rule.bidirectional
+                      ? 'Bidirecional — 1 linha cobre ida e volta. Desligar cria uma linha de exceção pra volta na seção manual.'
+                      : 'Direcional — existe uma linha de exceção de retorno na seção manual. Clique pra religar o bidirecional e removê-la.'
+                  }
+                  onClick={() =>
+                    dispatch(
+                      updateLink({
+                        id: rule.linkId!,
+                        changes: { bidirectional: !rule.bidirectional },
+                      }),
+                    )
+                  }
+                  className={`ml-1 flex h-5 w-5 items-center justify-center rounded border text-[10px] transition ${
+                    rule.bidirectional
+                      ? 'border-sky-600/60 bg-sky-900/30 text-sky-300 hover:bg-red-900/30 hover:text-red-300 hover:border-red-600/60'
+                      : 'border-slate-700 bg-slate-800/40 text-slate-500 hover:bg-sky-900/20 hover:text-sky-400 hover:border-sky-700/60'
+                  }`}
+                >
+                  ↔
+                </button>
+              )}
               {isManual && (
                 <div className="flex items-center gap-0.5">
                   {/* H — drag handle */}

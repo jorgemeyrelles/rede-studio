@@ -310,7 +310,10 @@ export default function LinkInspectorTooltip({
             </label>
 
             {/* Direção do link */}
-            <label className="flex items-center gap-2">
+            <label
+              className="flex items-center gap-2"
+              title="Ligado: 1 linha de ida cobre os dois sentidos. Desligado: cria uma linha de exceção de retorno na seção manual da tabela de firewall (apagá-la religa o bidirecional)."
+            >
               <input
                 type="checkbox"
                 checked={activeLink.bidirectional ?? true}
@@ -572,7 +575,9 @@ export default function LinkInspectorTooltip({
 
                     <span className="text-slate-500">Bidirecional</span>
                     <span className="text-slate-200">
-                      {(activeLink.bidirectional ?? true) ? 'Sim' : 'Não'}
+                      {(activeLink.bidirectional ?? true)
+                        ? 'Sim — 1 linha cobre os dois sentidos'
+                        : 'Não — exceção de retorno na seção manual'}
                     </span>
 
                     <span className="text-slate-500">Duplex</span>

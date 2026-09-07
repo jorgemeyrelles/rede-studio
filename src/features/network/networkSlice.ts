@@ -78,6 +78,7 @@ import {
     makeLayerId,
     makeNodeId,
     makeSiteId,
+    managedAclRuleId,
     networkRangeBounds,
     normalizeAclRule,
     normalizeNodeVlansForCatalog,
@@ -2479,6 +2480,24 @@ export const networkSlice = createSlice({
       state.aclRules = state.aclRules.filter(
         (r) => r.id !== action.payload.id && r.id !== returnId,
       );
+
+      // G — apagar a linha de exceção de retorno de um link de topologia
+      // religa o bidirecional do link automaticamente
+      if (rule.isReturnRule && rule.parentRuleId) {
+        const parentRule = state.aclRules.find(
+          (r) => r.id === rule.parentRuleId,
+        );
+        if (parentRule?.managed && parentRule.linkId) {
+          const link = state.links.find((l) => l.id === parentRule.linkId);
+          if (link) {
+            link.bidirectional = true;
+            if (parentRule.returnRuleId === rule.id) {
+              parentRule.returnRuleId = undefined;
+            }
+            state.aclRules = reconcileAclRules(state);
+          }
+        }
+      }
     },
     reorderCustomAclRule: (
       state,
@@ -2509,7 +2528,67 @@ export const networkSlice = createSlice({
         link.kind = action.payload.changes.kind;
       }
       if (typeof action.payload.changes.bidirectional === 'boolean') {
-        link.bidirectional = action.payload.changes.bidirectional;
+        const previousBidirectional = link.bidirectional ?? true;
+        const nextBidirectional = action.payload.changes.bidirectional;
+        link.bidirectional = nextBidirectional;
+
+        if (previousBidirectional !== nextBidirectional) {
+          const forwardId = managedAclRuleId(link.id);
+          const forwardRule = state.aclRules.find((r) => r.id === forwardId);
+
+          if (!nextBidirectional) {
+            // G — desligou o bidirecional: cria a linha manual de exceção de retorno
+            const exceptionId = `acl_manual_ret_topology_${link.id}`;
+            const alreadyExists = state.aclRules.some(
+              (r) => r.id === exceptionId,
+            );
+            if (!alreadyExists) {
+              const exceptionRule: AclRule = {
+                id: exceptionId,
+                linkId: link.id,
+                sourceNodeId: link.to,
+                destinationNodeId: link.from,
+                sourceScope: 'node',
+                destinationScope: 'node',
+                action: forwardRule?.action ?? 'ALLOW',
+                service: forwardRule?.service ?? 'QUALQUER',
+                enabled: true,
+                managed: false,
+                priority:
+                  state.aclRules
+                    .filter((r) => !r.managed)
+                    .reduce((max, r) => Math.max(max, r.priority ?? 0), 0) +
+                  10,
+                source: 'manual',
+                stateful: forwardRule?.stateful ?? true,
+                bidirectional: false,
+                passthrough: false,
+                natExempt: false,
+                protocol: forwardRule?.protocol ?? 'any',
+                parentRuleId: forwardId,
+                isReturnRule: true,
+              };
+              state.aclRules.push(
+                normalizeAclRule(exceptionRule, state.nodes, state.siteVlans),
+              );
+              if (forwardRule) forwardRule.returnRuleId = exceptionId;
+            }
+          } else {
+            // G — religou o bidirecional: remove a linha manual de exceção associada
+            const removed = state.aclRules.find(
+              (r) =>
+                !r.managed && r.isReturnRule && r.parentRuleId === forwardId,
+            );
+            if (removed) {
+              state.aclRules = state.aclRules.filter(
+                (r) => r.id !== removed.id,
+              );
+              if (forwardRule?.returnRuleId === removed.id) {
+                forwardRule.returnRuleId = undefined;
+              }
+            }
+          }
+        }
       }
       if (typeof action.payload.changes.duplexMode === 'string') {
         link.duplexMode = action.payload.changes.duplexMode;
