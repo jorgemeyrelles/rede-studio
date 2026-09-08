@@ -9,11 +9,14 @@ import './styles/global.css';
 
 const rootEl = document.getElementById('root') as HTMLElement;
 
+// Dev: navegar direto pra uma URL "amigável" (ex.: /pt/studio/abc) sem
+// hash não é reconhecido pelo HashRouter — reescreve pra .../#/pt/studio/abc
+// antes do React montar. Generalizado (não mais só /studio e /slides)
+// porque agora toda rota vive sob um prefixo de idioma (/:lang/...).
 if (
   import.meta.env.DEV &&
   !window.location.hash &&
-  (window.location.pathname === '/studio' ||
-    window.location.pathname === '/slides')
+  window.location.pathname !== '/'
 ) {
   window.history.replaceState(
     null,

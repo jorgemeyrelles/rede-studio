@@ -27,7 +27,7 @@ export default function SlidesPage() {
     const resolvedSlide = getSlideIdFromSearch(location.search);
 
     if (rawSlide !== resolvedSlide) {
-      navigate(`/slides?slide=${resolvedSlide}`, { replace: true });
+      navigate(`?slide=${resolvedSlide}`, { replace: true });
       return;
     }
 

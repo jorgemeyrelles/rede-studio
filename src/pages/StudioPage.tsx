@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { requestImmediateSave } from '../app/store';
 import CertificatePanel from '../components/studio/CertificatePanel';
 import CustomServicePanel from '../components/studio/CustomServicePanel';
 import LegendPanel from '../components/studio/LegendPanel';
@@ -18,10 +19,6 @@ import {
   selectFirewallRules,
   selectRouteTable,
 } from '../features/network/selectors';
-import { servicesRoutes } from '../services';
-
-// Metodo legado direto (mantido como referencia):
-// import { clearNetworkState } from '../features/network/persistence';
 
 export default function StudioPage({ language }: StudioPageProps) {
   const dispatch = useAppDispatch();
@@ -45,8 +42,8 @@ export default function StudioPage({ language }: StudioPageProps) {
   }
 
   function confirmReset() {
-    servicesRoutes.persistence.clearNetworkState();
-    // clearNetworkState();
+    // O autosave (ver app/store.ts) grava esse estado resetado no slot
+    // do projeto ativo sozinho — não precisa limpar storage aqui.
     dispatch(resetNetworkState());
     setIsResetModalOpen(false);
   }
@@ -129,17 +126,51 @@ export default function StudioPage({ language }: StudioPageProps) {
 
         <section className="space-y-3">
           <div className="rounded-lg border border-[#315072] bg-[#0b172a]/75 px-4 py-3">
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
-                {copy.proposalTitle}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+                  {copy.proposalTitle}
+                </div>
+                <h2 className="mt-1 text-lg font-semibold text-slate-100">
+                  {copy.diagramTitle}
+                  {/* <span className="ml-2 text-sm font-medium text-cyan-300">
+                    Matriz | Tunelamento | Filial
+                  </span> */}
+                </h2>
+                <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
               </div>
-              <h2 className="mt-1 text-lg font-semibold text-slate-100">
-                {copy.diagramTitle}
-                {/* <span className="ml-2 text-sm font-medium text-cyan-300">
-                  Matriz | Tunelamento | Filial
-                </span> */}
-              </h2>
-              <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
+
+              <button
+                type="button"
+                onClick={() => dispatch(requestImmediateSave())}
+                title={
+                  meta.lastSavedAt
+                    ? new Date(meta.lastSavedAt).toLocaleString(language)
+                    : copy.notSavedYet
+                }
+                className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition ${
+                  meta.persistWarning
+                    ? 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                    : meta.saveStatus === 'saving'
+                      ? 'border-sky-500/60 bg-sky-500/10 text-sky-300'
+                      : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                }`}
+              >
+                {meta.persistWarning ? (
+                  <span>⚠</span>
+                ) : meta.saveStatus === 'saving' ? (
+                  <span className="animate-spin">⟳</span>
+                ) : (
+                  <span>💾</span>
+                )}
+                {meta.persistWarning
+                  ? copy.warning
+                  : meta.saveStatus === 'saving'
+                    ? copy.saving
+                    : meta.lastSavedAt
+                      ? `${copy.saved} ${new Date(meta.lastSavedAt).toLocaleTimeString(language)}`
+                      : copy.notSavedYet}
+              </button>
             </div>
           </div>
 
@@ -177,14 +208,6 @@ export default function StudioPage({ language }: StudioPageProps) {
             <div>
               {copy.localPersistence}:{' '}
               <span className="font-semibold text-emerald-300">JSON</span>
-            </div>
-            <div>
-              {copy.lastSave}:{' '}
-              <span className="font-semibold text-cyan-300">
-                {meta.lastSavedAt
-                  ? new Date(meta.lastSavedAt).toLocaleString(language)
-                  : copy.notSavedYet}
-              </span>
             </div>
             {meta.persistWarning && (
               <div className="text-amber-300">

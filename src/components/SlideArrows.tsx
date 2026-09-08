@@ -35,7 +35,7 @@ export default function SlideArrows() {
     <div className="slide-arrows" aria-label="Navegação entre slides">
       <Link
         className={`slide-arrow ${!prevSlide ? "disabled" : ""}`}
-        to={prevSlide ? `/slides?slide=${prevSlide}` : location.pathname + location.search}
+        to={prevSlide ? `?slide=${prevSlide}` : location.pathname + location.search}
         aria-disabled={!prevSlide}
         aria-label="Slide anterior"
         onClick={(event) => {
@@ -48,7 +48,7 @@ export default function SlideArrows() {
       </Link>
       <Link
         className={`slide-arrow ${!nextSlide ? "disabled" : ""}`}
-        to={nextSlide ? `/slides?slide=${nextSlide}` : location.pathname + location.search}
+        to={nextSlide ? `?slide=${nextSlide}` : location.pathname + location.search}
         aria-disabled={!nextSlide}
         aria-label="Próximo slide"
         onClick={(event) => {

@@ -142,7 +142,7 @@ function buildDefaultDhcpScopeForVlan(
   };
 }
 
-const initialState: NetworkState = {
+export const networkInitialState: NetworkState = {
   sites: [],
   layers: [],
   nodes: [
@@ -198,6 +198,7 @@ const initialState: NetworkState = {
     projectName: 'Projeto Rede Interativa',
     persistWarning: null,
     lastSavedAt: null,
+    saveStatus: 'idle',
   },
 };
 
@@ -1026,10 +1027,10 @@ function normalizeState(input: NetworkState): NetworkState {
 
 export const networkSlice = createSlice({
   name: 'network',
-  initialState,
+  initialState: networkInitialState,
   reducers: {
     resetNetworkState: () => ({
-      ...initialState,
+      ...networkInitialState,
       sites: [],
       layers: [],
       links: [],
@@ -1046,10 +1047,10 @@ export const networkSlice = createSlice({
       fwPolicies: [],
       natRules: [],
       activeSessions: [],
-      nodes: [...initialState.nodes],
-      counters: { ...initialState.counters },
-      ui: { ...initialState.ui, activeLinkId: null, vlanAssignment: null },
-      meta: { ...initialState.meta },
+      nodes: [...networkInitialState.nodes],
+      counters: { ...networkInitialState.counters },
+      ui: { ...networkInitialState.ui, activeLinkId: null, vlanAssignment: null },
+      meta: { ...networkInitialState.meta },
     }),
     hydrateNetworkState: (_state, action: PayloadAction<NetworkState>) => {
       return normalizeState(action.payload);
@@ -2615,10 +2616,18 @@ export const networkSlice = createSlice({
     },
     setPersistWarning: (state, action: PayloadAction<string | null>) => {
       state.meta.persistWarning = action.payload;
+      state.meta.saveStatus = 'idle';
+    },
+    setSaveStatus: (
+      state,
+      action: PayloadAction<NetworkState['meta']['saveStatus']>,
+    ) => {
+      state.meta.saveStatus = action.payload;
     },
     markSaved: (state, action: PayloadAction<string>) => {
       state.meta.lastSavedAt = action.payload;
       state.meta.persistWarning = null;
+      state.meta.saveStatus = 'saved';
     },
 
     // ── Fase 3 — CustomService ──────────────────────────────────────────────
@@ -2852,6 +2861,7 @@ export const {
   setActiveLinkId,
   setZoom,
   setPersistWarning,
+  setSaveStatus,
   markSaved,
   hydrateNetworkState,
   // Fase 3

@@ -1,4 +1,7 @@
-export type StudioLanguage = 'pt' | 'en' | 'es';
+import type { AppLanguage } from '../../../types/i18n';
+
+/** Alias — o conjunto de idiomas é definido em `src/types/i18n.ts` (compartilhado com rotas/auth). */
+export type StudioLanguage = AppLanguage;
 
 export type LanguageOption = {
   value: StudioLanguage;
@@ -29,8 +32,9 @@ export type StudioPageCopy = {
   infoHint: string;
   dashboardTitle: string;
   localPersistence: string;
-  lastSave: string;
   notSavedYet: string;
+  saving: string;
+  saved: string;
   warning: string;
   resetData: string;
   confirmReset: string;

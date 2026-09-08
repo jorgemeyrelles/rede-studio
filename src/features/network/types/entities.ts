@@ -598,5 +598,6 @@ export type NetworkState = {
     projectName: string;
     persistWarning: string | null;
     lastSavedAt: string | null;
+    saveStatus: 'idle' | 'saving' | 'saved';
   };
 };
