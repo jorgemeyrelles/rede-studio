@@ -4,8 +4,11 @@ import { Provider } from 'react-redux';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { store } from './app/store';
+import { initClarity } from './services/observability/clarity';
 import './styles/tailwind.css';
 import './styles/global.css';
+
+initClarity();
 
 const rootEl = document.getElementById('root') as HTMLElement;
 

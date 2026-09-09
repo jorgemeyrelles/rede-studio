@@ -37,7 +37,7 @@ export default function LoginModal() {
     <Modal onClose={close}>
       <form
         onSubmit={handleSubmit}
-        className="relative flex w-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900 p-8"
+        className="relative flex w-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900 p-6"
       >
         <button
           type="button"

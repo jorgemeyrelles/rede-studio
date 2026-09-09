@@ -5,7 +5,11 @@ import {
     type Middleware,
     type UnknownAction,
 } from '@reduxjs/toolkit';
-import authReducer, { hydrateSession } from '../features/auth/authSlice';
+import authReducer, {
+    hydrateSession,
+    loginUser,
+    registerUser,
+} from '../features/auth/authSlice';
 import networkReducer, {
     markSaved,
     setPersistWarning,
@@ -14,6 +18,7 @@ import networkReducer, {
 import type { NetworkState } from '../features/network/types';
 import projectsReducer from '../features/projects/projectsSlice';
 import { servicesRoutes } from '../services';
+import { identifyClarityUser } from '../services/observability/clarity';
 
 /** Dispara o save do projeto ativo imediatamente, sem esperar o debounce. */
 export const requestImmediateSave = createAction('network/requestImmediateSave');
@@ -138,6 +143,28 @@ const autosaveMiddleware: Middleware =
     return result;
   };
 
+// Correlaciona gravações de sessão do Clarity com o usuário autenticado.
+// Middleware (não lógica dentro do authSlice) pelo mesmo motivo do
+// autosave: side-effect de rede/browser não pertence a um reducer puro.
+const CLARITY_IDENTIFY_ACTIONS = new Set([
+  loginUser.fulfilled.type,
+  registerUser.fulfilled.type,
+  hydrateSession.fulfilled.type,
+]);
+
+const clarityMiddleware: Middleware = () => (next) => (action) => {
+  const result = next(action);
+  const typedAction = action as { type?: string; payload?: { email?: string } | null };
+  if (
+    typedAction.type &&
+    CLARITY_IDENTIFY_ACTIONS.has(typedAction.type) &&
+    typedAction.payload?.email
+  ) {
+    identifyClarityUser(typedAction.payload.email);
+  }
+  return result;
+};
+
 export const store = configureStore({
   reducer: {
     network: networkReducer,
@@ -145,7 +172,7 @@ export const store = configureStore({
     projects: projectsReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(autosaveMiddleware),
+    getDefaultMiddleware().concat(autosaveMiddleware, clarityMiddleware),
 });
 
 store.dispatch(hydrateSession());
