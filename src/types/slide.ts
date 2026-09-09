@@ -15,7 +15,11 @@ export type SlideId =
   | 's13'
   | 's14'
   | 's15'
-  | 's16';
+  | 's16'
+  | 's17'
+  | 's18'
+  | 's19'
+  | 's20';
 
 /** Cor da barra lateral de cada slide */
 export type SlideBarColor =

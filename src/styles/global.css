@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap');
 
 :root {
   --bg: #0a0e1a;
@@ -13,13 +13,24 @@
   --purple: #a855f7;
   --dim: #4a6080;
   --text: #c8d8f0;
-  --mono: "Share Tech Mono", monospace;
-  --sans: "Barlow", sans-serif;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'Barlow', sans-serif;
 }
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Remove spinners visuais de inputs numéricos */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 html,
 body {
@@ -29,6 +40,30 @@ body {
 }
 body {
   padding: 30px 20px 60px;
+}
+
+/* ── SCROLLBAR DA PÁGINA ── */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #0ea5e9 #060d19;
+}
+html::-webkit-scrollbar {
+  width: 8px;
+}
+html::-webkit-scrollbar-track {
+  background: #060d19;
+  border-left: 1px solid #0f2040;
+}
+html::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #0369a1 0%, #0ea5e9 50%, #22d3ee 100%);
+  border-radius: 999px;
+  border: 1px solid #38bdf8;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0ea5e9 0%, #22d3ee 50%, #67e8f9 100%);
+}
+html::-webkit-scrollbar-corner {
+  background: #060d19;
 }
 
 /* ── CORPO (Diagrama s51) ── */
@@ -710,7 +745,7 @@ h1 {
   gap: 6px;
 }
 .sc-item::before {
-  content: "▸";
+  content: '▸';
   color: var(--cyan);
   flex-shrink: 0;
   margin-top: 1px;
@@ -1179,6 +1214,35 @@ tr:hover td {
   color: var(--text);
   line-height: 1.6;
 }
+
+/* ── THEME SCROLLBAR (dashboard) ── */
+.theme-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #0ea5e9 #0a1525;
+}
+
+.theme-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-track {
+  background: #0a1525;
+  border-radius: 999px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #0369a1 0%, #0ea5e9 50%, #22d3ee 100%);
+  border-radius: 999px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0ea5e9 0%, #22d3ee 50%, #67e8f9 100%);
+}
+
+.theme-scrollbar::-webkit-scrollbar-corner {
+  background: #0a1525;
+}
 .vpn-step-text strong {
   color: var(--yellow);
 }
@@ -1351,7 +1415,7 @@ tr:hover td {
   line-height: 1.5;
 }
 .cc-item::before {
-  content: "✔";
+  content: '✔';
   color: var(--green);
   flex-shrink: 0;
 }
@@ -1549,8 +1613,8 @@ hr.slide-hr {
 .gojs-icon-tooltip {
   position: absolute;
   z-index: 101;
-  min-width: 220px;
-  max-width: 260px;
+  min-width: 317px;
+  max-width: 374px;
   background: #050d19;
   border: 1px solid #2a4b76;
   border-radius: 8px;
@@ -1620,8 +1684,8 @@ hr.slide-hr {
   border-radius: 10px;
   padding: 12px 14px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
-  min-width: 270px;
-  max-width: 320px;
+  min-width: 389px;
+  max-width: 461px;
 }
 .gojs-tooltip-header {
   display: flex;
@@ -1667,12 +1731,20 @@ hr.slide-hr {
 }
 .gojs-tooltip-body {
   --gojs-tooltip-scroll-track: rgba(20, 42, 66, 0.75);
-  --gojs-tooltip-scroll-thumb: linear-gradient(180deg, #5d90c4 0%, #3d6f9f 100%);
-  --gojs-tooltip-scroll-thumb-hover: linear-gradient(180deg, #76aae0 0%, #4a82b8 100%);
+  --gojs-tooltip-scroll-thumb: linear-gradient(
+    180deg,
+    #5d90c4 0%,
+    #3d6f9f 100%
+  );
+  --gojs-tooltip-scroll-thumb-hover: linear-gradient(
+    180deg,
+    #76aae0 0%,
+    #4a82b8 100%
+  );
   display: flex;
   flex-direction: column;
   gap: 7px;
-  max-height: 245px;
+  max-height: 350px;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;

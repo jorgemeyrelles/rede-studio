@@ -12,7 +12,7 @@ export default function S10VPN() {
           VPN — <span>Site-to-Site &amp; Acesso Remoto</span>
         </div>
         <div className="slide-subtitle">
-          IPsec/IKEv2 · SSL-VPN · Autenticação por certificados digitais
+          MPLS primario + VPN IPsec/IKEv2 de contingencia · SSL-VPN para acesso remoto
         </div>
 
         <div className="vpn-flow" style={{ marginBottom: "16px" }}>
@@ -34,7 +34,7 @@ export default function S10VPN() {
                 color: "var(--yellow)",
               }}
             >
-              IP WAN: 200.10.1.1
+              MPLS: 203.0.113.1 · Backup: 198.51.100.1
             </div>
             <div
               style={{
@@ -43,7 +43,7 @@ export default function S10VPN() {
                 color: "var(--dim)",
               }}
             >
-              Túnel local: 10.10.0.1
+              Peer VPN backup: 198.51.100.5
             </div>
             <div
               style={{
@@ -52,7 +52,7 @@ export default function S10VPN() {
                 color: "var(--dim)",
               }}
             >
-              Rede local: 10.0.1.0/24
+              Rede local: 10.10.0.0/16
             </div>
             <hr style={{ borderColor: "#1a3a6a", margin: "8px 0" }} />
             <div
@@ -73,19 +73,22 @@ export default function S10VPN() {
                 Certificado X.509
               </strong>
               <br />
+              Hash:{" "}
+              <strong style={{ color: "var(--orange)" }}>SHA-384</strong>
+              <br />
               DH Group:{" "}
               <strong style={{ color: "var(--purple)" }}>
-                Group 14 (2048-bit)
+                Group 20
               </strong>
             </div>
           </div>
           <div className="vpn-arrow-col">
             <div style={{ fontSize: "18px" }}>↔️</div>
             <div className="vpn-flow-label">
-              Túnel Criptografado
+              IPsec de Contingencia
               <br />
               <span style={{ fontFamily: "var(--mono)", fontSize: "7px" }}>
-                10.10.0.0/30
+                198.51.100.0/30
               </span>
             </div>
           </div>
@@ -107,7 +110,7 @@ export default function S10VPN() {
                 color: "var(--yellow)",
               }}
             >
-              IP WAN: 200.20.1.1
+              MPLS: 203.0.113.5 · Backup: 198.51.100.5
             </div>
             <div
               style={{
@@ -116,7 +119,7 @@ export default function S10VPN() {
                 color: "var(--dim)",
               }}
             >
-              Túnel local: 10.10.0.2
+              Peer VPN backup: 198.51.100.1
             </div>
             <div
               style={{
@@ -125,7 +128,7 @@ export default function S10VPN() {
                 color: "var(--dim)",
               }}
             >
-              Rede local: 10.0.2.0/25
+              Rede local: /24, /25, /26 e /28 (dimensionadas)
             </div>
             <hr style={{ borderColor: "#0f3a22", margin: "8px 0" }} />
             <div
@@ -146,9 +149,12 @@ export default function S10VPN() {
                 Certificado X.509
               </strong>
               <br />
+              Hash:{" "}
+              <strong style={{ color: "var(--orange)" }}>SHA-384</strong>
+              <br />
               DH Group:{" "}
               <strong style={{ color: "var(--purple)" }}>
-                Group 14 (2048-bit)
+                Group 20
               </strong>
             </div>
           </div>

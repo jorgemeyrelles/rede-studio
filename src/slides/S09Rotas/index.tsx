@@ -13,7 +13,7 @@ export default function S09Rotas() {
           Tabela de <span>Rotas</span>
         </div>
         <div className="slide-subtitle">
-          Rotas estáticas e diretas em cada roteador de borda
+          Rotas diretas e estaticas com preferencia MPLS e contingencia VPN por metrica
         </div>
         <div className="route-cols">
           <div className="route-block">
@@ -47,7 +47,7 @@ export default function S09Rotas() {
           <span style={{ color: "var(--yellow)" }}>■ Estática</span> = rota
           configurada manualmente pelo administrador &nbsp;|&nbsp;
           <span style={{ color: "var(--orange)" }}>■ Default</span> = rota
-          padrão para todo tráfego não correspondido (next hop = ISP)
+          padrao para trafego nao correspondido (MPLS metrica 10, backup metrica 20)
         </div>
       </div>
     </div>

@@ -1,43 +1,56 @@
-import NavBar from './components/NavBar';
-import SlideArrows from './components/SlideArrows';
-import S01Capa from './slides/S01Capa';
-import S02Agenda from './slides/S02Agenda';
-import S03Escopo from './slides/S03Escopo';
-import S04TopologiaLogica from './slides/S04TopologiaLogica';
-import S05TopologiaFisica from './slides/S05TopologiaFisica';
-import S06Enderecamento from './slides/S06Enderecamento';
-import S07VLANs from './slides/S07VLANs';
-import S08Diagramas from './slides/S08Diagramas';
-import S09Rotas from './slides/S09Rotas';
-import S10VPN from './slides/S10VPN';
-import S11Firewall from './slides/S11Firewall';
-import S12Seguranca from './slides/S12Seguranca';
-import S13SOW from './slides/S13SOW';
-import S14Encerramento from './slides/S14Encerramento';
-import S15PropostaGojs from './slides/S15PropostaGojs';
-import S16EquipamentosRecomendados from './slides/S16EquipamentosRecomendados';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import LanguageLayout from './app/routing/LanguageLayout';
+import RequireAuth from './app/routing/RequireAuth';
+import RequireGuest from './app/routing/RequireGuest';
+import RootRedirect from './app/routing/RootRedirect';
+import AppShellLayout from './components/AppShellLayout';
+import LandingPage from './pages/LandingPage';
+import LoginModal from './pages/LoginModal';
+import ProjectsPage from './pages/ProjectsPage';
+import RegisterModal from './pages/RegisterModal';
+// Fase 8 (sprint contas/projetos): acesso à apresentação de slides
+// desativado — o app agora é só o Studio, logado. Código de
+// SlidesPage/NavBar/SlideArrows permanece no repo, só sem rota.
+// import SlidesPage from './pages/SlidesPage';
+import StudioProjectLoader from './pages/StudioProjectLoader';
 
 export default function App() {
+  // Bloqueia ↑/↓ em todos os inputs numéricos do app
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const t = e.target as HTMLElement;
+      if (t instanceof HTMLInputElement && t.type === 'number') {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, []);
+
   return (
-    <>
-      <NavBar />
-      <SlideArrows />
-      <S01Capa />
-      <S02Agenda />
-      <S03Escopo />
-      <S04TopologiaLogica />
-      <S05TopologiaFisica />
-      <S06Enderecamento />
-      <S07VLANs />
-      <S08Diagramas />
-      <S09Rotas />
-      <S10VPN />
-      <S11Firewall />
-      <S12Seguranca />
-      <S13SOW />
-      <S14Encerramento />
-      <S15PropostaGojs />
-      <S16EquipamentosRecomendados />
-    </>
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path=":lang" element={<LanguageLayout />}>
+        <Route element={<RequireGuest />}>
+          <Route element={<LandingPage />}>
+            {/* login/register renderizam como modal sobre a Landing (ver LandingPage's Outlet) */}
+            <Route index element={null} />
+            <Route path="login" element={<LoginModal />} />
+            <Route path="register" element={<RegisterModal />} />
+          </Route>
+        </Route>
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShellLayout />}>
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="studio/:projectId" element={<StudioProjectLoader />} />
+            {/* <Route path="slides" element={<SlidesPage />} /> */}
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="." replace />} />
+      </Route>
+      <Route path="*" element={<RootRedirect />} />
+    </Routes>
   );
 }

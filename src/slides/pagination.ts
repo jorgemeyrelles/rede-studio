@@ -17,6 +17,10 @@ export const SLIDE_ORDER: SlideId[] = [
   's14',
   's15',
   's16',
+  's17',
+  's18',
+  's19',
+  's20',
 ];
 
 export const TOTAL_SLIDES = SLIDE_ORDER.length;

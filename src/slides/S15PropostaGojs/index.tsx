@@ -8,22 +8,21 @@ export default function S15PropostaGojs() {
       <div className="slide-bar purple"></div>
       <div className="slide-number">{getSlidePagination('s15')}</div>
       <div className="slide-body">
-        <div className="slide-tag">Proposta DEV - JS</div>
+        <div className="slide-tag">Diagrama Integrado - GoJS</div>
         <div className="slide-title">
-          Diagrama logico unificado <span>Matriz | Tunelamento | Filial</span>
+          Topologia unificada <span>Matriz | WAN | Filial</span>
         </div>
         <div className="slide-subtitle">
-          Clique na seta no canto superior direito de cada icone para expandir
-          dados de IP e VLAN.
+          Visual interativo com caminho primario MPLS e contingencia IPsec.
         </div>
 
         <div className="gojs-proposal-grid">
           <GojsLogicalDiagram
-            cardTitle="Logico - Matriz x Filial com tunelamento central"
-            cardSubtitle="Cada ativo possui um expander: clique na seta para ver Site, IP, VLAN e contexto."
-            ariaLabel="Diagrama logico com GoJS"
-            tooltipWidth={300}
-            tooltipHeight={170}
+            cardTitle="Arquitetura logica corporativa"
+            cardSubtitle="Clique no icone de informacao para visualizar IP, VLAN e contexto operacional."
+            ariaLabel="Diagrama logico Matriz e Filial"
+            tooltipWidth={320}
+            tooltipHeight={188}
           />
         </div>
 

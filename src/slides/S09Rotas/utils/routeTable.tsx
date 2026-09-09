@@ -5,7 +5,7 @@ interface RouteTableProps {
   rows: RouteEntry[]
 }
 
-const HEADER_COLUMNS = ['Tipo', 'Destino', 'Máscara', 'Gateway', 'Interface']
+const HEADER_COLUMNS = ['Tipo', 'Destino', 'Máscara', 'Gateway', 'Métrica', 'Interface']
 
 export function RouteTable({ rows }: RouteTableProps) {
   return (
@@ -24,6 +24,7 @@ export function RouteTable({ rows }: RouteTableProps) {
             <td className="tc-ip">{r.destination}</td>
             <td className="tc-mask">{r.mask}</td>
             <td className="tc-gw">{r.gateway}</td>
+            <td className="tc-mask">{r.metric}</td>
             <td style={{ color: r.ifaceColor }}>{r.iface}</td>
           </tr>
         ))}

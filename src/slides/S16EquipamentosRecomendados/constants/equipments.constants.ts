@@ -1,5 +1,9 @@
 import type { Equipment } from '../types';
 
+function getPublicAssetPath(path: string) {
+  return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+}
+
 // Equipamentos CISCO recomendados para Matriz SP
 export const CISCO_ROUTERS: Equipment[] = [
   {
@@ -10,7 +14,9 @@ export const CISCO_ROUTERS: Equipment[] = [
     vendor: 'cisco',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/cisco/catalyst-8300.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/cisco/catalyst-8300.svg',
+    ),
     imageUrl:
       'https://www.cisco.com/c/dam/assets/support/product-images/series/routers-catalyst-8300-series-edge-platforms.jpg',
     description: 'Roteador SD-WAN de alta performance para matriz corporativa',
@@ -42,7 +48,9 @@ export const CISCO_FIREWALLS: Equipment[] = [
     vendor: 'cisco',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/cisco/firepower-2100.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/cisco/firepower-2100.svg',
+    ),
     imageUrl:
       'https://www.cisco.com/c/dam/assets/support/product-images/series/security-firepower-2100-series.jpg',
     description: 'Firewall de próxima geração para proteção corporativa',
@@ -74,7 +82,9 @@ export const CISCO_SWITCHES: Equipment[] = [
     vendor: 'cisco',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/cisco/catalyst-3650.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/cisco/catalyst-3650.svg',
+    ),
     imageUrl:
       'https://www.cisco.com/c/dam/assets/support/product-images/series/switches-catalyst-3650-series-switches.jpg',
     description: 'Switch gerenciado de camada 3 para distribuição de dados',
@@ -107,7 +117,9 @@ export const CISCO_ACCESS_POINTS: Equipment[] = [
     vendor: 'cisco',
     site: 'matriz',
     quantity: 2,
-    imagePath: '/images/equipamentos/cisco/catalyst-9120.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/cisco/catalyst-9120.svg',
+    ),
     imageUrl:
       'https://www.cisco.com/c/dam/assets/support/product-images/series/wireless-catalyst-9120-series-access-points.jpg',
     description: 'Access Point Wi-Fi 6E com alta performance',
@@ -140,7 +152,9 @@ export const FORTINET_ROUTERS: Equipment[] = [
     vendor: 'fortinet',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/fortinet/fortigate-100f.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/fortinet/fortigate-100f.svg',
+    ),
     imageUrl:
       'https://www.fortinet.com/content/dam/fortinet/images/product-image/fortigate-100f.jpg',
     description: 'FortiGate com roteamento e firewall integrados para matriz',
@@ -169,7 +183,9 @@ export const FORTINET_ROUTERS: Equipment[] = [
     vendor: 'fortinet',
     site: 'filial',
     quantity: 1,
-    imagePath: '/images/equipamentos/fortinet/fortigate-40f.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/fortinet/fortigate-40f.svg',
+    ),
     imageUrl:
       'https://www.fortinet.com/content/dam/fortinet/images/product-image/fortigate-40f.jpg',
     description: 'FortiGate compacto para filiais com performance adequada',
@@ -201,7 +217,9 @@ export const FORTINET_FIREWALLS: Equipment[] = [
     vendor: 'fortinet',
     site: 'filial',
     quantity: 1,
-    imagePath: '/images/equipamentos/fortinet/fortigate-60f.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/fortinet/fortigate-60f.svg',
+    ),
     imageUrl:
       'https://www.fortinet.com/content/dam/fortinet/images/product-image/fortigate-60f.jpg',
     description: 'Firewall NGFW dedicado para filial com alto fluxo de acessos',
@@ -230,7 +248,9 @@ export const FORTINET_FIREWALLS: Equipment[] = [
     vendor: 'fortinet',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/fortinet/fortigate-200f.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/fortinet/fortigate-200f.svg',
+    ),
     imageUrl:
       'https://www.fortinet.com/content/dam/fortinet/images/product-image/fortigate-200f.jpg',
     description: 'FortiGate enterprise para proteção completa de matriz',
@@ -262,7 +282,9 @@ export const FORTINET_SWITCHES: Equipment[] = [
     vendor: 'fortinet',
     site: 'matriz',
     quantity: 1,
-    imagePath: '/images/equipamentos/fortinet/fortiswitch-248f.svg',
+    imagePath: getPublicAssetPath(
+      'images/equipamentos/fortinet/fortiswitch-248f.svg',
+    ),
     imageUrl:
       'https://www.fortinet.com/content/dam/fortinet/images/product-image/fortiswitch-248f.jpg',
     description: 'Switch gerenciado com recursos de segurança integrados',

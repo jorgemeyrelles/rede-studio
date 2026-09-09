@@ -7,7 +7,8 @@ export const FIREWALL_DEDICATED_ITEMS = [
 
 export const VPN_CRYPTO_ITEMS = [
   'IPsec IKEv2 com AES-256-GCM',
+  'Integridade com SHA-384 no tunel de contingencia',
   'Certificados X.509 para autenticação mútua',
   'MFA obrigatório para SSL-VPN remoto',
-  'Perfect Forward Secrecy (DH Group 14)',
+  'Perfect Forward Secrecy (DH Group 20)',
 ]

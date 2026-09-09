@@ -7,13 +7,14 @@ export type TooltipAclItem = {
 }
 
 export type TooltipData = {
+  kind?: 'node' | 'link'
   key: string
   site: string
   ip: string
   vlan: string
   vlanInfo: string
   title: string
-  iconSrc: string
+  iconSrc?: string
   x: number
   y: number
   preferredPlacement?: TooltipPlacement

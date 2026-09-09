@@ -9,7 +9,7 @@ export const SSL_STEPS: SslVpnStep[] = [
     num: 2,
     text: 'Autenticação com usuário + senha + certificado digital (MFA)',
   },
-  { num: 3, text: 'Firewall valida e atribui IP do pool 10.10.1.0/28' },
+  { num: 3, text: 'Firewall valida e atribui IP do pool SSL-VPN (acesso remoto)' },
   {
     num: 4,
     text: 'Usuário acessa rede interna como se estivesse no escritório',
@@ -18,15 +18,18 @@ export const SSL_STEPS: SslVpnStep[] = [
 ]
 
 export const VPN_SUMMARY_ROWS: VpnSummaryRow[] = [
-  { item: 'Protocolo', siteToSite: 'IPsec/IKEv2', sslRemote: 'SSL/TLS' },
+  { item: 'Protocolo', siteToSite: 'IPsec/IKEv2 (backup)', sslRemote: 'SSL/TLS' },
   { item: 'Cifra', siteToSite: 'AES-256-GCM', sslRemote: 'AES-256-GCM' },
+  { item: 'Integridade', siteToSite: 'SHA-384', sslRemote: 'TLS nativo' },
+  { item: 'Diffie-Hellman', siteToSite: 'Group 20', sslRemote: 'N/A' },
   { item: 'Autenticação', siteToSite: 'Cert X.509', sslRemote: 'Cert + MFA' },
   {
-    item: 'Rede túnel',
-    siteToSite: '10.10.0.0/30',
-    sslRemote: '10.10.1.0/28',
+    item: 'Enlace de contingencia',
+    siteToSite: '198.51.100.5 ↔ 198.51.100.1',
+    sslRemote: 'Pool remoto dedicado',
   },
-  { item: 'Endpoints', siteToSite: 'SP ↔ CWB', sslRemote: 'Usuário remoto' },
+  { item: 'Transporte primario', siteToSite: 'MPLS dual-stack', sslRemote: 'Internet segura' },
+  { item: 'Endpoints', siteToSite: 'Matriz ↔ Filial', sslRemote: 'Usuario remoto' },
   {
     item: 'Status',
     siteToSite: '✅ ATIVA',
