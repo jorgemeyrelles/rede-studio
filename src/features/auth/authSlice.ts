@@ -4,6 +4,7 @@ import type {
     AuthErrorCode,
     AuthState,
     LoginInput,
+    OAuthProvider,
     PublicUser,
     RegisterInput,
     UpdateUserProfileInput,
@@ -37,6 +38,16 @@ export const loginUser = createAsyncThunk<
   { rejectValue: AuthErrorCode }
 >('auth/loginUser', async (input, { rejectWithValue }) => {
   const result = await authRoutes.loginUser(input);
+  if (!result.ok) return rejectWithValue(result.error);
+  return result.user;
+});
+
+export const loginWithOAuthProvider = createAsyncThunk<
+  PublicUser,
+  { provider: OAuthProvider; idToken: string },
+  { rejectValue: AuthErrorCode }
+>('auth/loginWithOAuthProvider', async ({ provider, idToken }, { rejectWithValue }) => {
+  const result = await authRoutes.loginWithOAuth(provider, idToken);
   if (!result.ok) return rejectWithValue(result.error);
   return result.user;
 });
@@ -91,6 +102,18 @@ const authSlice = createSlice({
         state.currentUser = action.payload;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.status = 'idle';
+        state.error = action.payload ?? 'GENERIC';
+      })
+      .addCase(loginWithOAuthProvider.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(loginWithOAuthProvider.fulfilled, (state, action) => {
+        state.status = 'idle';
+        state.currentUser = action.payload;
+      })
+      .addCase(loginWithOAuthProvider.rejected, (state, action) => {
         state.status = 'idle';
         state.error = action.payload ?? 'GENERIC';
       })

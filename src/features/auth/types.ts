@@ -34,7 +34,10 @@ export type AuthErrorCode =
   | 'USER_NOT_FOUND'
   | 'NOT_AUTHENTICATED'
   | 'VALIDATION_ERROR'
+  | 'OAUTH_FAILED'
   | 'GENERIC';
+
+export type OAuthProvider = 'google' | 'microsoft';
 
 /** Persistido em localStorage — só o JWT, nada de dados de usuário. */
 export type AuthDocument = {

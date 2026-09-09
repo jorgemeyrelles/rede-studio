@@ -8,6 +8,7 @@ import {
 import authReducer, {
     hydrateSession,
     loginUser,
+    loginWithOAuthProvider,
     registerUser,
 } from '../features/auth/authSlice';
 import networkReducer, {
@@ -149,6 +150,7 @@ const autosaveMiddleware: Middleware =
 const CLARITY_IDENTIFY_ACTIONS = new Set([
   loginUser.fulfilled.type,
   registerUser.fulfilled.type,
+  loginWithOAuthProvider.fulfilled.type,
   hydrateSession.fulfilled.type,
 ]);
 

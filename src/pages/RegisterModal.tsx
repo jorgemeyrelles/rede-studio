@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import BrandMark from '../components/BrandMark';
 import Modal from '../components/Modal';
+import OAuthButtons from '../components/OAuthButtons';
 import { clearAuthError, registerUser } from '../features/auth/authSlice';
 import { migrateLegacyProject } from '../features/projects/projectsSlice';
 import { getAuthErrorMessage, getRegisterPageCopy } from '../i18n/utils';
@@ -27,6 +28,11 @@ export default function RegisterModal() {
 
   const close = () => navigate(`/${language}`);
 
+  const goToProjects = async () => {
+    await dispatch(migrateLegacyProject());
+    navigate(`/${language}/projects`);
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -38,8 +44,7 @@ export default function RegisterModal() {
 
     const result = await dispatch(registerUser({ name, email, password }));
     if (registerUser.fulfilled.match(result)) {
-      await dispatch(migrateLegacyProject());
-      navigate(`/${language}/projects`);
+      await goToProjects();
     }
   };
 
@@ -47,7 +52,7 @@ export default function RegisterModal() {
     <Modal onClose={close}>
       <form
         onSubmit={handleSubmit}
-        className="relative flex w-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900 p-6"
+        className="relative flex w-full flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900 p-6"
       >
         <button
           type="button"
@@ -58,8 +63,8 @@ export default function RegisterModal() {
           ✕
         </button>
 
-        <div className="mb-2 flex flex-col items-center gap-3 text-center">
-          <BrandMark className="h-10 w-10" />
+        <div className="mb-1 flex flex-col items-center gap-1.5 text-center">
+          <BrandMark className="h-8 w-8" />
           <h1 className="text-base font-semibold text-white">{copy.title}</h1>
           <p className="text-xs text-slate-400">{copy.subtitle}</p>
         </div>
@@ -132,6 +137,13 @@ export default function RegisterModal() {
         >
           {status === 'loading' ? copy.submitting : copy.submit}
         </button>
+
+        <OAuthButtons
+          language={language}
+          mode="register"
+          copy={copy}
+          onSuccess={goToProjects}
+        />
 
         <p className="text-center text-xs text-slate-500">
           {copy.hasAccountText}{' '}

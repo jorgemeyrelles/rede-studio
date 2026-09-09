@@ -173,6 +173,8 @@ export const LOGIN_PAGE_COPY: Record<AppLanguage, LoginPageCopy> = {
     noAccountText: 'Ainda não tem conta?',
     registerLinkText: 'Criar conta',
     backToHome: '← Voltar',
+    orDivider: 'ou',
+    continueWithMicrosoft: 'Continuar com a Microsoft',
   },
   en: {
     title: 'Sign in',
@@ -184,6 +186,8 @@ export const LOGIN_PAGE_COPY: Record<AppLanguage, LoginPageCopy> = {
     noAccountText: "Don't have an account?",
     registerLinkText: 'Sign up',
     backToHome: '← Back',
+    orDivider: 'or',
+    continueWithMicrosoft: 'Continue with Microsoft',
   },
   es: {
     title: 'Entrar',
@@ -195,6 +199,8 @@ export const LOGIN_PAGE_COPY: Record<AppLanguage, LoginPageCopy> = {
     noAccountText: '¿Aún no tienes cuenta?',
     registerLinkText: 'Crear cuenta',
     backToHome: '← Volver',
+    orDivider: 'o',
+    continueWithMicrosoft: 'Continuar con Microsoft',
   },
 };
 
@@ -212,6 +218,8 @@ export const REGISTER_PAGE_COPY: Record<AppLanguage, RegisterPageCopy> = {
     hasAccountText: 'Já tem conta?',
     loginLinkText: 'Entrar',
     backToHome: '← Voltar',
+    orDivider: 'ou',
+    continueWithMicrosoft: 'Continuar com a Microsoft',
   },
   en: {
     title: 'Sign up',
@@ -226,6 +234,8 @@ export const REGISTER_PAGE_COPY: Record<AppLanguage, RegisterPageCopy> = {
     hasAccountText: 'Already have an account?',
     loginLinkText: 'Sign in',
     backToHome: '← Back',
+    orDivider: 'or',
+    continueWithMicrosoft: 'Continue with Microsoft',
   },
   es: {
     title: 'Crear cuenta',
@@ -240,6 +250,8 @@ export const REGISTER_PAGE_COPY: Record<AppLanguage, RegisterPageCopy> = {
     hasAccountText: '¿Ya tienes cuenta?',
     loginLinkText: 'Entrar',
     backToHome: '← Volver',
+    orDivider: 'o',
+    continueWithMicrosoft: 'Continuar con Microsoft',
   },
 };
 
@@ -355,6 +367,7 @@ export const AUTH_ERROR_COPY: Record<AppLanguage, AuthErrorCopy> = {
     USER_NOT_FOUND: 'Usuário não encontrado.',
     NOT_AUTHENTICATED: 'Você precisa estar logado.',
     VALIDATION_ERROR: 'Dados inválidos. Confira os campos e tente novamente.',
+    OAUTH_FAILED: 'Não foi possível continuar com esse provedor. Tente novamente.',
     GENERIC: 'Algo deu errado. Tente novamente.',
   },
   en: {
@@ -363,6 +376,7 @@ export const AUTH_ERROR_COPY: Record<AppLanguage, AuthErrorCopy> = {
     USER_NOT_FOUND: 'User not found.',
     NOT_AUTHENTICATED: 'You need to be logged in.',
     VALIDATION_ERROR: 'Invalid data. Check the fields and try again.',
+    OAUTH_FAILED: 'Could not continue with that provider. Please try again.',
     GENERIC: 'Something went wrong. Please try again.',
   },
   es: {
@@ -371,6 +385,7 @@ export const AUTH_ERROR_COPY: Record<AppLanguage, AuthErrorCopy> = {
     USER_NOT_FOUND: 'Usuario no encontrado.',
     NOT_AUTHENTICATED: 'Necesitas iniciar sesión.',
     VALIDATION_ERROR: 'Datos inválidos. Revisa los campos e intenta de nuevo.',
+    OAUTH_FAILED: 'No se pudo continuar con ese proveedor. Inténtalo de nuevo.',
     GENERIC: 'Algo salió mal. Inténtalo de nuevo.',
   },
 };

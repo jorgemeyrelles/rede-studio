@@ -32,6 +32,8 @@ export type LoginPageCopy = {
   noAccountText: string;
   registerLinkText: string;
   backToHome: string;
+  orDivider: string;
+  continueWithMicrosoft: string;
 };
 
 export type RegisterPageCopy = {
@@ -47,6 +49,8 @@ export type RegisterPageCopy = {
   hasAccountText: string;
   loginLinkText: string;
   backToHome: string;
+  orDivider: string;
+  continueWithMicrosoft: string;
 };
 
 export type ProjectsPageCopy = {
@@ -90,5 +94,6 @@ export type AuthErrorCopy = {
   USER_NOT_FOUND: string;
   NOT_AUTHENTICATED: string;
   VALIDATION_ERROR: string;
+  OAUTH_FAILED: string;
   GENERIC: string;
 };

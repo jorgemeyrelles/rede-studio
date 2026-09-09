@@ -32,7 +32,7 @@ export default function Modal({ onClose, children }: ModalProps) {
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-sm"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto"
       >
         {children}
       </div>

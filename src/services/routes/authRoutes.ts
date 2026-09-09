@@ -1,6 +1,7 @@
 import type {
     AuthErrorCode,
     LoginInput,
+    OAuthProvider,
     PublicUser,
     RegisterInput,
     UpdateUserProfileInput,
@@ -132,6 +133,44 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
   }
 }
 
+/**
+ * Decodifica (sem verificar assinatura) o payload de um JWT pra extrair um
+ * email de exibição imediata — a fonte da verdade é sempre o backend, que
+ * valida o token de verdade; isso só evita mais um round-trip antes de
+ * montar o `PublicUser` (mesmo espírito do `email` que login/registro já
+ * recebem do próprio input do formulário).
+ */
+function decodeEmailFromIdToken(idToken: string): string {
+  try {
+    const payload = idToken.split('.')[1] ?? '';
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { email?: string; preferred_username?: string };
+    return decoded.email ?? decoded.preferred_username ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export async function loginWithOAuth(
+  provider: OAuthProvider,
+  idToken: string,
+): Promise<AuthResult> {
+  try {
+    const auth = await httpPost<AuthTokenResponse>(`/api/auth/oauth/${provider}`, {
+      body: { idToken },
+    });
+    saveAuthToken(auth.token);
+    return { ok: true, user: authResponseToPublicUser(auth, decodeEmailFromIdToken(idToken)) };
+  } catch (err) {
+    // 409 = alguém já está registrando esse e-mail agora (corrida rara);
+    // qualquer outra falha (token inválido, provider fora do ar) é genérica.
+    const code: AuthErrorCode =
+      err instanceof ApiError && err.status === 409 ? 'EMAIL_TAKEN' : 'OAUTH_FAILED';
+    return { ok: false, error: code };
+  }
+}
+
 export async function logoutSession(): Promise<void> {
   // JWT é stateless — não existe endpoint de logout no backend, só limpa localmente.
   clearAuthToken();
@@ -157,6 +196,7 @@ export const authRoutes = {
   getPersistedSession,
   registerUser,
   loginUser,
+  loginWithOAuth,
   logoutSession,
   updateUserProfile,
 };
