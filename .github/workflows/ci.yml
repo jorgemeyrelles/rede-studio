@@ -1,0 +1,57 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+env:
+  # Node 22 (não 20 puro) — Vite 8 exige "^20.19.0 || >=22.12.0" no
+  # engines; 22 satisfaz isso sem ambiguidade de qual patch de 20 o
+  # runner resolveria. Resolve de vez o desalinhamento que hoje exige
+  # `nvm use` local (Node 18 do sistema quebra o Vite 8).
+  NODE_VERSION: "22"
+  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+  VITE_CLARITY_PROJECT_ID: ${{ vars.VITE_CLARITY_PROJECT_ID }}
+  VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+  VITE_MICROSOFT_CLIENT_ID: ${{ vars.VITE_MICROSOFT_CLIENT_ID }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      # npm run build, não tsc --noEmit — há débito técnico pré-existente
+      # (3 erros de tipo em arquivos não relacionados a nenhuma sprint
+      # recente) que faria esse gate nascer vermelho.
+      - run: npm run build
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
