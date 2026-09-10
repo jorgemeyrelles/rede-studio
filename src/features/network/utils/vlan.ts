@@ -1,12 +1,12 @@
 import type { NetworkState, NodeItem, SiteNetwork, SiteVlan } from '../types';
 import {
-  ipToNumber,
-  isIpInAnyVlan,
-  getVlanRange,
-  isIpInVlan,
-  networkRangeBounds,
-  numberToIp,
-  siteRangeBounds,
+    getVlanRange,
+    ipToNumber,
+    isIpInAnyVlan,
+    isIpInVlan,
+    networkRangeBounds,
+    numberToIp,
+    siteRangeBounds,
 } from './ip';
 
 export function toValidVlanId(value: number) {
@@ -74,7 +74,8 @@ export function getNodeReservedRange(node: Pick<NodeItem, 'ip' | 'hostCount'>) {
 }
 
 function buildOccupiedIpSet(
-  state: NetworkState,
+  state: Pick<NetworkState, 'nodes'> &
+    Partial<Pick<NetworkState, 'nodeVlanInterfaces'>>,
   siteId: string,
   excludeNodeId: string | null,
 ) {
@@ -97,6 +98,15 @@ function buildOccupiedIpSet(
         candidate += 1
       ) {
         used.add(candidate);
+      }
+    });
+
+  (state.nodeVlanInterfaces ?? [])
+    .filter((iface) => iface.siteId === siteId)
+    .forEach((iface) => {
+      const gateway = ipToNumber(iface.gatewayIp);
+      if (gateway !== null) {
+        used.add(gateway);
       }
     });
 
@@ -232,7 +242,8 @@ export function assignNodeIpInsideVlan(
 }
 
 export function getAvailableVlanCapacityForNode(
-  state: Pick<NetworkState, 'nodes' | 'siteVlans'>,
+  state: Pick<NetworkState, 'nodes' | 'siteVlans'> &
+    Partial<Pick<NetworkState, 'nodeVlanInterfaces'>>,
   node: NodeItem,
   vlan: SiteVlan,
 ) {
@@ -241,7 +252,7 @@ export function getAvailableVlanCapacityForNode(
   const range = getVlanRange(vlan);
   if (!range) return 1;
 
-  const used = buildOccupiedIpSet(state as NetworkState, node.siteId, node.id);
+  const used = buildOccupiedIpSet(state, node.siteId, node.id);
   let available = 0;
 
   for (let candidate = range.start; candidate <= range.end; candidate += 1) {

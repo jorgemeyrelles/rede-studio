@@ -1,67 +1,177 @@
 import * as go from 'gojs';
 import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
-  addLink,
-  removeLink,
-  resizeLayer,
-  setActiveLinkId,
-  setZoom,
-  toggleNodeVlanAssignment,
-  updateLink,
-  updateNodeTechField,
-  updateSite,
-  updateNode,
-  updateNodePosition,
+    addLink,
+    removeLink,
+    resizeLayer,
+    setActiveLinkId,
+    setZoom,
+    toggleNodeVlanAssignment,
+    updateNode,
+    updateNodePosition,
+    updateNodeTechField,
+    updateSite,
 } from '../../features/network/networkSlice';
+import {
+    ensureTechProfile,
+    getTechProfileWarnings,
+    getVisibleTechSchema,
+} from '../../features/network/techProfiles';
 import type { NodeItem } from '../../features/network/types';
 import {
-  ensureTechProfile,
-  getTechProfileWarnings,
-  getVisibleTechSchema,
-} from '../../features/network/techProfiles';
-import {
-  getAvailableVlanCapacityForNode,
-  getNodeReservedRange,
-  getSiteReserveRange,
-  buildNetworkAddress,
-  cidrToHostCount,
+    buildNetworkAddress,
+    cidrToHostCount,
+    getAvailableVlanCapacityForNode,
+    getNodeReservedRange,
+    getSiteReserveRange,
 } from '../../features/network/utils';
 import {
-  BASE_Y,
-  DEFAULT_DIAGRAM_WIDTH,
-  buildGridLayout,
-  calculateTooltipPosition,
-  colorByCategory,
-  getNetworkDiagramCopy,
-  getLayerFallbackPosition,
-  getNodeIconSrc,
-  getNodeVisual,
-  getSiteHeaderIp,
-  isInsideLayerBounds,
-  parseTechValue,
-  parseVlans,
-  resolveLinkDescription,
-  resolveLinkVisual,
-  type DiagramTooltip,
-  type SiteTooltip,
-  type NetworkTooltip,
-  type StudioLanguage,
+    BASE_Y,
+    CENTER_CHANNEL_WIDTH,
+    DEFAULT_DIAGRAM_WIDTH,
+    DIAGRAM_SIDE_PADDING,
+    GRID_COLUMN_GAP,
+    buildGridLayout,
+    calculateTooltipPosition,
+    colorByCategory,
+    getLayerFallbackPosition,
+    getNetworkDiagramCopy,
+    getNodeIconSrc,
+    getNodeVisual,
+    getSiteHeaderIp,
+    isInsideLayerBounds,
+    parseCsvItems,
+    parseTechValue,
+    parseVlans,
+    resolveLinkDescription,
+    resolveLinkVisual,
+    serializeCsvItems,
+    type CreatableOption,
+    type DiagramTooltip,
+    type NetworkDiagramProps,
+    type NetworkTooltip,
+    type SiteTooltip,
 } from './catalog';
 
-type NetworkDiagramProps = {
-  language: StudioLanguage;
-};
+function CreatableMultiSelectField({
+  values,
+  options,
+  placeholder,
+  onChange,
+}: {
+  values: string[];
+  options: CreatableOption[];
+  placeholder: string;
+  onChange: (next: string[]) => void;
+}) {
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [customValue, setCustomValue] = useState('');
+
+  const exists = (value: string) =>
+    values.some((item) => item.toLowerCase() === value.toLowerCase());
+
+  const addValue = (raw: string) => {
+    const value = raw.trim();
+    if (!value || exists(value)) return;
+    onChange([...values, value]);
+    setCustomValue('');
+  };
+
+  const addSelected = () => {
+    if (!selectedOption) return;
+    addValue(selectedOption);
+  };
+
+  const removeValue = (target: string) => {
+    onChange(values.filter((value) => value !== target));
+  };
+
+  return (
+    <div className="w-full space-y-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1">
+        <select
+          value={selectedOption}
+          onChange={(event) => setSelectedOption(event.target.value)}
+          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+        >
+          <option value="">Selecionar opção...</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={addSelected}
+          className="rounded border border-cyan-700/60 bg-cyan-900/30 px-2 py-1 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-800/40"
+        >
+          +
+        </button>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1">
+        <input
+          value={customValue}
+          onChange={(event) => setCustomValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              addValue(customValue);
+            }
+          }}
+          placeholder={placeholder}
+          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 font-mono text-[11px] text-slate-100"
+        />
+        <button
+          type="button"
+          onClick={() => addValue(customValue)}
+          className="rounded border border-emerald-700/60 bg-emerald-900/30 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-800/40"
+        >
+          Add
+        </button>
+      </div>
+
+      <div className="max-h-[88px] overflow-y-auto rounded border border-[#2a4565] bg-[#091527]/75 p-1">
+        {values.length === 0 ? (
+          <div className="text-[10px] italic text-slate-500">Sem itens.</div>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {values.map((value) => (
+              <span
+                key={value}
+                className="inline-flex max-w-full items-center gap-1 rounded border border-violet-700/50 bg-violet-900/25 px-1.5 py-0.5 text-[10px] text-violet-100"
+              >
+                <span className="truncate font-mono">{value}</span>
+                <button
+                  type="button"
+                  onClick={() => removeValue(value)}
+                  className="rounded px-1 text-[9px] text-rose-300 hover:bg-rose-900/40"
+                  aria-label={`Remover ${value}`}
+                >
+                  x
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export type NetworkDiagramHandle = {
-  exportImageDataForPdf: () => string | null;
+  exportImageDataForPdf: (options?: {
+    showLinkDescriptions?: boolean;
+  }) => string | null;
 };
 
 const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
@@ -69,7 +179,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     const dispatch = useAppDispatch();
     const diagramDivRef = useRef<HTMLDivElement | null>(null);
     const diagramRef = useRef<go.Diagram | null>(null);
-    const hasInitialFitDoneRef = useRef(false);
     const lastFitCenterRequestHandledRef = useRef(0);
     const nodesByIdRef = useRef<Map<string, NodeItem>>(new Map());
     const vlanAssignmentRef = useRef<{ siteId: string; vlanId: number } | null>(
@@ -178,6 +287,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           category: 'site',
           siteStroke: visual.stroke,
           siteFill: visual.siteFill,
+          siteMinSize: `${Math.max(1, layout.siteWidths.get(site.id) ?? 1)} 0`,
           loc: `${layout.sitePositions.get(site.id)?.x ?? 16} ${layout.sitePositions.get(site.id)?.y ?? BASE_Y}`,
         });
 
@@ -266,6 +376,15 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           iconSrc: getNodeIconSrc(node.category),
           loc: isWan ? `${layout.wanPosition.x} ${layout.wanPosition.y}` : loc,
           nodeId: node.id,
+          // P3 — cores das VLANs às quais o nó pertence
+          vlanColors: (node.vlans ?? [])
+            .map((vlanId) => {
+              const vlan = siteVlans.find(
+                (v) => v.siteId === node.siteId && v.vlanId === vlanId,
+              );
+              return vlan?.color ?? null;
+            })
+            .filter(Boolean) as string[],
         });
       }
 
@@ -278,6 +397,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       nodes,
       sites,
       siteNetworks,
+      siteVlans,
     ]);
 
     const linkData = useMemo(() => {
@@ -320,6 +440,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           toNode?.label ?? link.to,
           fromNode?.category,
           toNode?.category,
+          link.bidirectional ?? true,
         );
 
         return {
@@ -541,6 +662,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           {
             movable: false,
             locationSpot: go.Spot.TopLeft,
+            locationObjectName: 'SITE_BODY',
             computesBoundsAfterDrag: true,
             computesBoundsIncludingLinks: false,
           },
@@ -591,6 +713,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           $(
             go.Panel,
             'Auto',
+            {
+              name: 'SITE_BODY',
+            },
             $(
               go.Shape,
               'RoundedRectangle',
@@ -602,7 +727,11 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               new go.Binding('fill', 'siteFill'),
               new go.Binding('stroke', 'siteStroke'),
             ),
-            $(go.Placeholder, { padding: 14 }),
+            $(
+              go.Placeholder,
+              { padding: 14 },
+              new go.Binding('minSize', 'siteMinSize', go.Size.parse),
+            ),
           ),
         ),
       );
@@ -823,6 +952,46 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             new go.Binding('text', 'marker', (marker) => `[${String(marker)}]`),
           ),
         ),
+        // P3 — dots de VLAN na quina superior esquerda (até 4 VLANs, lado a lado)
+        $(
+          go.Panel,
+          'Horizontal',
+          {
+            alignment: new go.Spot(0, 0, 5, 5),
+            alignmentFocus: go.Spot.TopLeft,
+            visible: false,
+          },
+          new go.Binding('visible', 'vlanColors', (colors: string[]) =>
+            Array.isArray(colors) && colors.length >= 1,
+          ),
+          $(
+            go.Shape,
+            'Circle',
+            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent' },
+            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[0] ?? 'transparent'),
+          ),
+          $(
+            go.Shape,
+            'Circle',
+            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
+            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[1] ?? 'transparent'),
+            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 2),
+          ),
+          $(
+            go.Shape,
+            'Circle',
+            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
+            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[2] ?? 'transparent'),
+            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 3),
+          ),
+          $(
+            go.Shape,
+            'Circle',
+            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
+            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[3] ?? 'transparent'),
+            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 4),
+          ),
+        ),
         $(
           go.Panel,
           'Auto',
@@ -907,6 +1076,26 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             const base = Number((obj.part as go.Link).data?.baseWidth ?? 1.8);
             return h ? base + 2.2 : base;
           }).ofObject(),
+        ),
+        $(
+          go.Shape,
+          {
+            fromArrow: 'Circle',
+            stroke: null,
+            fill: '#38bdf8',
+            scale: 0.9,
+          },
+          new go.Binding('fill', 'stroke'),
+        ),
+        $(
+          go.Shape,
+          {
+            toArrow: 'Circle',
+            stroke: null,
+            fill: '#38bdf8',
+            scale: 0.9,
+          },
+          new go.Binding('fill', 'stroke'),
         ),
         $(
           go.Panel,
@@ -1002,6 +1191,28 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         );
         if (!resizedLayer) return;
 
+        const uniqueSiteCount = new Set(
+          layersRef.current.map((layer) => layer.siteId),
+        ).size;
+        const columns = uniqueSiteCount <= 1 ? 1 : 2;
+        const canvasWidth = Math.max(
+          1,
+          diagramDivRef.current?.clientWidth ?? DEFAULT_DIAGRAM_WIDTH,
+        );
+        const availableWidth = Math.max(
+          resizedLayer.minWidth,
+          columns === 1
+            ? canvasWidth - DIAGRAM_SIDE_PADDING * 2
+            : canvasWidth -
+                DIAGRAM_SIDE_PADDING * 2 -
+                  CENTER_CHANNEL_WIDTH -
+                  GRID_COLUMN_GAP * 2,
+        );
+        const dynamicMaxWidth = Math.max(
+          resizedLayer.minWidth,
+          Math.floor(availableWidth / columns),
+        );
+
         // Propaga mesma largura para todas as camadas do mesmo site
         const siblings = layersRef.current.filter(
           (l) => l.siteId === resizedLayer.siteId,
@@ -1011,6 +1222,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             resizeLayer({
               layerId: sibling.id,
               width: newWidth,
+              maxWidth: dynamicMaxWidth,
               height: sibling.id === data.layerId ? newHeight : sibling.height,
             }),
           );
@@ -1039,7 +1251,19 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       if (!diagram) return;
 
       const previousScale = diagram.scale;
-      const previousPosition = diagram.position.copy();
+      const previousCenter = new go.Point(
+        diagram.viewportBounds.centerX,
+        diagram.viewportBounds.centerY,
+      );
+
+      const restoreViewport = () => {
+        diagram.scale = previousScale;
+        const viewport = diagram.viewportBounds;
+        diagram.position = new go.Point(
+          previousCenter.x - viewport.width / 2,
+          previousCenter.y - viewport.height / 2,
+        );
+      };
 
       const model = new go.GraphLinksModel(nodeData, linkData);
       model.linkKeyProperty = 'key';
@@ -1056,7 +1280,11 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         }
       });
 
+      // Evita animações na troca de model para reduzir flicker visual.
+      const previousAnimationState = diagram.animationManager.isEnabled;
+      diagram.animationManager.isEnabled = false;
       diagram.model = model;
+      diagram.animationManager.isEnabled = previousAnimationState;
 
       const fitAndCenter = () => {
         diagram.zoomToFit();
@@ -1069,18 +1297,29 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       };
 
       const shouldApplyFitCenter =
-        !hasInitialFitDoneRef.current ||
         fitCenterRequest !== lastFitCenterRequestHandledRef.current;
 
       if (shouldApplyFitCenter) {
         fitAndCenter();
-        hasInitialFitDoneRef.current = true;
         lastFitCenterRequestHandledRef.current = fitCenterRequest;
       } else {
-        // Mantém o viewport do usuário quando o modelo é recriado
-        diagram.scale = previousScale;
-        diagram.position = previousPosition;
+        // Mantém o viewport do usuário quando o modelo é recriado.
+        restoreViewport();
       }
+
+      // Segunda passada após o layout interno do GoJS evita salto visual residual.
+      const rafId = window.requestAnimationFrame(() => {
+        if (diagramRef.current !== diagram) return;
+        if (shouldApplyFitCenter) {
+          fitAndCenter();
+        } else {
+          restoreViewport();
+        }
+      });
+
+      return () => {
+        window.cancelAnimationFrame(rafId);
+      };
     }, [dispatch, fitCenterRequest, linkData, nodeData]);
 
     useEffect(() => {
@@ -1098,9 +1337,10 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     }, [activeSiteTooltip, sites]);
 
     useImperativeHandle(ref, () => ({
-      exportImageDataForPdf: () => {
+      exportImageDataForPdf: (options) => {
         const diagram = diagramRef.current;
         if (!diagram) return null;
+        const showLinkDescriptions = options?.showLinkDescriptions ?? true;
 
         const panelStates: Array<{
           panel: go.Panel;
@@ -1126,8 +1366,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               font: textBlock?.font ?? null,
             });
 
-            panel.visible = true;
-            if (textBlock) {
+            panel.visible = showLinkDescriptions;
+            if (showLinkDescriptions && textBlock) {
               textBlock.font = '700 10px "Share Tech Mono"';
             }
           });
@@ -1240,8 +1480,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               iconY: activeTooltip.y,
               containerWidth: rect.width,
               containerHeight: rect.height,
-              tooltipWidth: 320,
-              tooltipHeight: tooltipNode.category === 'wan' ? 210 : 300,
+              tooltipWidth: 461,
+              tooltipHeight: tooltipNode.category === 'wan' ? 230 : 360,
               preferredPlacement: activeTooltip.preferredPlacement,
             });
 
@@ -1298,6 +1538,74 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 siteNodeCount,
               },
             );
+            const routingMode = String(techProfile.fields.routingMode ?? 'static');
+            const isBgpMode = routingMode === 'bgp' || routingMode === 'mixed';
+
+            const bgpNeighborOptions: CreatableOption[] = isBgpMode
+              ? Array.from(
+                  new Map(
+                    nodes
+                      .filter((candidate) => {
+                        if (candidate.id === tooltipNode.id) return false;
+                        if (candidate.category !== 'router') return false;
+                        if (!candidate.siteId || candidate.siteId === tooltipNode.siteId) {
+                          return false;
+                        }
+                        const candidateMode = String(
+                          candidate.techProfile?.fields?.routingMode ?? 'static',
+                        );
+                        if (candidateMode !== 'bgp' && candidateMode !== 'mixed') {
+                          return false;
+                        }
+                        return Boolean(candidate.ip?.trim());
+                      })
+                      .map((candidate) => {
+                        const candidateSite = sites.find(
+                          (site) => site.id === candidate.siteId,
+                        );
+                        const value = candidate.ip?.trim() ?? '';
+                        const label = `${value} - ${candidate.label} (${candidateSite?.name ?? candidate.siteId})`;
+                        return [value, { value, label }] as const;
+                      }),
+                  ).values(),
+                )
+              : [];
+
+            const localNetworkPrefixOptions: CreatableOption[] = tooltipNode.siteId
+              ? siteNetworks
+                  .filter((network) => network.siteId === tooltipNode.siteId)
+                  .map((network) => {
+                    const siteRef = sites.find((site) => site.id === network.siteId);
+                    const address = buildNetworkAddress(
+                      network.addressFamily,
+                      network.thirdOctet,
+                      siteRef?.ipOctet,
+                    );
+                    const value = `${address}/${network.cidr}`;
+                    return {
+                      value,
+                      label: `${value} - ${network.name}`,
+                    };
+                  })
+              : [];
+
+            const remoteNetworkPrefixOptions: CreatableOption[] = tooltipNode.siteId
+              ? siteNetworks
+                  .filter((network) => network.siteId !== tooltipNode.siteId)
+                  .map((network) => {
+                    const siteRef = sites.find((site) => site.id === network.siteId);
+                    const address = buildNetworkAddress(
+                      network.addressFamily,
+                      network.thirdOctet,
+                      siteRef?.ipOctet,
+                    );
+                    const value = `${address}/${network.cidr}`;
+                    return {
+                      value,
+                      label: `${value} - ${network.name} (${siteRef?.name ?? network.siteId})`,
+                    };
+                  })
+              : [];
 
             return (
               <div
@@ -1366,6 +1674,23 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                             )
                           }
                           className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                        />
+                      </label>
+
+                      <label className="gojs-tooltip-row">
+                        <span className="gojs-tooltip-label">IPv6:</span>
+                        <input
+                          value={tooltipNode.ipv6 ?? ''}
+                          onChange={(event) =>
+                            dispatch(
+                              updateNode({
+                                id: tooltipNode.id,
+                                changes: { ipv6: event.target.value },
+                              }),
+                            )
+                          }
+                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                          placeholder="2001:db8::10"
                         />
                       </label>
 
@@ -1506,6 +1831,47 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           const fieldLabel =
                             field.labels?.[language] ?? field.label;
 
+                          if (
+                            tooltipNode.category === 'router' &&
+                            isBgpMode &&
+                            (field.key === 'bgpNeighbors' ||
+                              field.key === 'bgpPrefixListIn' ||
+                              field.key === 'bgpPrefixListOut')
+                          ) {
+                            const options =
+                              field.key === 'bgpNeighbors'
+                                ? bgpNeighborOptions
+                                : field.key === 'bgpPrefixListIn'
+                                  ? remoteNetworkPrefixOptions
+                                  : localNetworkPrefixOptions;
+
+                            const currentValues = parseCsvItems(String(value ?? ''));
+
+                            return (
+                              <label key={field.key} className="gojs-tooltip-row">
+                                <span className="gojs-tooltip-label">{fieldLabel}:</span>
+                                <CreatableMultiSelectField
+                                  values={currentValues}
+                                  options={options}
+                                  placeholder={
+                                    field.key === 'bgpNeighbors'
+                                      ? 'Ex: 200.40.1.10'
+                                      : 'Ex: 200.40.1.0/24'
+                                  }
+                                  onChange={(nextValues) =>
+                                    dispatch(
+                                      updateNodeTechField({
+                                        id: tooltipNode.id,
+                                        key: field.key,
+                                        value: serializeCsvItems(nextValues),
+                                      }),
+                                    )
+                                  }
+                                />
+                              </label>
+                            );
+                          }
+
                           if (field.type === 'boolean') {
                             return (
                               <label
@@ -1645,7 +2011,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               iconY: activeSiteTooltip.y,
               containerWidth: rect.width,
               containerHeight: rect.height,
-              tooltipWidth: 320,
+              tooltipWidth: 461,
               tooltipHeight: 310,
             });
             const siteReserveRange = getSiteReserveRange(tooltipSite);
@@ -1781,7 +2147,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               iconY: activeNetworkTooltip.y,
               containerWidth: rect.width,
               containerHeight: rect.height,
-              tooltipWidth: 260,
+              tooltipWidth: 374,
               tooltipHeight: 180,
             });
             const netSite = sites.find((s) => s.id === tooltipNetwork.siteId);

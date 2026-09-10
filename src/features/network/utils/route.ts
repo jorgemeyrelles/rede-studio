@@ -45,6 +45,17 @@ export function resolveGateway(
   return toIp && toIp !== '' ? toIp : '—';
 }
 
+export function resolveGatewayIpv6(
+  tipo: RouteType,
+  fromIpv6: string | undefined,
+  toIpv6: string | undefined,
+): string {
+  if (tipo === 'Direta') return '—';
+  if (tipo === 'Default') return toIpv6 && toIpv6 !== '' ? toIpv6 : '—';
+  if (tipo === 'VPN') return fromIpv6 && fromIpv6 !== '' ? fromIpv6 : '—';
+  return toIpv6 && toIpv6 !== '' ? toIpv6 : '—';
+}
+
 export function resolveInterface(
   tipo: RouteType,
   linkKind: string,

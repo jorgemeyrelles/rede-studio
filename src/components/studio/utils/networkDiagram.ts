@@ -1,19 +1,33 @@
 import type { NodeItem, Site } from '../../../features/network/types';
 import {
-  BASE_Y,
-  CENTER_CHANNEL_WIDTH,
-  DIAGRAM_SIDE_PADDING,
-  EMPTY_SITE_HEIGHT,
-  GRID_COLUMN_GAP,
-  GRID_ROW_GAP,
-  INTER_NETWORK_GAP,
-  LAYER_TOP_OFFSET,
-  LAYER_VERTICAL_GAP,
-  SITE_BOTTOM_PADDING,
-  SITE_CONTAINER_WIDTH,
-  WAN_Y,
+    BASE_Y,
+    CENTER_CHANNEL_WIDTH,
+    DIAGRAM_SIDE_PADDING,
+    EMPTY_SITE_HEIGHT,
+    GRID_COLUMN_GAP,
+    GRID_ROW_GAP,
+    INTER_NETWORK_GAP,
+    LAYER_TOP_OFFSET,
+    LAYER_VERTICAL_GAP,
+    SITE_BOTTOM_PADDING,
+    WAN_Y,
 } from '../constants';
 import type { GridLayoutResult, TooltipPlacement } from '../types';
+
+export function parseCsvItems(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item !== ''),
+    ),
+  );
+}
+
+export function serializeCsvItems(items: string[]): string {
+  return items.join(', ');
+}
 
 export function calculateTooltipPosition({
   iconX,
@@ -146,12 +160,10 @@ export function buildGridLayout({
     if (isMultiNetwork) {
       // Redes lado a lado: largura = soma das colunas + gaps
       const netCount = netGroups.size;
-      width = Math.max(
-        SITE_CONTAINER_WIDTH,
+      width =
         netCount * maxLayerWidth +
-          (netCount - 1) * INTER_NETWORK_GAP +
-          SITE_H_PADDING,
-      );
+        (netCount - 1) * INTER_NETWORK_GAP +
+        SITE_H_PADDING;
       // Altura = coluna mais alta
       let maxNetHeight = 0;
       for (const [, netLayers] of netGroups) {
@@ -168,13 +180,7 @@ export function buildGridLayout({
       );
     } else {
       // Coluna única — comportamento legado
-      width = Math.max(
-        SITE_CONTAINER_WIDTH,
-        Math.min(
-          1383,
-          maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth,
-        ),
-      );
+      width = maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth;
       let stackedHeight = LAYER_TOP_OFFSET;
       siteLayers.forEach((layer, index) => {
         stackedHeight += layer.height;
@@ -196,18 +202,17 @@ export function buildGridLayout({
   const leftCandidates = [s1, s3].filter(Boolean) as Site[];
   const rightCandidates = [s2, s4].filter(Boolean) as Site[];
 
-  const leftColWidth = Math.max(
-    SITE_CONTAINER_WIDTH,
-    ...leftCandidates.map(
-      (site) => siteWidths.get(site.id) ?? SITE_CONTAINER_WIDTH,
-    ),
-  );
-  const rightColWidth = Math.max(
-    SITE_CONTAINER_WIDTH,
-    ...rightCandidates.map(
-      (site) => siteWidths.get(site.id) ?? SITE_CONTAINER_WIDTH,
-    ),
-  );
+  const getSiteWidth = (siteId: string) =>
+    siteWidths.get(siteId) ?? dynamicDefaultWidth;
+
+  const leftColWidth =
+    leftCandidates.length > 0
+      ? Math.max(...leftCandidates.map((site) => getSiteWidth(site.id)))
+      : 0;
+  const rightColWidth =
+    rightCandidates.length > 0
+      ? Math.max(...rightCandidates.map((site) => getSiteWidth(site.id)))
+      : 0;
 
   const useSymmetricEdgeColumns = limitedSites.length >= 2;
   const edgeColWidth = useSymmetricEdgeColumns
@@ -248,55 +253,62 @@ export function buildGridLayout({
   const hasMiddleRow = limitedSites.length >= 3;
   const middleRowHeight = hasMiddleRow ? CENTER_CHANNEL_WIDTH : 0;
 
-  const row3Sites = [s3, s4].filter(Boolean) as Site[];
-  const row3Height =
-    row3Sites.length > 0
-      ? Math.max(
-          ...row3Sites.map(
-            (site) => siteHeights.get(site.id) ?? EMPTY_SITE_HEIGHT,
-          ),
-        )
-      : 0;
-
   const row1Y = BASE_Y;
   const row2Y = row1Y + row1Height + GRID_ROW_GAP;
   const row3Y = row2Y + middleRowHeight + GRID_ROW_GAP;
 
+  // Simetria do vao central baseada no eixo da WAN e nas bordas internas
+  // dos containers (shape do site), nao no centro de cada coluna.
+  const wanAxisX = centerX + CENTER_CHANNEL_WIDTH / 2;
+  const leftInnerBorderX =
+    wanAxisX - (CENTER_CHANNEL_WIDTH / 2 + GRID_COLUMN_GAP);
+  const rightInnerBorderX =
+    wanAxisX + (CENTER_CHANNEL_WIDTH / 2 + GRID_COLUMN_GAP);
+  const SITE_FRAME_PADDING = 14;
+
   if (s1) {
-    const width = siteWidths.get(s1.id) ?? SITE_CONTAINER_WIDTH;
+    const width = getSiteWidth(s1.id);
+    const visualWidth = width + SITE_FRAME_PADDING * 2;
     sitePositions.set(s1.id, {
-      x: leftX + (effectiveLeftColWidth - width) / 2,
+      x: leftInnerBorderX - visualWidth,
       y: row1Y,
     });
   }
   if (s2) {
-    const width = siteWidths.get(s2.id) ?? SITE_CONTAINER_WIDTH;
     sitePositions.set(s2.id, {
-      x: rightX + (effectiveRightColWidth - width) / 2,
+      x: rightInnerBorderX,
       y: row1Y,
     });
   }
   if (s3 && !s4) {
-    const width = siteWidths.get(s3.id) ?? SITE_CONTAINER_WIDTH;
+    const width = getSiteWidth(s3.id);
     sitePositions.set(s3.id, {
       x: centerX + CENTER_CHANNEL_WIDTH / 2 - width / 2,
       y: row3Y,
     });
   }
   if (s3 && s4) {
-    const width3 = siteWidths.get(s3.id) ?? SITE_CONTAINER_WIDTH;
-    const width4 = siteWidths.get(s4.id) ?? SITE_CONTAINER_WIDTH;
+    const width3 = getSiteWidth(s3.id);
+    const visualWidth3 = width3 + SITE_FRAME_PADDING * 2;
     sitePositions.set(s3.id, {
-      x: leftX + (effectiveLeftColWidth - width3) / 2,
+      x: leftInnerBorderX - visualWidth3,
       y: row3Y,
     });
     sitePositions.set(s4.id, {
-      x: rightX + (effectiveRightColWidth - width4) / 2,
+      x: rightInnerBorderX,
       y: row3Y,
     });
   }
 
   const SITE_H_PADDING_POS = 24; // recuo horizontal interno para posicionamento
+  const leftColumnSiteIdsInFourSiteLayout =
+    s3 && s4
+      ? new Set(
+          [s1?.id, s3?.id].filter(
+            (siteId): siteId is string => typeof siteId === 'string',
+          ),
+        )
+      : null;
 
   for (const site of limitedSites) {
     const sitePos = sitePositions.get(site.id);
@@ -304,7 +316,7 @@ export function buildGridLayout({
     const siteLayers = layers
       .filter((layer) => layer.siteId === site.id)
       .sort((a, b) => a.order - b.order);
-    const siteWidth = siteWidths.get(site.id) ?? SITE_CONTAINER_WIDTH;
+    const siteWidth = getSiteWidth(site.id);
     const uniformLayerWidth = siteMaxLayerWidths.get(site.id) ?? 0;
 
     // Reagrupar por rede para o posicionamento
@@ -333,7 +345,25 @@ export function buildGridLayout({
       });
     } else {
       // Redes lado a lado — cada rede ocupa uma coluna
-      let colX = sitePos.x + SITE_H_PADDING_POS;
+      const netColumnCount = netGroupsPos.size;
+      const occupiedWidth =
+        netColumnCount * uniformLayerWidth +
+        (netColumnCount - 1) * INTER_NETWORK_GAP;
+      const leftAlignedStart = sitePos.x + SITE_H_PADDING_POS;
+      const rightAlignedStart =
+        sitePos.x +
+        Math.max(
+          SITE_H_PADDING_POS,
+          siteWidth - SITE_H_PADDING_POS - occupiedWidth,
+        );
+
+      const shouldRightAlignInsideSite = Boolean(
+        leftColumnSiteIdsInFourSiteLayout?.has(site.id),
+      );
+
+      let colX = shouldRightAlignInsideSite
+        ? rightAlignedStart
+        : leftAlignedStart;
       for (const [, netLayers] of netGroupsPos) {
         if (netLayers.length === 0) continue;
         let cursorY = sitePos.y + LAYER_TOP_OFFSET;
@@ -351,7 +381,7 @@ export function buildGridLayout({
 
   const wanTop = hasMiddleRow ? Math.max(28, row1Y - 74) : WAN_Y;
   const wanPosition = {
-    x: centerX + CENTER_CHANNEL_WIDTH / 2,
+    x: wanAxisX,
     y: wanTop,
   };
 
@@ -470,17 +500,19 @@ export function resolveLinkDescription(
   toLabel: string,
   fromCategory?: string,
   toCategory?: string,
+  bidirectional = false,
 ) {
+  const arrow = bidirectional ? '<->' : '->';
   if (kind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
-    return `WAN uplink: ${fromLabel} -> ${toLabel}`;
+    return `WAN uplink: ${fromLabel} ${arrow} ${toLabel}`;
   }
   if (kind === 'vpn' || kind === 'ipsec') {
-    return `Tunel seguro: ${fromLabel} -> ${toLabel}`;
+    return `Tunel seguro: ${fromLabel} ${arrow} ${toLabel}`;
   }
   if (kind === 'lan') {
-    return `LAN interna: ${fromLabel} -> ${toLabel}`;
+    return `LAN interna: ${fromLabel} ${arrow} ${toLabel}`;
   }
-  return `${fromLabel} -> ${toLabel}`;
+  return `${fromLabel} ${arrow} ${toLabel}`;
 }
 
 export function isInsideLayerBounds(

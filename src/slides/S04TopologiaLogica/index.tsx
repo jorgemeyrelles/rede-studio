@@ -9,7 +9,7 @@ export default function S04TopologiaLogica() {
         {/* MATRIZ SP */}
         <div className="topo-col">
           <div className="topo-site-header tsh-blue">
-            🏢 Matriz — São Paulo · 10.0.1.0/24
+            🏢 Matriz — São Paulo · Bloco corporativo 10.10.0.0/16
           </div>
 
           <div className="layer-label ll-core">Camada 1 — Core / WAN</div>
@@ -20,12 +20,12 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🔴</div>
               <div className="td-info">
-                <div className="td-name">Roteador Matriz SP</div>
-                <div className="td-role">Gateway · NAT · BGP/OSPF · WAN</div>
+                <div className="td-name">Gateway WAN Matriz</div>
+                <div className="td-role">MPLS primario · Internet backup</div>
               </div>
               <div>
-                <div className="td-ip">LAN: 10.0.1.1</div>
-                <div className="td-ip-wan">WAN: 200.10.1.1/30</div>
+                <div className="td-ip">MPLS: 203.0.113.1/30</div>
+                <div className="td-ip-wan">Backup: 198.51.100.1/30</div>
               </div>
             </div>
             <div
@@ -34,7 +34,7 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🛡️</div>
               <div className="td-info">
-                <div className="td-name">Firewall Matriz SP</div>
+                <div className="td-name">FortiGate 600F (HA)</div>
                 <div className="td-role">
                   Stateful · ACL · IDS/IPS · VPN Endpoint
                 </div>
@@ -45,7 +45,7 @@ export default function S04TopologiaLogica() {
             </div>
           </div>
 
-          <div className="layer-label ll-dist">Camada 2 — Distribuição</div>
+          <div className="layer-label ll-dist">Camada 2 — Distribuição (Core L3)</div>
           <div className="topo-layer tl-blue">
             <div
               className="topo-device"
@@ -53,10 +53,10 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🔵</div>
               <div className="td-info">
-                <div className="td-name">Switch L3 Matriz</div>
-                <div className="td-role">VLANs · Trunk · Gerenciamento</div>
+                <div className="td-name">Core Catalyst 9500</div>
+                <div className="td-role">Inter-VLAN L3 · Gateway das sub-redes</div>
               </div>
-              <div className="td-ip">10.0.1.2</div>
+              <div className="td-ip">Gerencia: 10.10.99.2</div>
             </div>
           </div>
 
@@ -68,40 +68,40 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🖧</div>
               <div className="td-info">
-                <div className="td-name">Servidores SP (3)</div>
+                <div className="td-name">Servidores Matriz</div>
                 <div className="td-role">
-                  File · AD/DNS · App · 🔒 ACL filial parcial
+                  Producao + Dev/Homolog · ACLs corporativas
                 </div>
               </div>
-              <div className="td-ip">10.0.1.200–.202</div>
+              <div className="td-ip">VLAN 10: 10.10.10.0/24</div>
             </div>
           </div>
 
-          <div className="layer-label ll-end">Camada 4 — Endpoints</div>
+          <div className="layer-label ll-end">Dominios de usuario (nao adiciona nova camada)</div>
           <div className="topo-layer tl-blue">
             <div className="topo-device">
               <div className="td-icon">🖥️</div>
               <div className="td-info">
-                <div className="td-name">PCs Admin (21)</div>
-                <div className="td-role">Estações cabeadas</div>
+                <div className="td-name">Desenvolvimento</div>
+                <div className="td-role">Usuarios de engenharia</div>
               </div>
-              <div className="td-ip">10.0.1.10–.30</div>
+              <div className="td-ip">VLAN 40: 10.10.40.0/23</div>
             </div>
             <div className="topo-device">
               <div className="td-icon">🖨️</div>
               <div className="td-info">
-                <div className="td-name">Impressoras (3)</div>
-                <div className="td-role">TCP/IP · switch direto</div>
+                <div className="td-name">Administrativo</div>
+                <div className="td-role">Backoffice e operacao interna</div>
               </div>
-              <div className="td-ip">10.0.1.40–.42</div>
+              <div className="td-ip">VLAN 50: 10.10.50.0/23</div>
             </div>
             <div className="topo-device">
               <div className="td-icon">📞</div>
               <div className="td-info">
-                <div className="td-name">Telefones VoIP (6)</div>
-                <div className="td-role">SIP · VLAN voz</div>
+                <div className="td-name">Comercial / Suporte</div>
+                <div className="td-role">Atendimento e vendas</div>
               </div>
-              <div className="td-ip">10.0.1.50–.55</div>
+              <div className="td-ip">VLAN 60: 10.10.60.0/23</div>
             </div>
             <div
               className="topo-device"
@@ -109,10 +109,10 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🔐</div>
               <div className="td-info">
-                <div className="td-name">PCs VPN Remoto (2)</div>
-                <div className="td-role">SSL-VPN · acesso externo</div>
+                <div className="td-name">Wi-Fi e Gerencia</div>
+                <div className="td-role">Corporativo, Visitantes e Rede de TI</div>
               </div>
-              <div className="td-ip">10.0.1.100–.101</div>
+              <div className="td-ip">VLAN 70/80/99</div>
             </div>
           </div>
         </div>
@@ -130,9 +130,9 @@ export default function S04TopologiaLogica() {
             }}
           ></div>
           <div className="vpn-badge-sm">
-            🔒 VPN
+            🔒 Contingencia
             <br />
-            Site-to-Site
+            IPsec/IKEv2
             <br />
             <span
               style={{
@@ -141,9 +141,7 @@ export default function S04TopologiaLogica() {
                 color: "#338833",
               }}
             >
-              IPsec/IKEv2
-              <br />
-              10.10.0.0/30
+              198.51.100.5 ↔ 198.51.100.1
             </span>
           </div>
           <div
@@ -174,7 +172,7 @@ export default function S04TopologiaLogica() {
         {/* FILIAL CWB */}
         <div className="topo-col">
           <div className="topo-site-header tsh-green">
-            🏭 Filial — Curitiba · 10.0.2.0/25
+            🏭 Filial — Curitiba · VLANs dimensionadas por crescimento
           </div>
 
           <div className="layer-label ll-core">Camada 1 — Core / WAN</div>
@@ -185,12 +183,12 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🔴</div>
               <div className="td-info">
-                <div className="td-name">Roteador Filial CWB</div>
-                <div className="td-role">Gateway · NAT · OSPF · WAN</div>
+                <div className="td-name">Gateway WAN Filial</div>
+                <div className="td-role">MPLS primario · Internet backup</div>
               </div>
               <div>
-                <div className="td-ip">LAN: 10.0.2.1</div>
-                <div className="td-ip-wan">WAN: 200.20.1.1/30</div>
+                <div className="td-ip">MPLS: 203.0.113.5/30</div>
+                <div className="td-ip-wan">Backup: 198.51.100.5/30</div>
               </div>
             </div>
             <div
@@ -199,7 +197,7 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🛡️</div>
               <div className="td-info">
-                <div className="td-name">Firewall Filial CWB</div>
+                <div className="td-name">Firewall Filial</div>
                 <div className="td-role">
                   Stateful · ACL · IDS/IPS · VPN Endpoint
                 </div>
@@ -210,7 +208,7 @@ export default function S04TopologiaLogica() {
             </div>
           </div>
 
-          <div className="layer-label ll-dist">Camada 2 — Distribuição</div>
+          <div className="layer-label ll-dist">Camada 2 — Distribuição (SVIs/VLANs)</div>
           <div className="topo-layer tl-green">
             <div
               className="topo-device"
@@ -218,10 +216,10 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🟢</div>
               <div className="td-info">
-                <div className="td-name">Switch L3 Filial</div>
-                <div className="td-role">VLANs · Trunk · Gerenciamento</div>
+                <div className="td-name">Switch de Distribuicao Filial</div>
+                <div className="td-role">Segmentacao /24, /25, /26 e /28</div>
               </div>
-              <div className="td-ip">10.0.2.2</div>
+              <div className="td-ip">SVIs por VLAN</div>
             </div>
           </div>
 
@@ -233,56 +231,56 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🖧</div>
               <div className="td-info">
-                <div className="td-name">Servidores CWB (2)</div>
+                <div className="td-name">Servidores CWB</div>
                 <div className="td-role">
-                  File · App · ✅ Matriz: acesso total
+                  AD Replica · File · Print · Backup
                 </div>
               </div>
-              <div className="td-ip">10.0.2.200–.201</div>
+              <div className="td-ip">VLAN Servidores: /28</div>
             </div>
             <div className="topo-device" style={{ borderColor: "#1a0a2a" }}>
               <div className="td-icon">📡</div>
               <div className="td-info">
-                <div className="td-name">Access Points (4)</div>
-                <div className="td-role">802.11ac · PoE · cabeado</div>
+                <div className="td-name">Wi-Fi Corporativo e Visitantes</div>
+                <div className="td-role">SSID segregados e isolamento logico</div>
               </div>
-              <div className="td-ip">10.0.2.60–.63</div>
+              <div className="td-ip">VLAN dedicada + VLAN isolada</div>
             </div>
           </div>
 
-          <div className="layer-label ll-end">Camada 4 — Endpoints</div>
+          <div className="layer-label ll-end">Dominios de usuario (nao adiciona nova camada)</div>
           <div className="topo-layer tl-green">
             <div className="topo-device">
               <div className="td-icon">🖥️</div>
               <div className="td-info">
-                <div className="td-name">Computadores (22)</div>
-                <div className="td-role">Cabeados · 18 mín + crescimento</div>
+                <div className="td-name">Desenvolvimento</div>
+                <div className="td-role">Crescimento + reserva operacional</div>
               </div>
-              <div className="td-ip">10.0.2.10–.31</div>
+              <div className="td-ip">/24 (144 hosts)</div>
             </div>
             <div className="topo-device">
               <div className="td-icon">💻</div>
               <div className="td-info">
-                <div className="td-name">Dispositivos Wi-Fi</div>
-                <div className="td-role">📶 AP → Switch → Roteador</div>
+                <div className="td-name">Suporte</div>
+                <div className="td-role">Operacao de atendimento</div>
               </div>
-              <div className="td-ip">10.0.2.70–.85</div>
+              <div className="td-ip">/25 (108 hosts)</div>
             </div>
             <div className="topo-device">
               <div className="td-icon">🖨️</div>
               <div className="td-info">
-                <div className="td-name">Impressoras (4)</div>
-                <div className="td-role">TCP/IP · switch direto</div>
+                <div className="td-name">Administrativo</div>
+                <div className="td-role">Backoffice da filial</div>
               </div>
-              <div className="td-ip">10.0.2.40–.43</div>
+              <div className="td-ip">/25 (72 hosts)</div>
             </div>
             <div className="topo-device">
               <div className="td-icon">📞</div>
               <div className="td-info">
-                <div className="td-name">Telefones VoIP (8)</div>
-                <div className="td-role">SIP · VLAN voz</div>
+                <div className="td-name">TI / Infra</div>
+                <div className="td-role">Equipe tecnica e operacao</div>
               </div>
-              <div className="td-ip">10.0.2.50–.57</div>
+              <div className="td-ip">/26 (36 hosts)</div>
             </div>
             <div
               className="topo-device"
@@ -290,10 +288,10 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">🔐</div>
               <div className="td-info">
-                <div className="td-name">PCs VPN Remoto (2)</div>
-                <div className="td-role">SSL-VPN · acesso externo</div>
+                <div className="td-name">Roteamento e failover</div>
+                <div className="td-role">MPLS metrica 10 · VPN metrica 20</div>
               </div>
-              <div className="td-ip">10.0.2.100–.101</div>
+              <div className="td-ip">Convergencia: 15 a 30s</div>
             </div>
             <div
               className="topo-device"
@@ -305,10 +303,10 @@ export default function S04TopologiaLogica() {
             >
               <div className="td-icon">📦</div>
               <div className="td-info">
-                <div className="td-name">Reserva (~30 hosts)</div>
-                <div className="td-role">Expansão futura · 20% mínimo</div>
+                <div className="td-name">Capacidade alvo</div>
+                <div className="td-role">360 usuarios totais planejados</div>
               </div>
-              <div className="td-ip">10.0.2.110–.126</div>
+              <div className="td-ip">3 anos + 20% de reserva</div>
             </div>
           </div>
         </div>

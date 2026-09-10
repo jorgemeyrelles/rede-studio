@@ -1,15 +1,15 @@
 import {
-  DEFAULT_TECH_FIELDS_BY_KIND,
-  TECH_PROFILE_VERSION,
-  TECH_SCHEMA,
+    DEFAULT_TECH_FIELDS_BY_KIND,
+    TECH_PROFILE_VERSION,
+    TECH_SCHEMA,
 } from '../constants';
 import type {
-  NodeCategory,
-  NodeTechProfile,
-  TechFieldSchema,
-  TechKind,
-  TechProfileContext,
-  TechValue,
+    NodeCategory,
+    NodeTechProfile,
+    TechFieldSchema,
+    TechKind,
+    TechProfileContext,
+    TechValue,
 } from '../types';
 
 export function resolveTechKind(category: NodeCategory): TechKind {
@@ -193,6 +193,16 @@ export function normalizeTechProfile(
   }
 
   if (ensured.kind === 'access-point') {
+    const interfaceMode = String(nextFields.apInterfaceMode ?? 'l2-bridge');
+    if (interfaceMode !== 'l2-bridge' && interfaceMode !== 'l3-routed') {
+      nextFields.apInterfaceMode = 'l2-bridge';
+    }
+
+    const rawManagementVlan = String(nextFields.apManagementVlanId ?? '').trim();
+    if (rawManagementVlan !== '' && !/^\d+$/.test(rawManagementVlan)) {
+      nextFields.apManagementVlanId = '';
+    }
+
     const security = String(nextFields.wirelessSecurity ?? 'wpa2-enterprise');
     const isEnterprise =
       security === 'wpa2-enterprise' || security === 'wpa3-enterprise';
@@ -268,6 +278,17 @@ export function getTechProfileWarnings(
   }
 
   if (normalized.kind === 'access-point') {
+    const interfaceMode = String(
+      normalized.fields.apInterfaceMode ?? 'l2-bridge',
+    );
+    const managementVlan = String(
+      normalized.fields.apManagementVlanId ?? '',
+    ).trim();
+
+    if (interfaceMode === 'l2-bridge' && managementVlan === '') {
+      warnings.push('AP em modo L2 deve definir VLAN de gerenciamento.');
+    }
+
     const security = String(normalized.fields.wirelessSecurity ?? '');
     const authServer = String(normalized.fields.authServer ?? '').trim();
     const isEnterprise =

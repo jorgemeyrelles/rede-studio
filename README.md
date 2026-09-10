@@ -1,13 +1,12 @@
 # Rede Studio
 
-Aplicação web em React para documentação e modelagem visual de uma rede corporativa. O projeto reúne dois produtos no mesmo frontend:
+Aplicação web em React para documentação e modelagem visual de uma rede corporativa. O uso do Studio é restrito a usuários com conta: cada usuário mantém múltiplos projetos salvos, escolhe um pelo dashboard e edita sites, camadas, nós, links, VLANs, rotas, regras de firewall e protocolos de roteamento, com geração de relatório em PDF.
 
-- uma apresentação navegável em slides para contexto executivo e técnico;
-- um Studio interativo para modelagem de sites, camadas, nós, links, VLANs, rotas, regras de firewall, protocolos de roteamento e geração de relatório em PDF.
+A apresentação em slides que existia como segundo produto está atualmente desativada (rota comentada) — o código permanece no repositório, mas não é acessível pela aplicação.
 
 ## Visão geral
 
-O objetivo do projeto é centralizar a proposta de topologia, o inventário técnico e a documentação operacional em uma interface única. A aplicação roda totalmente no cliente, persiste o estado localmente e permite exportar o desenho atual para um relatório PDF paginado.
+O objetivo do projeto é centralizar a proposta de topologia, o inventário técnico e a documentação operacional em uma interface única, por projeto e por conta. A aplicação roda totalmente no cliente — ainda sem backend real: contas e projetos são simulados em `localStorage`, numa estrutura já pensada para trocar por chamadas ao `rede-studio-api` sem alterar componentes. Cada projeto persiste automaticamente e pode ser exportado para um relatório PDF paginado.
 
 ## Stack principal
 
@@ -24,15 +23,22 @@ O objetivo do projeto é centralizar a proposta de topologia, o inventário téc
 
 ## Rotas da aplicação
 
-- `/slides`: apresentação linear com as seções do projeto de rede.
-- `/studio`: editor técnico com diagrama, tabelas operacionais e exportação PDF.
+Toda rota vive sob um prefixo de idioma (`:lang` = `pt`, `en` ou `es`), resolvido por `/` na primeira visita e lembrado depois:
 
-O roteamento é definido em [src/App.tsx](src/App.tsx) e inicializado em [src/main.tsx](src/main.tsx).
+- `/:lang` (deslogado): landing page de apresentação do produto, com Entrar/Criar conta — os dois abrem como modal por cima da própria landing, sem trocar de página.
+- `/:lang/projects` (logado): dashboard com os projetos salvos do usuário e criação de projeto novo.
+- `/:lang/studio/:projectId` (logado): editor técnico do projeto aberto — diagrama, tabelas operacionais e exportação PDF.
+- `/:lang/slides`: desativada (rota comentada); o código de apresentação continua no repositório.
+
+O roteamento é definido em [src/App.tsx](src/App.tsx) e inicializado em [src/main.tsx](src/main.tsx). As guardas de acesso (`RequireAuth`/`RequireGuest`/`LanguageLayout`) ficam em `src/app/routing/`.
 
 ## Principais capacidades
 
-- Navegação entre apresentação e Studio no mesmo shell de aplicação.
-- Alternância de idioma no Studio.
+- Contas de usuário (mock, sem backend ainda) com múltiplos projetos por conta — um projeto pertence a um único dono.
+- Dashboard de projetos: criar, renomear a qualquer momento e continuar de onde parou.
+- Indicador de status de salvamento no Studio (salvando/salvo/aviso), com opção de forçar salvar na hora.
+- Idioma selecionável pela URL, com seletor no cabeçalho e nas telas públicas.
+- Menu do usuário (badge circular) com atalhos pra projetos, novo projeto, configurações de perfil e sair.
 - Edição visual da topologia com sites, camadas e dispositivos.
 - Tooltip de informações técnicas em nós, links, sites e redes lógicas no diagrama GoJS.
 - Associação de VLANs aos elementos da rede.
@@ -40,29 +46,40 @@ O roteamento é definido em [src/App.tsx](src/App.tsx) e inicializado em [src/ma
 - Regras de firewall / ACL com QoS e expansão de alocações por VLAN.
 - Tabela de protocolos de roteamento com configuração inline de OSPF e BGP por roteador.
 - Tech Profile dinâmico por tipo de equipamento — campos condicionais com lógica de normalização automática.
-- Persistência local automática do estado do projeto.
+- Persistência local automática do estado de cada projeto.
 - Geração de PDF técnico em nova aba com diagrama, tabelas e anexos.
 
 ## Arquitetura técnica
 
 ### Frontend
 
-O frontend é uma SPA React inicializada com Vite. A navegação principal separa claramente o modo de apresentação do modo de edição. O shell global mantém o seletor de idioma do Studio e expõe as rotas de alto nível.
+O frontend é uma SPA React inicializada com Vite. Toda rota vive sob um prefixo de idioma e é protegida por conta: deslogado só acessa a landing/login/registro, logado acessa dashboard e Studio (ver "Rotas da aplicação"). O shell autenticado (`AppShellLayout`) mantém o seletor de idioma e o menu do usuário.
 
 ### Estado global
 
-O estado do domínio fica centralizado no slice `network` do Redux Toolkit.
+Três slices do Redux Toolkit:
+
+- `network`: domínio do projeto **atualmente aberto** no Studio (sites, nós, links, ACLs, VLANs, Tech Profile).
+- `auth`: sessão mock do usuário logado.
+- `projects`: lista de projetos do usuário logado e qual está ativo no Studio agora.
 
 Arquivos-chave:
 
-- [src/app/store.ts](src/app/store.ts): configuração da store, hidratação inicial e persistência com debounce.
+- [src/app/store.ts](src/app/store.ts): configuração da store e middleware de autosave por projeto (debounce 350 ms, grava no slot do projeto ativo).
 - [src/features/network/networkSlice.ts](src/features/network/networkSlice.ts): reducers, estado inicial e normalização do domínio.
 - [src/features/network/selectors.ts](src/features/network/selectors.ts): projeções derivadas para rotas, firewall, tabela de protocolos e árvore da legenda.
-- [src/features/network/persistence.ts](src/features/network/persistence.ts): ponte para carregamento, salvamento e limpeza do estado persistido.
+- [src/features/auth/authSlice.ts](src/features/auth/authSlice.ts) e [src/features/projects/projectsSlice.ts](src/features/projects/projectsSlice.ts): sessão mock e projetos do usuário.
+- [src/services/routes/distributor.ts](src/services/routes/distributor.ts): distribuidor central das rotas de serviço, incluindo as novas `authRoutes`, `projectsRoutes` e `languageRoutes`.
 
 ### Persistência
 
-O estado é carregado na inicialização da aplicação e salvo automaticamente após alterações, com debounce de 350 ms. Em caso de falha de persistência, o slice registra um aviso em `meta.persistWarning` para feedback na interface.
+Cada projeto persiste no seu próprio slot (não existe mais um documento único global). O estado é carregado ao abrir um projeto (`StudioProjectLoader`) e salvo automaticamente após alterações, com debounce de 350 ms, através de um middleware de autosave (não `store.subscribe`) — necessário pra não reagir às próprias actions de "salvo" em loop, e pra flushar o save pendente no projeto certo quando o usuário troca de projeto rapidamente.
+
+Fluxo atual:
+
+`store (middleware de autosave) -> servicesRoutes.projects.saveProjectSnapshot -> _core/projectsPersistence -> localStorage`
+
+Em caso de falha de persistência (limite de tamanho por projeto), o slice registra um aviso em `meta.persistWarning`, visível no indicador de status de salvamento do Studio. `servicesRoutes.persistence`/`stateRoutes` (fluxo antigo de projeto único) e `src/features/network/persistence.ts` (fachada legada sobre eles) não são mais usados pela aplicação — sobrevivem só como código morto/histórico.
 
 ### Tech Profile
 
@@ -149,6 +166,16 @@ O gerador está em [src/components/studio/utils/pdfReport.ts](src/components/stu
 src/
   app/
     store.ts
+  services/
+    _core/
+    routes/
+    topology/
+    addressing/
+    security/
+    qos/
+    catalog/
+    vpn/
+    sessions/
   components/
     studio/
       constants/
@@ -218,11 +245,26 @@ O artefato gerado pelo Vite é publicado na pasta `dist/`.
 
 ## Observações técnicas
 
-- A aplicação é client-side only; não há backend no repositório atual.
+- A aplicação é client-side only; não há backend no repositório atual — contas e projetos são simulados em `localStorage`, prontos pra trocar por chamadas reais ao `rede-studio-api`.
 - A exportação PDF depende do estado já carregado no navegador.
-- Como a persistência é local, o projeto salvo é específico do navegador/dispositivo em uso.
-- O diretório `slides/` representa a narrativa da apresentação e pode evoluir independentemente do Studio.
+- Como a persistência é local, os projetos salvos são específicos do navegador/dispositivo em uso — não há sincronização entre dispositivos nem entre abas.
+- O diretório `slides/` representa a narrativa da apresentação; a rota está desativada no momento (ver "Rotas da aplicação"), mas o código continua no repositório e pode evoluir independentemente do Studio se for reativado.
 - Inputs do tipo `number` têm spinners de browser e incremento por teclado desativados globalmente via CSS e `keydown` handler em `App.tsx`.
+- Senhas de usuário ficam em texto puro no mock local (sem hashing) — decisão deliberada, já que sem servidor um hash client-side não protegeria nada de verdade; será substituído quando o backend real entrar.
+
+## Histórico de incrementos recentes (setembro de 2026)
+
+| Incremento | Descrição |
+| --- | --- |
+| Contas de usuário (mock) | Registro/login/logout simulados em `localStorage` (`authSlice`, `authRoutes`); Studio e dashboard exigem sessão |
+| Múltiplos projetos por usuário | `projectsSlice`/`projectsRoutes`: um usuário tem N projetos, cada um com snapshot próprio; autosave por projeto ativo via middleware |
+| Rotas por idioma | Toda rota vive sob `/:lang` (`pt`/`en`/`es`); `AppLanguage` centralizado em `src/types/i18n.ts` |
+| Landing + Login/Registro em modal | Página inicial pra deslogados; login/registro abrem como modal sobre a landing, sem trocar de página |
+| Dashboard de projetos | Lista de projetos, criação com nome padrão sugerido, renomear a qualquer momento pelo card |
+| Indicador de save no Studio | Botão de status (salvando/salvo/aviso) no container "Proposta DEV - Studio", com save manual imediato |
+| Menu do usuário | Badge circular no header: Meus projetos, Novo projeto, Configurações (nome + idioma), Sair |
+| `/slides` desativado | Rota comentada — código de apresentação permanece no repositório sem acesso |
+| Migração de projeto legado | Dado salvo antes de existir conta é migrado automaticamente pro primeiro usuário que logar/registrar no navegador |
 
 ## Histórico de incrementos recentes (abril de 2026)
 

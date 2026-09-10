@@ -3,6 +3,7 @@ import { getSlidePagination } from "../pagination";
 export default function S01Capa() {
   return (
     <div className="slide" id="s1">
+      
       <div className="slide-bar"></div>
       <div className="slide-number">{getSlidePagination("s1")}</div>
       <div

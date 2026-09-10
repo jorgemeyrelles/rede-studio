@@ -1,14 +1,20 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
 import type {
-  BgpNeighborEntry,
-  FirewallGroupedResult,
-  FirewallRuleRow,
-  RouteRow,
-  RoutingProtocolRow,
+    BgpNeighborEntry,
+    FirewallGroupedResult,
+    FirewallRuleRow,
+    NetworkReadinessRow,
+    RouteRow,
+    RoutingProtocolRow,
+    SubnetRouteRow,
 } from './types';
-import { getNodeReservedRange, getSiteReserveRange } from './utils';
-import { resolveGateway, resolveInterface, resolveRouteType } from './utils';
+import {
+    getNodeReservedRange, getSiteReserveRange, resolveGateway,
+    resolveGatewayIpv6,
+    resolveInterface,
+    resolveRouteType
+} from './utils';
 
 export const selectNetworkState = (state: RootState) => state.network;
 
@@ -73,10 +79,11 @@ export const selectRouteTable = createSelector(
     const ifaceCountersBySite: Record<string, { eth: number; tun: number }> =
       {};
 
-    const rows: RouteRow[] = links.map((link) => {
-      const from = nodes.find((node) => node.id === link.from);
-      const to = nodes.find((node) => node.id === link.to);
-
+    const buildRouteRow = (
+      link: (typeof links)[number],
+      from: (typeof nodes)[number] | undefined,
+      to: (typeof nodes)[number] | undefined,
+    ): RouteRow => {
       const fromSiteId = from?.siteId;
       const toSiteId = to?.siteId;
 
@@ -108,12 +115,20 @@ export const selectRouteTable = createSelector(
           ? String(from.vlans[0])
           : '-';
       const gateway = resolveGateway(tipo, from?.ip, to?.ip);
+      const gatewayIpv6 = resolveGatewayIpv6(tipo, from?.ipv6, to?.ipv6);
       const iface = resolveInterface(tipo, link.kind, counters);
 
       const redeDest =
         tipo === 'Default'
           ? '0.0.0.0/0'
           : `${to?.ip ?? '0.0.0.0'}/${to?.cidr ?? 0}`;
+
+      const redeDestIpv6 =
+        tipo === 'Default'
+          ? '::/0'
+          : to?.ipv6 && to?.ipv6 !== ''
+            ? `${to.ipv6}/64`
+            : '';
 
       // Fase 1 — zona inferida pelo tipo de rota e categoria dos nós
       const zone = (() => {
@@ -137,7 +152,9 @@ export const selectRouteTable = createSelector(
         tipo,
         vlan,
         redeDest,
+        redeDestIpv6,
         gateway,
+        gatewayIpv6,
         iface,
         reservedSiteRange:
           reserveRange && reserveRange.count > 0
@@ -148,9 +165,18 @@ export const selectRouteTable = createSelector(
         zone,
         networkName,
       };
-    });
+    };
 
-    return rows;
+    return links.flatMap((link) => {
+      const from = nodes.find((node) => node.id === link.from);
+      const to = nodes.find((node) => node.id === link.to);
+
+      const rows: RouteRow[] = [buildRouteRow(link, from, to)];
+      if (link.bidirectional ?? true) {
+        rows.push(buildRouteRow(link, to, from));
+      }
+      return rows;
+    });
   },
 );
 
@@ -266,14 +292,60 @@ export const selectFirewallRules = createSelector(
           r.id === rule.returnRuleId ||
           (r.parentRuleId === rule.id && r.isReturnRule),
       );
+      const linkedLink = rule.linkId
+        ? links.find((l) => l.id === rule.linkId)
+        : undefined;
+      const linkBidirectional = linkedLink
+        ? (linkedLink.bidirectional ?? true)
+        : false;
+      const effectiveBidirectional =
+        (rule.bidirectional ?? false) || linkBidirectional;
+      const effectiveDuplexMode = linkedLink?.duplexMode ?? 'full';
       const missingReturn =
         !isStateful &&
         !hasReturnRule &&
         !rule.isReturnRule &&
-        !rule.bidirectional;
+        !effectiveBidirectional;
 
       const sourceNode = getNode(rule.sourceNodeId);
       const destinationNode = getNode(rule.destinationNodeId);
+      const linkedFrom = linkedLink
+        ? nodes.find((n) => n.id === linkedLink.from)
+        : undefined;
+      const linkedTo = linkedLink
+        ? nodes.find((n) => n.id === linkedLink.to)
+        : undefined;
+      const natHost = [linkedFrom, linkedTo].find(
+        (n) => n?.category === 'firewall' || n?.category === 'router',
+      );
+      const rawNatMode = natHost
+        ? String(natHost.techProfile?.fields?.natMode ?? 'none')
+        : 'none';
+      const fwNatMode = (
+        ['pat', 'snat', 'dnat', 'hybrid', 'none'].includes(rawNatMode)
+          ? rawNatMode
+          : 'none'
+      ) as FirewallRuleRow['fwNatMode'];
+
+      // E — IPsec auth badge
+      const ipsecNode = [linkedFrom, linkedTo].find(
+        (n) => n?.category === 'ipsec' || n?.category === 'vpn',
+      );
+      const ipsecAuth = ipsecNode
+        ? String(ipsecNode.techProfile?.fields?.authMethod ?? 'psk')
+        : undefined;
+      const ipsecAuthBadge: FirewallRuleRow['ipsecAuthBadge'] =
+        ipsecAuth === 'certificate'
+          ? 'PKI'
+          : ipsecAuth === 'eap'
+            ? 'EAP'
+            : ipsecAuth === 'keypair'
+              ? 'keypair'
+              : ipsecAuth === 'none'
+                ? '⚠ sem IKE'
+                : ipsecAuth === 'psk'
+                  ? 'PSK'
+                  : undefined;
 
       const sourceAllocations =
         rule.sourceScope === 'vlan'
@@ -296,9 +368,10 @@ export const selectFirewallRules = createSelector(
             ? destinationNode.hostAllocations
             : [{ id: rule.destinationNodeId, ip: destinationNode?.ip ?? '-' }];
 
-      return sourceAllocations.flatMap((sourceAllocation, sourceIndex) => {
-        return destinationAllocations.map(
-          (destinationAllocation, destinationIndex) => {
+      const forwardRows = sourceAllocations.flatMap(
+        (sourceAllocation, sourceIndex) => {
+          return destinationAllocations.map(
+            (destinationAllocation, destinationIndex) => {
             const origem =
               rule.sourceScope === 'vlan'
                 ? `${sourceAllocation.ip} / ${sourceAllocation.id} (${formatVlanTarget(rule.sourceNodeId, rule.sourceVlanId)})`
@@ -326,48 +399,6 @@ export const selectFirewallRules = createSelector(
                 ? 'Nao'
                 : `O: ${sourceVlanLabel} | D: ${destinationVlanLabel}`;
 
-            // E — NAT mode badge from FW/router on the link path
-            const linkedLink = rule.linkId
-              ? links.find((l) => l.id === rule.linkId)
-              : undefined;
-            const linkedFrom = linkedLink
-              ? nodes.find((n) => n.id === linkedLink.from)
-              : undefined;
-            const linkedTo = linkedLink
-              ? nodes.find((n) => n.id === linkedLink.to)
-              : undefined;
-            const natHost = [linkedFrom, linkedTo].find(
-              (n) => n?.category === 'firewall' || n?.category === 'router',
-            );
-            const rawNatMode = natHost
-              ? String(natHost.techProfile?.fields?.natMode ?? 'none')
-              : 'none';
-            const fwNatMode = (
-              ['pat', 'snat', 'dnat', 'hybrid', 'none'].includes(rawNatMode)
-                ? rawNatMode
-                : 'none'
-            ) as FirewallRuleRow['fwNatMode'];
-
-            // E — IPsec auth badge
-            const ipsecNode = [linkedFrom, linkedTo].find(
-              (n) => n?.category === 'ipsec' || n?.category === 'vpn',
-            );
-            const ipsecAuth = ipsecNode
-              ? String(ipsecNode.techProfile?.fields?.authMethod ?? 'psk')
-              : undefined;
-            const ipsecAuthBadge: FirewallRuleRow['ipsecAuthBadge'] =
-              ipsecAuth === 'certificate'
-                ? 'PKI'
-                : ipsecAuth === 'eap'
-                  ? 'EAP'
-                  : ipsecAuth === 'keypair'
-                    ? 'keypair'
-                    : ipsecAuth === 'none'
-                      ? '⚠ sem IKE'
-                      : ipsecAuth === 'psk'
-                        ? 'PSK'
-                        : undefined;
-
             const row: FirewallRuleRow = {
               id:
                 sourceIndex === 0 && destinationIndex === 0
@@ -384,7 +415,8 @@ export const selectFirewallRules = createSelector(
               enabled: rule.enabled,
               managed: rule.managed,
               stateful: rule.stateful ?? true,
-              bidirectional: rule.bidirectional ?? false,
+              bidirectional: effectiveBidirectional,
+              duplexMode: effectiveDuplexMode,
               passthrough: rule.passthrough ?? false,
               natExempt: rule.natExempt ?? false,
               protocol: rule.protocol ?? 'any',
@@ -403,14 +435,22 @@ export const selectFirewallRules = createSelector(
               destinationVlanId: rule.destinationVlanId,
               destinationIp: rule.destinationIp,
               parentRuleId: rule.parentRuleId,
+              linkId: rule.linkId,
               fwNatMode: fwNatMode !== 'none' ? fwNatMode : undefined,
               ipsecAuthBadge,
             };
 
             return row;
-          },
-        );
-      });
+            },
+          );
+        },
+      );
+
+      // A linha de volta de um link não-bidirecional agora é uma AclRule
+      // real (exceção manual gerada por updateLink, ver networkSlice.ts) —
+      // ela passa por este mesmo loop e vira sua própria linha, sem
+      // precisar duplicar nada aqui.
+      return forwardRows;
     });
   },
 );
@@ -460,7 +500,7 @@ function parseBgpNeighbors(raw: string): BgpNeighborEntry[] {
 export const selectRoutingProtocolRows = createSelector(
   [selectNetworkState],
   (network): RoutingProtocolRow[] => {
-    const { nodes, sites } = network;
+    const { nodes, sites, links } = network;
 
     return nodes
       .filter((node) => node.category === 'router')
@@ -482,11 +522,27 @@ export const selectRoutingProtocolRows = createSelector(
         }
 
         const bgpNeighborsRaw = String(fields.bgpNeighbors ?? '');
+        const neighborCandidates = Array.from(
+          new Set(
+            links
+              .filter((link) => link.from === node.id || link.to === node.id)
+              .map((link) => (link.from === node.id ? link.to : link.from)),
+          ),
+        )
+          .map((peerId) => nodes.find((candidate) => candidate.id === peerId))
+          .filter((peer): peer is (typeof nodes)[number] => Boolean(peer))
+          .map((peer) => ({
+            nodeId: peer.id,
+            nodeLabel: peer.label,
+            ip: peer.ip?.trim() ?? '',
+            remoteAsn: String(peer.techProfile?.fields?.bgpAsn ?? '').trim(),
+          }))
+          .filter((peer) => peer.ip !== '');
 
         return {
           nodeId: node.id,
           nodeLabel: node.label,
-          siteId: node.siteId,
+          siteId: node.siteId ?? site?.id ?? '',
           siteName: site?.name ?? '—',
           mode,
           // OSPF
@@ -513,6 +569,10 @@ export const selectRoutingProtocolRows = createSelector(
               : undefined,
           bgpNeighborsRaw:
             mode === 'bgp' || mode === 'mixed' ? bgpNeighborsRaw : undefined,
+          bgpNeighborCandidates:
+            mode === 'bgp' || mode === 'mixed'
+              ? neighborCandidates
+              : undefined,
           bgpPrefixListIn:
             mode === 'bgp' || mode === 'mixed'
               ? String(fields.bgpPrefixListIn ?? '')
@@ -528,5 +588,172 @@ export const selectRoutingProtocolRows = createSelector(
           warnings,
         };
       });
+  },
+);
+
+/**
+ * P8 — Tabela de rotas derivada de sub-redes (Subnet) + interfaces VLAN (NodeVlanInterface).
+ * Cada linha representa uma rota de sub-rede com gateway opcionalmente atribuído.
+ */
+export const selectSubnetRouteTable = createSelector(
+  [selectNetworkState],
+  (network): SubnetRouteRow[] => {
+    const { subnets, siteVlans, sites, nodes, nodeVlanInterfaces, siteNetworks } = network;
+
+    const resolveGatewayIface = (siteId: string, vlanId: number) => {
+      const candidates = (nodeVlanInterfaces ?? []).filter(
+        (i) => i.siteId === siteId && i.vlanId === vlanId,
+      );
+
+      if (candidates.length === 0) return null;
+
+      const preferred = candidates.find((iface) => {
+        const node = nodes.find((n) => n.id === iface.nodeId);
+        return node?.category === 'router' || node?.category === 'firewall';
+      });
+
+      return preferred ?? candidates[0] ?? null;
+    };
+
+    const resolveVlanIpv6Prefix = (
+      vlan: (typeof siteVlans)[number],
+    ): string | undefined => {
+      if (vlan.ipv6Prefix?.trim()) return vlan.ipv6Prefix.trim();
+      if (!vlan.networkId) return undefined;
+      const network = (siteNetworks ?? []).find((n) => n.id === vlan.networkId);
+      const basePrefix = network?.ipv6Prefix?.trim();
+      if (!basePrefix) return undefined;
+      const [base] = basePrefix.split('/');
+      if (!base) return undefined;
+      const compactBase = base.replace(/::+$/, '').replace(/:$/, '');
+      const vlanHex = vlan.vlanId.toString(16);
+      return `${compactBase}:${vlanHex}::/64`;
+    };
+
+    const vlanBaseRows: SubnetRouteRow[] = (siteVlans ?? []).map((vlan) => {
+      const site = sites.find((s) => s.id === vlan.siteId);
+      const iface = resolveGatewayIface(vlan.siteId, vlan.vlanId);
+      const gatewayNode = iface
+        ? nodes.find((n) => n.id === iface.nodeId)
+        : undefined;
+
+      return {
+        siteId: vlan.siteId,
+        siteName: site?.name ?? vlan.siteId,
+        vlanId: vlan.vlanId,
+        vlanName: vlan.name ?? `VLAN ${vlan.vlanId}`,
+        destination: `${vlan.startIp} - ${vlan.endIp}`,
+        destinationIpv6: resolveVlanIpv6Prefix(vlan),
+        gateway: iface?.gatewayIp ?? '',
+        gatewayIpv6: iface?.gatewayIpv6 ?? '',
+        gatewayNodeId: iface?.nodeId ?? '',
+        gatewayNodeLabel: gatewayNode?.label ?? '',
+        subnetName: 'VLAN base',
+      };
+    });
+
+    const subnetRows: SubnetRouteRow[] = (subnets ?? []).map((subnet) => {
+      const site = sites.find((s) => s.id === subnet.siteId);
+      const vlan = (siteVlans ?? []).find(
+        (v) => v.siteId === subnet.siteId && v.vlanId === subnet.vlanId,
+      );
+
+      const iface = resolveGatewayIface(subnet.siteId, subnet.vlanId);
+      const gatewayNode = iface
+        ? nodes.find((n) => n.id === iface.nodeId)
+        : undefined;
+
+      const destination = `${subnet.networkAddress}/${subnet.cidr}`;
+
+      return {
+        siteId: subnet.siteId,
+        siteName: site?.name ?? subnet.siteId,
+        vlanId: subnet.vlanId ?? 0,
+        vlanName: vlan?.name ?? `VLAN ${subnet.vlanId ?? '—'}`,
+        destination,
+        destinationIpv6: subnet.ipv6Prefix?.trim() || (vlan ? resolveVlanIpv6Prefix(vlan) : undefined),
+        gateway: iface?.gatewayIp ?? '',
+        gatewayIpv6: iface?.gatewayIpv6 ?? '',
+        gatewayNodeId: iface?.nodeId ?? '',
+        gatewayNodeLabel: gatewayNode?.label ?? '',
+        subnetName: subnet.name,
+      };
+    });
+
+    return [...vlanBaseRows, ...subnetRows];
+  },
+);
+
+export const selectNetworkReadiness = createSelector(
+  [selectNetworkState],
+  (network): NetworkReadinessRow[] => {
+    const { siteNetworks, sites, nodes, siteVlans } = network;
+
+    return (siteNetworks ?? []).map((net) => {
+      const siteName = sites.find((s) => s.id === net.siteId)?.name ?? net.siteId;
+      const issues: string[] = [];
+
+      const stackMode = net.stackMode ?? 'ipv4';
+      const gatewayMode = net.gatewayMode ?? 'ipv4-only';
+      const dnsPolicy = net.dnsPolicy ?? 'a-only';
+      const preference = net.trafficPreference ?? 'ipv4-preferred';
+
+      const networkNodes = nodes.filter(
+        (n) => n.networkId === net.id && n.category !== 'wan',
+      );
+      const nodesMissingIpv6 = networkNodes.filter(
+        (n) => !(n.ipv6 && n.ipv6.trim() !== ''),
+      ).length;
+
+      const vlansInNetwork = (siteVlans ?? []).filter((v) => v.networkId === net.id);
+      const vlansMissingIpv6 = vlansInNetwork.filter(
+        (v) => !(v.ipv6Prefix && v.ipv6Prefix.trim() !== ''),
+      ).length;
+
+      if (stackMode !== 'ipv4' && !(net.ipv6Prefix && net.ipv6Prefix.trim() !== '')) {
+        issues.push('Stack dual/IPv6 sem prefixo IPv6 definido na LAN.');
+      }
+
+      if (stackMode !== 'ipv4' && gatewayMode !== 'dual-gateway') {
+        issues.push('Gateway não está em modo dual (v4+v6).');
+      }
+
+      if (stackMode !== 'ipv4' && dnsPolicy !== 'a-aaaa') {
+        issues.push('Política DNS sem suporte completo A+AAAA.');
+      }
+
+      if (
+        (preference === 'ipv6-preferred' || preference === 'ipv6-strict') &&
+        nodesMissingIpv6 > 0
+      ) {
+        issues.push(`${nodesMissingIpv6} nó(s) da LAN sem IPv6 configurado.`);
+      }
+
+      if (preference === 'ipv6-strict' && stackMode === 'ipv4') {
+        issues.push('Preferência IPv6 strict incompatível com stack IPv4 only.');
+      }
+
+      if (preference === 'ipv6-strict' && vlansMissingIpv6 > 0) {
+        issues.push(`${vlansMissingIpv6} VLAN(s) sem prefixo IPv6 em modo strict.`);
+      }
+
+      const level: NetworkReadinessRow['level'] =
+        issues.length === 0
+          ? 'ready'
+          : issues.some((i) =>
+                i.includes('strict') || i.includes('sem prefixo IPv6 definido'),
+              )
+            ? 'critical'
+            : 'warning';
+
+      return {
+        siteId: net.siteId,
+        siteName,
+        networkId: net.id,
+        networkName: net.name,
+        level,
+        issues,
+      };
+    });
   },
 );

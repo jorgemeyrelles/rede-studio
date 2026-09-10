@@ -1,24 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { updateNodeTechField } from '../../features/network/networkSlice';
 import { selectRoutingProtocolRows } from '../../features/network/selectors';
 import type { RoutingProtocolRow } from '../../features/network/types';
-import type { StudioLanguage } from './catalog';
-
-// ── Mode badge ────────────────────────────────────────────────────────────────
-const MODE_CLASS: Record<string, string> = {
-  static: 'bg-slate-700 text-slate-300',
-  ospf: 'bg-blue-900/60 text-blue-300',
-  bgp: 'bg-violet-900/60 text-violet-300',
-  mixed: 'bg-teal-900/60 text-teal-300',
-};
-
-const MODE_LABEL: Record<string, string> = {
-  static: 'Static',
-  ospf: 'OSPF',
-  bgp: 'BGP',
-  mixed: 'Mixed',
-};
+import { buildNetworkAddress } from '../../features/network/utils';
+import {
+    MODE_CLASS,
+    MODE_LABEL,
+    parseNeighborDraft,
+    serializeNeighborDraft,
+    type NeighborDraftEntry,
+    type RoutingProtocolTableProps,
+} from './catalog';
 
 // ── Inline editable cell ──────────────────────────────────────────────────────
 function EditableCell({
@@ -27,14 +20,12 @@ function EditableCell({
   value,
   placeholder,
   numeric,
-  layerOrder,
 }: {
   nodeId: string;
   fieldKey: string;
   value: string | number;
   placeholder?: string;
   numeric?: boolean;
-  layerOrder?: number;
 }) {
   const dispatch = useAppDispatch();
   const [editing, setEditing] = useState(false);
@@ -138,43 +129,161 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
   const dispatch = useAppDispatch();
   const [expanded, setExpanded] = useState(false);
   const [editingRaw, setEditingRaw] = useState(false);
-  const [draft, setDraft] = useState(row.bgpNeighborsRaw ?? '');
+  const [draftNeighbors, setDraftNeighbors] = useState<NeighborDraftEntry[]>(
+    parseNeighborDraft(row.bgpNeighborsRaw ?? ''),
+  );
+  const [candidateIp, setCandidateIp] = useState<string>('__custom__');
+  const [customIp, setCustomIp] = useState('');
+  const [draftRemoteAsn, setDraftRemoteAsn] = useState('');
 
   const count = row.bgpNeighborsParsed?.length ?? 0;
+  const candidates = row.bgpNeighborCandidates ?? [];
 
   const commitRaw = () => {
     dispatch(
       updateNodeTechField({
         id: row.nodeId,
         key: 'bgpNeighbors',
-        value: draft,
+        value: serializeNeighborDraft(draftNeighbors),
       }),
     );
     setEditingRaw(false);
   };
 
+  const addNeighbor = () => {
+    const selectedIp =
+      candidateIp === '__custom__' ? customIp.trim() : candidateIp;
+    const remoteAsn = draftRemoteAsn.trim();
+    if (!selectedIp) return;
+
+    setDraftNeighbors((prev) => {
+      const idx = prev.findIndex((entry) => entry.ip === selectedIp);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          remoteAsn: remoteAsn || next[idx].remoteAsn,
+        };
+        return next;
+      }
+
+      return [...prev, { ip: selectedIp, remoteAsn }];
+    });
+
+    setDraftRemoteAsn('');
+    if (candidateIp === '__custom__') {
+      setCustomIp('');
+    }
+  };
+
+  const removeNeighbor = (index: number) => {
+    setDraftNeighbors((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   if (editingRaw) {
     return (
       <div className="flex flex-col gap-1">
-        <input
-          autoFocus
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitRaw}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitRaw();
-            if (e.key === 'Escape') {
-              setDraft(row.bgpNeighborsRaw ?? '');
+        <div className="grid grid-cols-[minmax(110px,1fr)_85px_auto] gap-1">
+          <select
+            value={candidateIp}
+            onChange={(e) => {
+              const nextIp = e.target.value;
+              setCandidateIp(nextIp);
+              if (nextIp !== '__custom__') {
+                const selected = candidates.find((item) => item.ip === nextIp);
+                setDraftRemoteAsn(selected?.remoteAsn ?? '');
+              }
+            }}
+            className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+          >
+            {candidates.map((candidate) => (
+              <option key={`${row.nodeId}-${candidate.nodeId}`} value={candidate.ip}>
+                {candidate.ip} - {candidate.nodeLabel}
+              </option>
+            ))}
+            <option value="__custom__">Outro IP...</option>
+          </select>
+          <input
+            type="text"
+            value={draftRemoteAsn}
+            onChange={(e) => setDraftRemoteAsn(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addNeighbor();
+            }}
+            placeholder="ASN"
+            className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-violet-400"
+          />
+          <button
+            type="button"
+            onClick={addNeighbor}
+            className="rounded border border-violet-600/60 bg-violet-900/40 px-1 py-0.5 text-[9px] font-semibold text-violet-200 hover:bg-violet-800/50"
+          >
+            + Peer
+          </button>
+        </div>
+
+        {candidateIp === '__custom__' && (
+          <input
+            autoFocus
+            type="text"
+            value={customIp}
+            onChange={(e) => setCustomIp(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addNeighbor();
+            }}
+            placeholder="IP do neighbor"
+            className="w-full rounded border border-blue-500/50 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-blue-400"
+          />
+        )}
+
+        <div className="max-h-20 space-y-0.5 overflow-y-auto rounded border border-slate-800/70 bg-slate-950/40 p-1">
+          {draftNeighbors.length === 0 ? (
+            <div className="text-[9px] italic text-slate-600">
+              Sem peers adicionados.
+            </div>
+          ) : (
+            draftNeighbors.map((entry, index) => (
+              <div
+                key={`${entry.ip}-${index}`}
+                className="flex items-center justify-between gap-1 text-[10px]"
+              >
+                <span className="min-w-0 truncate font-mono text-slate-300">
+                  {entry.ip}
+                  <span className="text-violet-300">
+                    {entry.remoteAsn ? ` / ${entry.remoteAsn}` : ''}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeNeighbor(index)}
+                  className="rounded px-1 text-[9px] text-rose-300 hover:bg-rose-900/40"
+                >
+                  x
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="flex justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftNeighbors(parseNeighborDraft(row.bgpNeighborsRaw ?? ''));
               setEditingRaw(false);
-            }
-          }}
-          placeholder="10.0.0.1/65002, 10.0.0.2/65003"
-          className="w-full rounded border border-blue-500/50 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-blue-400"
-        />
-        <span className="text-[9px] text-slate-500">
-          Formato: ip/ASN-remoto, separados por vírgula
-        </span>
+            }}
+            className="rounded border border-slate-700 px-1.5 py-0.5 text-[9px] text-slate-400 hover:bg-slate-800"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={commitRaw}
+            className="rounded border border-emerald-700/60 bg-emerald-900/40 px-1.5 py-0.5 text-[9px] text-emerald-300 hover:bg-emerald-800/50"
+          >
+            Salvar
+          </button>
+        </div>
       </div>
     );
   }
@@ -201,7 +310,12 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
           type="button"
           title="Editar neighbors"
           onClick={() => {
-            setDraft(row.bgpNeighborsRaw ?? '');
+            const initial = parseNeighborDraft(row.bgpNeighborsRaw ?? '');
+            const firstCandidate = candidates[0];
+            setDraftNeighbors(initial);
+            setCandidateIp(firstCandidate?.ip ?? '__custom__');
+            setCustomIp('');
+            setDraftRemoteAsn(firstCandidate?.remoteAsn ?? '');
             setEditingRaw(true);
           }}
           className="text-[9px] text-slate-600 hover:text-blue-400"
@@ -432,11 +546,85 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
 // ── Prefix-list expansion row ─────────────────────────────────────────────────
 function PrefixRow({ row }: { row: RoutingProtocolRow }) {
   const dispatch = useAppDispatch();
+  const { sites, siteNetworks } = useAppSelector((state) => state.network);
   const [open, setOpen] = useState(false);
+  const [draftIn, setDraftIn] = useState('');
+  const [draftOut, setDraftOut] = useState('');
 
-  if (row.mode !== 'bgp' && row.mode !== 'mixed') return null;
+  const suggestedInList = Array.from(
+    new Set(
+      (() => {
+        const remoteNetworks = siteNetworks
+          .filter((network) => network.siteId !== row.siteId)
+          .map((network) => {
+            const networkSite = sites.find((item) => item.id === network.siteId);
+            const networkAddress = buildNetworkAddress(
+              network.addressFamily,
+              network.thirdOctet,
+              networkSite?.ipOctet,
+            );
+            return `${networkAddress}/${network.cidr}`;
+          });
 
-  const hasPrefixes = !!(row.bgpPrefixListIn || row.bgpPrefixListOut);
+        if (remoteNetworks.length > 0) {
+          return remoteNetworks;
+        }
+
+        return (row.bgpNeighborCandidates ?? [])
+          .map((peer) => peer.ip?.trim())
+          .filter((ip): ip is string => Boolean(ip))
+          .map((ip) => `${ip}/32`);
+      })(),
+    ),
+  );
+
+  const site = sites.find((item) => item.id === row.siteId);
+  const suggestedOutList = Array.from(
+    new Set(
+      siteNetworks
+        .filter((network) => network.siteId === row.siteId)
+        .map((network) => {
+          const networkAddress = buildNetworkAddress(
+            network.addressFamily,
+            network.thirdOctet,
+            site?.ipOctet,
+          );
+          return `${networkAddress}/${network.cidr}`;
+        }),
+    ),
+  );
+
+  const suggestedInValue = suggestedInList.join(', ');
+  const suggestedOutValue = suggestedOutList.join(', ');
+
+  useEffect(() => {
+    setDraftIn((row.bgpPrefixListIn ?? '').trim() || suggestedInValue);
+  }, [row.bgpPrefixListIn, suggestedInValue]);
+
+  useEffect(() => {
+    setDraftOut((row.bgpPrefixListOut ?? '').trim() || suggestedOutValue);
+  }, [row.bgpPrefixListOut, suggestedOutValue]);
+
+  const prefixesIn = (row.bgpPrefixListIn ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+  const prefixesOut = (row.bgpPrefixListOut ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+  const hasConfiguredPrefixes = prefixesIn.length > 0 || prefixesOut.length > 0;
+  const hasSuggestedPrefixes = suggestedInList.length > 0 || suggestedOutList.length > 0;
+
+  const commitPrefix = (key: 'bgpPrefixListIn' | 'bgpPrefixListOut', raw: string) => {
+    dispatch(
+      updateNodeTechField({
+        id: row.nodeId,
+        key,
+        value: raw.trim(),
+      }),
+    );
+  };
 
   return (
     <>
@@ -449,9 +637,11 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
           >
             <span>{open ? '▼' : '▶'}</span>
             <span>
-              Prefix-Lists{' '}
-              {hasPrefixes ? (
+              Prefix-Lists (opcional){' '}
+              {hasConfiguredPrefixes ? (
                 <span className="text-violet-400">configurados</span>
+              ) : hasSuggestedPrefixes ? (
+                <span className="text-cyan-300">sugeridos</span>
               ) : (
                 <span className="italic">(não configurados)</span>
               )}
@@ -469,19 +659,23 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
                 </label>
                 <input
                   type="text"
-                  defaultValue={row.bgpPrefixListIn ?? ''}
-                  onBlur={(e) =>
-                    dispatch(
-                      updateNodeTechField({
-                        id: row.nodeId,
-                        key: 'bgpPrefixListIn',
-                        value: e.target.value,
-                      }),
-                    )
-                  }
-                  placeholder="Ex: 10.100.0.0/16, 192.168.0.0/24"
+                  value={draftIn}
+                  onChange={(event) => setDraftIn(event.target.value)}
+                  onBlur={() => commitPrefix('bgpPrefixListIn', draftIn)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      commitPrefix('bgpPrefixListIn', draftIn);
+                    }
+                  }}
+                  placeholder={suggestedInValue || 'Ex: 10.10.0.0/16, 172.16.20.0/24'}
                   className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500/50"
                 />
+                {suggestedInValue && !row.bgpPrefixListIn?.trim() && (
+                  <p className="mt-0.5 text-[9px] text-cyan-300">
+                    Sugestão inicial aplicada automaticamente.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="mb-0.5 block text-[9px] text-slate-500">
@@ -489,21 +683,28 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
                 </label>
                 <input
                   type="text"
-                  defaultValue={row.bgpPrefixListOut ?? ''}
-                  onBlur={(e) =>
-                    dispatch(
-                      updateNodeTechField({
-                        id: row.nodeId,
-                        key: 'bgpPrefixListOut',
-                        value: e.target.value,
-                      }),
-                    )
-                  }
-                  placeholder="Ex: 172.16.0.0/16"
+                  value={draftOut}
+                  onChange={(event) => setDraftOut(event.target.value)}
+                  onBlur={() => commitPrefix('bgpPrefixListOut', draftOut)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      commitPrefix('bgpPrefixListOut', draftOut);
+                    }
+                  }}
+                  placeholder={suggestedOutValue || 'Ex: 200.30.1.0/24'}
                   className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500/50"
                 />
+                {suggestedOutValue && !row.bgpPrefixListOut?.trim() && (
+                  <p className="mt-0.5 text-[9px] text-cyan-300">
+                    Sugestão inicial aplicada automaticamente.
+                  </p>
+                )}
               </div>
             </div>
+            <p className="mt-1 text-[9px] text-slate-600">
+              Prefix-list é opcional e aceita edição livre por lista CSV.
+            </p>
           </td>
         </tr>
       )}
@@ -528,10 +729,6 @@ function WarningRow({ row }: { row: RoutingProtocolRow }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-type RoutingProtocolTableProps = {
-  language: StudioLanguage;
-};
-
 export default function RoutingProtocolTable({
   language: _language,
 }: RoutingProtocolTableProps) {

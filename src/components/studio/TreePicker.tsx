@@ -4,13 +4,13 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type {
-  NodeItem,
-  Site,
-  SiteNetwork,
-  SiteVlan,
-  Subnet,
+    AclEndpointScope,
+    NodeItem,
+    Site,
+    SiteNetwork,
+    SiteVlan,
+    Subnet,
 } from '../../features/network/types/entities';
-import type { AclEndpointScope } from '../../features/network/types/entities';
 
 export type TreePickerValue = {
   scope: AclEndpointScope;
@@ -33,32 +33,6 @@ interface TreePickerProps {
   onChange: (nodeId: string) => void;
   placeholder?: string;
   excludeNodeId?: string;
-}
-
-/** Checkbox that supports indeterminate state */
-function IndeterminateCheckbox({
-  checked,
-  indeterminate,
-  onChange,
-}: {
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = indeterminate;
-  }, [indeterminate]);
-
-  return (
-    <input
-      ref={ref}
-      type="checkbox"
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-      className="h-3 w-3 cursor-pointer accent-sky-500"
-    />
-  );
 }
 
 export function TreePicker({

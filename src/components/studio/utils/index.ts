@@ -4,4 +4,6 @@ export * from './networkDiagram';
 export * from './node';
 export * from './pdfReport';
 export * from './routeFirewall';
+export * from './routingProtocol';
 export * from './siteVlan';
+

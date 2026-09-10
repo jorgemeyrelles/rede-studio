@@ -11,7 +11,7 @@ export default function S05TopologiaFisica() {
           Ligações <span>Físicas</span> entre Dispositivos
         </div>
         <div className="slide-subtitle">
-          Cada enlace com meio físico, velocidade e tipo de conexão
+          Enlaces fisicos com MPLS primario, internet de backup e VPN IPsec
         </div>
         <div
           style={{
@@ -52,8 +52,23 @@ export default function S05TopologiaFisica() {
                 </strong>
                 <br />
                 <span style={{ color: "var(--dim)" }}>
-                  Cabo óptico monomodo · Gbps · porta WAN · IP público
-                  200.10.1.1/30
+                  MPLS 100 Mbps · SLA 99,9% · WAN primario 203.0.113.1/30
+                </span>
+              </div>
+              <div
+                style={{
+                  background: "#0d1a2a",
+                  borderRadius: "6px",
+                  padding: "8px 12px",
+                  borderLeft: "3px solid var(--cyan)",
+                }}
+              >
+                <strong style={{ color: "var(--cyan)" }}>
+                  Internet Backup
+                </strong>
+                <br />
+                <span style={{ color: "var(--dim)" }}>
+                  Link dedicado 50 Mbps · IPv4 only · 198.51.100.1/30
                 </span>
               </div>
               <div
@@ -97,12 +112,11 @@ export default function S05TopologiaFisica() {
                 }}
               >
                 <strong style={{ color: "#aa88ff" }}>
-                  Switch → Servidores (3)
+                  Switch → Servidores (~20)
                 </strong>
                 <br />
                 <span style={{ color: "var(--dim)" }}>
-                  Cat6A · 1Gbps por servidor · IPs estáticos · rack de
-                  servidores
+                  Cat6A · 1Gbps por servidor · IPs estáticos · rack corporativo
                 </span>
               </div>
               <div
@@ -180,9 +194,9 @@ export default function S05TopologiaFisica() {
                 padding: "3px 6px",
               }}
             >
-              VPN
+              VPN Backup
               <br />
-              IPsec
+              IPsec/IKEv2
             </div>
             <div
               style={{
@@ -231,7 +245,23 @@ export default function S05TopologiaFisica() {
                 </strong>
                 <br />
                 <span style={{ color: "var(--dim)" }}>
-                  Cabo óptico · Gbps · porta WAN · IP público 200.20.1.1/30
+                  MPLS 100 Mbps · SLA 99,9% · WAN primario 203.0.113.5/30
+                </span>
+              </div>
+              <div
+                style={{
+                  background: "#071408",
+                  borderRadius: "6px",
+                  padding: "8px 12px",
+                  borderLeft: "3px solid var(--cyan)",
+                }}
+              >
+                <strong style={{ color: "var(--cyan)" }}>
+                  Internet Backup
+                </strong>
+                <br />
+                <span style={{ color: "var(--dim)" }}>
+                  Link dedicado 50 Mbps · IPv4 only · 198.51.100.5/30
                 </span>
               </div>
               <div
@@ -275,11 +305,11 @@ export default function S05TopologiaFisica() {
                 }}
               >
                 <strong style={{ color: "#aa88ff" }}>
-                  Switch → Servidores (2)
+                  Switch → Servidores (4 iniciais)
                 </strong>
                 <br />
                 <span style={{ color: "var(--dim)" }}>
-                  Cat6A · 1Gbps por servidor · IPs estáticos · rack local
+                  Cat6A · 1Gbps por servidor · IPs estáticos · rack local · expansao 6-8
                 </span>
               </div>
               <div

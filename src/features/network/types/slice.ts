@@ -1,18 +1,25 @@
-import type { AclAction, LinkKind, NodeCategory } from './primitives';
 import type {
-  AclEndpointScope,
-  AddressFamily,
-  CertificateType,
-  CustomServiceProto,
-  FwPolicyAction,
-  IpsecSaState,
-  LayerTier,
-  NatType,
-  NetworkPurpose,
-  SessionProto,
-  SessionState,
-  SslVpnAuthMode,
+    AclEndpointScope,
+    AddressAllocationMode,
+    AddressFamily,
+    CertificateType,
+    CustomServiceProto,
+    DhcpScope,
+    FwPolicyAction,
+    IpsecSaState,
+    LayerTier,
+    LinkDuplexMode,
+    NatType,
+    NetworkDnsPolicy,
+    NetworkGatewayMode,
+    NetworkPurpose,
+    NetworkStackMode,
+    NetworkTrafficPreference,
+    SessionProto,
+    SessionState,
+    SslVpnAuthMode,
 } from './entities';
+import type { AclAction, LinkKind, NodeCategory } from './primitives';
 import type { TechValue } from './techProfile.type';
 
 export type AddNodePayload = {
@@ -36,6 +43,7 @@ export type UpdateNodePayload = {
   changes: Partial<{
     label: string;
     ip: string;
+    ipv6: string;
     hostCount: number;
     cidr: number;
     vlans: number[];
@@ -128,6 +136,8 @@ export type UpdateLinkPayload = {
   id: string;
   changes: Partial<{
     kind: LinkKind;
+    bidirectional: boolean;
+    duplexMode: LinkDuplexMode;
     generateAcl: boolean;
     statefulOverride: 'inherited' | 'force-stateful' | 'force-stateless';
     description: string;
@@ -153,6 +163,12 @@ export type AddSiteNetworkPayload = {
   addressFamily: AddressFamily;
   thirdOctet: number;
   cidr: number;
+  stackMode?: NetworkStackMode;
+  gatewayMode?: NetworkGatewayMode;
+  dnsPolicy?: NetworkDnsPolicy;
+  ipv6Prefix?: string;
+  ipv6VlanPrefixLength?: number;
+  trafficPreference?: NetworkTrafficPreference;
 };
 
 export type RemoveSiteNetworkPayload = {
@@ -168,6 +184,7 @@ export type AddSubnetPayload = {
   name: string;
   cidr: number;
   networkAddress: string;
+  ipv6Prefix?: string;
 };
 
 export type RemoveSubnetPayload = {
@@ -182,12 +199,24 @@ export type AddSiteVlanPayload = {
   startRadical: string;
   /** Fase 2 — rede lógica à qual esta VLAN pertence */
   networkId?: string;
+  /** V2-B — prefixo IPv6 planejado por VLAN */
+  ipv6Prefix?: string;
+  /** V2-B — modo de alocação de endereços na VLAN */
+  addressAllocation?: AddressAllocationMode;
 };
 
 export type RemoveSiteVlanPayload = {
   siteId: string;
   vlanId: number;
 };
+
+export type UpsertDhcpScopePayload = Omit<DhcpScope, 'id'> & {
+  id?: string;
+};
+
+export type RemoveDhcpScopePayload =
+  | { id: string }
+  | { siteId: string; vlanId: number };
 
 export type SetVlanAssignmentPayload = {
   siteId: string;
@@ -362,5 +391,5 @@ export type SetAclChildOverridePayload = {
   /** ID composto da linha de expansão */
   childId: string;
   /** Ação de sobrescrita. null = remover a sobrescrita (voltar ao padrão da regra pai) */
-  action: import('./entities').AclAction | null;
+  action: AclAction | null;
 };

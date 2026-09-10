@@ -247,8 +247,13 @@ export function networkRangeBounds(
 
 /**
  * Versão network-aware de buildIpFromSiteAndRadical.
- * O radical X.Y é interpretado como offset a partir do endereço base da rede:
- *   IP = prefix.A.B.(C + X).Y  onde prefix.A.B.C é buildNetworkAddress.
+ *
+ * Para a família '200.x' (padrão legado), o radical X.Y representa
+ * os octetos absolutos 3.4 no espaço 200.siteOctet.X.Y — mesma
+ * convenção de buildIpFromSiteAndRadical e getSiteRadicalOptions.
+ *
+ * Para outras famílias, X.Y é interpretado como offset sobre o
+ * thirdOctet da rede: IP = prefix.A.(thirdOctet + X).Y
  */
 export function buildIpFromNetworkAndRadical(
   network: Pick<SiteNetwork, 'addressFamily' | 'thirdOctet'>,
@@ -257,6 +262,13 @@ export function buildIpFromNetworkAndRadical(
 ): string | null {
   const parsed = parseRadical(startRadical);
   if (!parsed) return null;
+
+  // Para '200.x' o radical já é o 3º/4º octeto absoluto
+  if (network.addressFamily === '200.x') {
+    return `200.${siteOctet}.${parsed.third}.${parsed.fourth}`;
+  }
+
+  // Para outras famílias, trata como offset sobre o endereço base da rede
   const base = buildNetworkAddress(
     network.addressFamily,
     network.thirdOctet,

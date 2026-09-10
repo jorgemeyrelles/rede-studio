@@ -2,27 +2,34 @@ import * as go from 'gojs';
 import { useEffect, useRef, useState } from 'react';
 import { ACL_RULES, ACTION_LABEL } from '../../S11Firewall/constants';
 import {
-  FIREWALL_DEDICATED_ITEMS,
-  VPN_CRYPTO_ITEMS,
+    FIREWALL_DEDICATED_ITEMS,
+    VPN_CRYPTO_ITEMS,
 } from '../../S12Seguranca/constants';
 import {
-  DIAGRAM_LINK_DATA,
-  DIAGRAM_NODE_DATA,
-  ICON_KEYS_BY_LAYER,
-  LAYER1_HEIGHT,
-  LAYER1_Y,
-  LAYER2_Y,
-  LAYER3_Y,
-  LAYER4_Y,
-  LAYER_COMMON_HEIGHT,
-  LAYER_WIDTH,
-  MAIN_CONTAINER_MAX_HEIGHT,
-  MAIN_CONTAINER_MIN_HEIGHT,
-  MAIN_CONTAINER_WIDTH,
-  PLACEHOLDER_PADDING,
+    DIAGRAM_LINK_DATA,
+    DIAGRAM_NODE_DATA,
+    ICON_KEYS_BY_LAYER,
+    LAYER1_HEIGHT,
+    LAYER1_Y,
+    LAYER2_Y,
+    LAYER3_Y,
+    LAYER4_Y,
+    LAYER_COMMON_HEIGHT,
+    LAYER_WIDTH,
+    MAIN_CONTAINER_MAX_HEIGHT,
+    MAIN_CONTAINER_MIN_HEIGHT,
+    MAIN_CONTAINER_WIDTH,
+    PLACEHOLDER_PADDING,
 } from '../constants';
 import type { TooltipData } from '../types';
 import { calculateTooltipPosition } from '../utils';
+
+type TooltipPayload = Exclude<TooltipData, null>;
+
+type DiagramCallbacks = {
+  onLinkHover?: (tooltip: TooltipPayload) => void;
+  onLinkLeave?: () => void;
+};
 
 function getPublicAssetPath(path: string) {
   return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
@@ -73,7 +80,10 @@ function getSecurityTooltipData(nodeKey: string) {
   return {};
 }
 
-function buildLogicalDiagram(container: HTMLDivElement) {
+function buildLogicalDiagram(
+  container: HTMLDivElement,
+  callbacks: DiagramCallbacks = {},
+) {
   const $ = go.GraphObject.make;
 
   const existingDiagram = go.Diagram.fromDiv(container);
@@ -265,6 +275,39 @@ function buildLogicalDiagram(container: HTMLDivElement) {
     ),
   );
 
+  const readString = (
+    source: Record<string, unknown>,
+    key: string,
+    fallback: string,
+  ) => {
+    const value = source[key];
+    return typeof value === 'string' && value.trim().length > 0
+      ? value
+      : fallback;
+  };
+
+  const buildLinkTooltip = (link: go.Link): TooltipPayload => {
+    const data = (link.data ?? {}) as Record<string, unknown>;
+    const from = readString(data, 'from', 'origem');
+    const to = readString(data, 'to', 'destino');
+    const label = readString(data, 'label', `${from} -> ${to}`);
+    const midpoint = link.midPoint.copy();
+    const viewPoint = diagram.transformDocToView(midpoint);
+
+    return {
+      kind: 'link',
+      key: `link-${from}-${to}-${label}`,
+      title: readString(data, 'infoTitle', `Enlace: ${label}`),
+      site: readString(data, 'infoSite', `${from} -> ${to}`),
+      ip: readString(data, 'infoIp', '-'),
+      vlan: readString(data, 'infoVlan', label),
+      vlanInfo: readString(data, 'infoText', 'Detalhes do enlace logico.'),
+      x: viewPoint.x,
+      y: viewPoint.y,
+      preferredPlacement: 'top',
+    };
+  };
+
   diagram.linkTemplate = $(
     go.Link,
     {
@@ -277,6 +320,24 @@ function buildLogicalDiagram(container: HTMLDivElement) {
       toEndSegmentLength: 14,
       fromSpot: go.Spot.AllSides,
       toSpot: go.Spot.AllSides,
+      mouseEnter: (_event, obj) => {
+        const link = obj.part;
+        if (!(link instanceof go.Link)) {
+          return;
+        }
+
+        link.isHighlighted = true;
+        callbacks.onLinkHover?.(buildLinkTooltip(link));
+      },
+      mouseLeave: (_event, obj) => {
+        const link = obj.part;
+        if (!(link instanceof go.Link)) {
+          return;
+        }
+
+        link.isHighlighted = false;
+        callbacks.onLinkLeave?.();
+      },
     },
     new go.Binding('layerName', 'isHighlighted', (h) =>
       h ? 'Foreground' : 'Background',
@@ -487,14 +548,19 @@ export function GojsLogicalDiagram({
   tooltipHeight = 170,
 }: GojsLogicalDiagramProps) {
   const logicalRef = useRef<HTMLDivElement | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipData>(null);
+  const [pinnedTooltip, setPinnedTooltip] = useState<TooltipData>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<TooltipData>(null);
+  const tooltip = hoverTooltip ?? pinnedTooltip;
 
   useEffect(() => {
     if (!logicalRef.current) {
       return;
     }
 
-    const diagram = buildLogicalDiagram(logicalRef.current);
+    const diagram = buildLogicalDiagram(logicalRef.current, {
+      onLinkHover: (linkTooltip) => setHoverTooltip(linkTooltip),
+      onLinkLeave: () => setHoverTooltip(null),
+    });
 
     diagram.addDiagramListener('ObjectSingleClicked', (e) => {
       const part = e.subject.part;
@@ -503,7 +569,8 @@ export function GojsLogicalDiagram({
         part.category === 'layerbox' ||
         part instanceof go.Group
       ) {
-        setTooltip(null);
+        setPinnedTooltip(null);
+        setHoverTooltip(null);
         return;
       }
 
@@ -520,7 +587,8 @@ export function GojsLogicalDiagram({
       }
 
       if (!infoBtnClicked) {
-        setTooltip(null);
+        setPinnedTooltip(null);
+        setHoverTooltip(null);
         return;
       }
 
@@ -531,7 +599,9 @@ export function GojsLogicalDiagram({
         : part.location;
       const viewPt = diagram.transformDocToView(btnDocPt);
       const isWAN = nodeData.key === 'wan';
-      setTooltip({
+      setHoverTooltip(null);
+      setPinnedTooltip({
+        kind: 'node',
         key: nodeData.key,
         site: nodeData.site || '-',
         ip: nodeData.ip || '-',
@@ -549,7 +619,8 @@ export function GojsLogicalDiagram({
     });
 
     diagram.addDiagramListener('BackgroundSingleClicked', () => {
-      setTooltip(null);
+      setPinnedTooltip(null);
+      setHoverTooltip(null);
     });
 
     return () => {
@@ -561,7 +632,10 @@ export function GojsLogicalDiagram({
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setTooltip(null);
+      if (e.key === 'Escape') {
+        setPinnedTooltip(null);
+        setHoverTooltip(null);
+      }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
@@ -599,17 +673,22 @@ export function GojsLogicalDiagram({
               >
                 <div className="gojs-tooltip-header">
                   <div className="gojs-tooltip-head-main">
-                    <img
-                      src={tooltip.iconSrc}
-                      alt=""
-                      className="gojs-tooltip-icon"
-                      aria-hidden="true"
-                    />
+                    {tooltip.iconSrc ? (
+                      <img
+                        src={tooltip.iconSrc}
+                        alt=""
+                        className="gojs-tooltip-icon"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                     <div className="gojs-tooltip-title">{tooltip.title}</div>
                   </div>
                   <button
                     className="gojs-tooltip-close-btn"
-                    onClick={() => setTooltip(null)}
+                    onClick={() => {
+                      setPinnedTooltip(null);
+                      setHoverTooltip(null);
+                    }}
                     aria-label="Fechar"
                   >
                     ✕
@@ -617,7 +696,9 @@ export function GojsLogicalDiagram({
                 </div>
                 <div className="gojs-tooltip-body">
                   <div className="gojs-tooltip-row">
-                    <span className="gojs-tooltip-label">Site:</span>
+                    <span className="gojs-tooltip-label">
+                      {tooltip.kind === 'link' ? 'Enlace:' : 'Site:'}
+                    </span>
                     <span className="gojs-tooltip-value">{tooltip.site}</span>
                   </div>
                   <div className="gojs-tooltip-row">
@@ -625,11 +706,15 @@ export function GojsLogicalDiagram({
                     <span className="gojs-tooltip-value">{tooltip.ip}</span>
                   </div>
                   <div className="gojs-tooltip-row">
-                    <span className="gojs-tooltip-label">VLAN:</span>
+                    <span className="gojs-tooltip-label">
+                      {tooltip.kind === 'link' ? 'SLA/Metrica:' : 'VLAN:'}
+                    </span>
                     <span className="gojs-tooltip-value">{tooltip.vlan}</span>
                   </div>
                   <div className="gojs-tooltip-row">
-                    <span className="gojs-tooltip-label">Info:</span>
+                    <span className="gojs-tooltip-label">
+                      {tooltip.kind === 'link' ? 'Detalhes:' : 'Info:'}
+                    </span>
                     <span className="gojs-tooltip-value">
                       {tooltip.vlanInfo}
                     </span>

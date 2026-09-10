@@ -49,6 +49,7 @@ export function getNodeIdPrefix(value: string) {
 
 export function buildNodeHostAllocations(
   node: Pick<NodeItem, 'id' | 'ip' | 'hostCount'>,
+  options?: { usedIds?: Iterable<string> },
 ) {
   const startIp = ipToNumber(node.ip);
   if (startIp === null) {
@@ -57,11 +58,39 @@ export function buildNodeHostAllocations(
 
   const count = Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1));
   const { prefix, start } = getNodeIdPrefix(node.id);
+  const scopedUsedIds = new Set<string>();
 
-  return Array.from({ length: count }, (_entry, index) => ({
-    id: index === 0 ? node.id : `${prefix}${start + index}`,
-    ip: numberToIp(startIp + index),
-  }));
+  for (const candidate of options?.usedIds ?? []) {
+    if (candidate.startsWith(prefix)) {
+      scopedUsedIds.add(candidate);
+    }
+  }
+
+  scopedUsedIds.delete(node.id);
+
+  const generatedIds = new Set<string>([node.id]);
+
+  return Array.from({ length: count }, (_entry, index) => {
+    if (index === 0) {
+      return {
+        id: node.id,
+        ip: numberToIp(startIp + index),
+      };
+    }
+
+    let sequence = start + index;
+    let candidateId = `${prefix}${sequence}`;
+    while (scopedUsedIds.has(candidateId) || generatedIds.has(candidateId)) {
+      sequence += 1;
+      candidateId = `${prefix}${sequence}`;
+    }
+
+    generatedIds.add(candidateId);
+    return {
+      id: candidateId,
+      ip: numberToIp(startIp + index),
+    };
+  });
 }
 
 export function getNextNodeSequence(
@@ -137,4 +166,29 @@ export function buildNodeIp(
     return `200.${siteOctet}.${third}.${fourth}`;
   }
   return `${baseParts[0]}.${baseParts[1]}.${baseParts[2]}.${fourth}`;
+}
+
+export function buildNodeIpv6(
+  siteOctet: number,
+  layerOrder: number,
+  category: NodeCategory,
+  categoryCount: number,
+  network?: Pick<SiteNetwork, 'ipv6Prefix'>,
+) {
+  const hostBase = getCategoryHostBase(category);
+  const host = Math.max(1, hostBase + categoryCount - 1).toString(16);
+
+  const networkPrefix = network?.ipv6Prefix?.trim();
+  if (networkPrefix) {
+    const [baseRaw] = networkPrefix.split('/');
+    if (baseRaw) {
+      const base = baseRaw.replace(/::+$/, '').replace(/:$/, '');
+      const layerHex = Math.max(1, layerOrder).toString(16);
+      return `${base}:${layerHex}::${host}`;
+    }
+  }
+
+  const siteHex = Math.max(1, Math.min(4095, siteOctet)).toString(16);
+  const layerHex = Math.max(1, Math.min(4095, layerOrder)).toString(16);
+  return `fd00:${siteHex}:${layerHex}::${host}`;
 }
