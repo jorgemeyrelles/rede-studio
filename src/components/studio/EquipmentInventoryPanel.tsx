@@ -6,24 +6,31 @@ import {
   updateNode,
 } from '../../features/network/networkSlice';
 import { selectEquipmentInventory } from '../../features/network/selectors';
-import type { EquipmentInventoryRow } from '../../features/network/types';
+import type {
+  EquipmentInventoryRow,
+  LayerTier,
+} from '../../features/network/types';
+import type { StudioLanguage } from './types';
+import { getEquipmentInventoryCopy, getTierLabel } from './utils/i18n';
+
+type EquipmentInventoryPanelProps = {
+  language: StudioLanguage;
+};
 
 type SortKey = keyof EquipmentInventoryRow;
 type SortDir = 'asc' | 'desc';
 
-const COLUMNS: { key: SortKey; label: string }[] = [
-  { key: 'id', label: 'ID' },
-  { key: 'nome', label: 'Nome' },
-  { key: 'marca', label: 'Marca' },
-  { key: 'modelo', label: 'Modelo' },
-  { key: 'funcao', label: 'Função' },
-  { key: 'site', label: 'Site' },
-  { key: 'lan', label: 'LAN' },
-  { key: 'tier', label: 'Tier' },
-];
-
 // Sprint equipamentos Fase 12 — +1 pela coluna de chevron/accordion.
-const TOTAL_COLUMN_COUNT = COLUMNS.length + 1;
+const TOTAL_COLUMN_COUNT = 9;
+
+// Bug fix i18n — sentinela distinto de `''` (usado pelo option "Todos os
+// tiers") para representar, no filtro, as linhas cujo `tier` bruto é
+// `undefined` (nó sem camada associada) — evita colidir com "sem filtro".
+const NONE_TIER_VALUE = '__none__';
+
+function tierFilterValue(tier: LayerTier | undefined): string {
+  return tier ?? NONE_TIER_VALUE;
+}
 
 function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
@@ -49,8 +56,11 @@ function groupEquipmentRows(rows: EquipmentInventoryRow[]): EquipmentGroup[] {
   return groups;
 }
 
-export default function EquipmentInventoryPanel() {
+export default function EquipmentInventoryPanel({
+  language,
+}: EquipmentInventoryPanelProps) {
   const dispatch = useAppDispatch();
+  const copy = getEquipmentInventoryCopy(language);
   const rows = useAppSelector(selectEquipmentInventory);
   // Sprint equipamentos Fase 8 — marca/modelo em cascata na própria linha da
   // tabela; `rows.marca/modelo` já vêm formatados pro display ("—" quando
@@ -75,8 +85,25 @@ export default function EquipmentInventoryPanel() {
       .map((item) => item.model)
       .sort((a, b) => a.localeCompare(b));
 
+  // Bug fix i18n — 8 cabeçalhos de coluna traduzidos por `copy`; a mesma
+  // lista é reaproveitada pela tabela filha do accordion (ID/Nome/Marca/
+  // Modelo), ver abaixo.
+  const COLUMNS: { key: SortKey; label: string }[] = [
+    { key: 'id', label: copy.colId },
+    { key: 'nome', label: copy.colName },
+    { key: 'marca', label: copy.colBrand },
+    { key: 'modelo', label: copy.colModel },
+    { key: 'funcao', label: copy.colFunction },
+    { key: 'site', label: copy.colSite },
+    { key: 'lan', label: copy.colLan },
+    { key: 'tier', label: copy.colTier },
+  ];
+
   const [siteFilter, setSiteFilter] = useState('');
   const [lanFilter, setLanFilter] = useState('');
+  // Bug fix i18n — guarda o valor BRUTO do tier (`LayerTier` ou o sentinela
+  // `NONE_TIER_VALUE`), não o rótulo traduzido: assim o filtro sobrevive a
+  // troca de idioma em vez de "perder" a seleção porque o texto mudou.
   const [tierFilter, setTierFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('nome');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -100,10 +127,25 @@ export default function EquipmentInventoryPanel() {
     () => uniqueSorted(rows.map((row) => row.lan)),
     [rows],
   );
-  const tierOptions = useMemo(
-    () => uniqueSorted(rows.map((row) => row.tier)),
-    [rows],
-  );
+  // Bug fix i18n — cada opção guarda o valor bruto (pra filtrar,
+  // estável entre idiomas) e o rótulo já traduzido (pra exibir).
+  const tierOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const row of rows) {
+      const value = tierFilterValue(row.tier);
+      if (!seen.has(value)) {
+        seen.set(value, getTierLabel(row.tier, language, row.lan));
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, language]);
+
+  function getSortValue(row: EquipmentInventoryRow, key: SortKey): string {
+    if (key === 'tier') return getTierLabel(row.tier, language, row.lan);
+    return String(row[key]);
+  }
 
   // Filtro/ordenação incidem só sobre a linha "pai" (1 por equipamento);
   // as linhas derivadas (unidades extras) herdam site/lan/tier do pai, então
@@ -114,18 +156,18 @@ export default function EquipmentInventoryPanel() {
       ({ parent }) =>
         (!siteFilter || parent.site === siteFilter) &&
         (!lanFilter || parent.lan === lanFilter) &&
-        (!tierFilter || parent.tier === tierFilter),
+        (!tierFilter || tierFilterValue(parent.tier) === tierFilter),
     );
 
     const sorted = [...filtered].sort((a, b) => {
-      const result = String(a.parent[sortKey]).localeCompare(
-        String(b.parent[sortKey]),
+      const result = getSortValue(a.parent, sortKey).localeCompare(
+        getSortValue(b.parent, sortKey),
       );
       return sortDir === 'asc' ? result : -result;
     });
 
     return sorted;
-  }, [rows, siteFilter, lanFilter, tierFilter, sortKey, sortDir]);
+  }, [rows, siteFilter, lanFilter, tierFilter, sortKey, sortDir, language]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -139,7 +181,7 @@ export default function EquipmentInventoryPanel() {
   return (
     <section className="w-full rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">
-        Inventário de Equipamentos
+        {copy.title}
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -148,7 +190,7 @@ export default function EquipmentInventoryPanel() {
           onChange={(event) => setSiteFilter(event.target.value)}
           className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
         >
-          <option value="">Todos os sites</option>
+          <option value="">{copy.filterAllSites}</option>
           {siteOptions.map((site) => (
             <option key={site} value={site}>
               {site}
@@ -160,7 +202,7 @@ export default function EquipmentInventoryPanel() {
           onChange={(event) => setLanFilter(event.target.value)}
           className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
         >
-          <option value="">Todas as LANs</option>
+          <option value="">{copy.filterAllLans}</option>
           {lanOptions.map((lan) => (
             <option key={lan} value={lan}>
               {lan}
@@ -172,16 +214,16 @@ export default function EquipmentInventoryPanel() {
           onChange={(event) => setTierFilter(event.target.value)}
           className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
         >
-          <option value="">Todos os tiers</option>
+          <option value="">{copy.filterAllTiers}</option>
           {tierOptions.map((tier) => (
-            <option key={tier} value={tier}>
-              {tier}
+            <option key={tier.value} value={tier.value}>
+              {tier.label}
             </option>
           ))}
         </select>
         <span className="text-[10px] text-slate-500">
-          {visibleGroups.length} equipamento
-          {visibleGroups.length !== 1 ? 's' : ''}
+          {visibleGroups.length}{' '}
+          {visibleGroups.length !== 1 ? copy.countPlural : copy.countSingular}
         </span>
       </div>
 
@@ -213,7 +255,7 @@ export default function EquipmentInventoryPanel() {
                   colSpan={TOTAL_COLUMN_COUNT}
                   className="border-b border-slate-800 px-2 py-3 text-center text-slate-500"
                 >
-                  Nenhum equipamento de sustentação de rede cadastrado.
+                  {copy.emptyState}
                 </td>
               </tr>
             )}
@@ -233,7 +275,9 @@ export default function EquipmentInventoryPanel() {
                     <td className="border-b border-slate-800 px-1 py-1">
                       <button
                         type="button"
-                        aria-label={isOpen ? 'Recolher' : 'Expandir'}
+                        aria-label={
+                          isOpen ? copy.collapseAriaLabel : copy.expandAriaLabel
+                        }
                         onClick={() => isExpandable && toggleExpand(row.id)}
                         disabled={!isExpandable}
                         className={`flex h-5 w-5 items-center justify-center rounded transition-all duration-150 ${
@@ -282,7 +326,7 @@ export default function EquipmentInventoryPanel() {
                         }
                         className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100"
                       >
-                        <option value="">— não definida —</option>
+                        <option value="">{copy.brandPlaceholder}</option>
                         {equipmentBrands.map((brand) => (
                           <option key={brand} value={brand}>
                             {brand}
@@ -304,7 +348,7 @@ export default function EquipmentInventoryPanel() {
                         }
                         className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100 disabled:opacity-50"
                       >
-                        <option value="">— não definido —</option>
+                        <option value="">{copy.modelPlaceholder}</option>
                         {availableModels.map((model) => (
                           <option key={model} value={model}>
                             {model}
@@ -322,7 +366,7 @@ export default function EquipmentInventoryPanel() {
                       {row.lan}
                     </td>
                     <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
-                      {row.tier}
+                      {getTierLabel(row.tier, language, row.lan)}
                     </td>
                   </tr>
 
@@ -336,10 +380,16 @@ export default function EquipmentInventoryPanel() {
                             <table className="w-full border-collapse">
                               <thead>
                                 <tr className="text-left text-[10px] text-slate-500">
-                                  <th className="px-2 py-0.5">ID</th>
-                                  <th className="px-2 py-0.5">Nome</th>
-                                  <th className="px-2 py-0.5">Marca</th>
-                                  <th className="px-2 py-0.5">Modelo</th>
+                                  <th className="px-2 py-0.5">{copy.colId}</th>
+                                  <th className="px-2 py-0.5">
+                                    {copy.colName}
+                                  </th>
+                                  <th className="px-2 py-0.5">
+                                    {copy.colBrand}
+                                  </th>
+                                  <th className="px-2 py-0.5">
+                                    {copy.colModel}
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -388,7 +438,7 @@ export default function EquipmentInventoryPanel() {
                                           className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100"
                                         >
                                           <option value="">
-                                            — não definida —
+                                            {copy.brandPlaceholder}
                                           </option>
                                           {equipmentBrands.map((brand) => (
                                             <option key={brand} value={brand}>
@@ -414,7 +464,7 @@ export default function EquipmentInventoryPanel() {
                                           className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100 disabled:opacity-50"
                                         >
                                           <option value="">
-                                            — não definido —
+                                            {copy.modelPlaceholder}
                                           </option>
                                           {childModels.map((model) => (
                                             <option key={model} value={model}>

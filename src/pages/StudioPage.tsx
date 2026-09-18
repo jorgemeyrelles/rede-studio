@@ -281,7 +281,7 @@ export default function StudioPage({ language }: StudioPageProps) {
 
       <SiteVlanPanel language={language} />
 
-      <EquipmentInventoryPanel />
+      <EquipmentInventoryPanel language={language} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CustomServicePanel />

@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
-import { EQUIPMENT_SUPPORT_CATEGORIES, TIER_LABELS } from './constants';
+import { EQUIPMENT_SUPPORT_CATEGORIES } from './constants';
 import type {
   BgpNeighborEntry,
   EquipmentInventoryRow,
@@ -810,9 +810,6 @@ export const selectEquipmentInventory = createSelector(
       .flatMap((node) => {
         const site = sites.find((s) => s.id === node.siteId);
         const layer = layers.find((l) => l.id === node.layerId);
-        const tierLabel = layer?.tier
-          ? TIER_LABELS[layer.tier] || layer.name || '—'
-          : '—';
 
         const baseRow = {
           nome: node.label,
@@ -821,7 +818,10 @@ export const selectEquipmentInventory = createSelector(
           funcao: node.description || '—',
           site: site?.name ?? '—',
           lan: layer?.name ?? '—',
-          tier: tierLabel,
+          // Valor bruto — tradução fica a cargo da UI/PDF (`getTierLabel`),
+          // que também sabe resolver o rótulo de tiers `custom` a partir do
+          // nome da camada (`lan`, já herdado acima).
+          tier: layer?.tier,
         };
 
         const parentRow: EquipmentInventoryRow = {

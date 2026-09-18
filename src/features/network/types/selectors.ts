@@ -1,4 +1,4 @@
-import type { AclEndpointScope, LinkDuplexMode } from './entities';
+import type { AclEndpointScope, LayerTier, LinkDuplexMode } from './entities';
 import type { AclAction } from './primitives';
 
 /** P8 — linha de rota derivada de sub-rede ou interface VLAN de gateway */
@@ -146,7 +146,13 @@ export type EquipmentInventoryRow = {
   funcao: string;
   site: string;
   lan: string;
-  tier: string;
+  /**
+   * Valor bruto do tier da camada (`undefined` quando o nó não tem
+   * camada/tier associado) — o rótulo traduzido é resolvido na UI/PDF via
+   * `getTierLabel(tier, language, lan)` (Studio i18n), nunca aqui: este é um
+   * selector Redux puro, sem acesso ao idioma corrente.
+   */
+  tier: LayerTier | undefined;
   /**
    * Sprint equipamentos Fase 12 — `true` para linhas derivadas de
    * `node.hostAllocations[i]` (i >= 1), quando o nó representa mais de uma

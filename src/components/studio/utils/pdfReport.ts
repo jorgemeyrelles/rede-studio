@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type {
+  LayerTier,
   LinkItem,
   NodeItem,
   RouteRow,
@@ -11,7 +12,7 @@ import type {
 import { ipToNumber, numberToIp } from '../../../features/network/utils/ip';
 import { NODE_VISUALS } from '../constants';
 import type { StudioLanguage } from '../types';
-import { getPdfReportCopy, getRouteFirewallCopy } from './i18n';
+import { getPdfReportCopy, getRouteFirewallCopy, getTierLabel } from './i18n';
 import { getSiteOtherIps } from './routeFirewall';
 import { formatCompactRange } from './siteVlan';
 
@@ -27,7 +28,8 @@ type EquipmentInventoryPdfRow = {
   funcao: string;
   site: string;
   lan: string;
-  tier: string;
+  /** Bug fix i18n — valor bruto; traduzido na hora de montar a tabela via `getTierLabel`. */
+  tier: LayerTier | undefined;
   isDerivedAllocation?: boolean;
   priceUsd: number | null;
   priceBrl: number | null;
@@ -1940,7 +1942,7 @@ function drawEquipmentInventorySection(
       row.funcao,
       row.site,
       row.lan,
-      row.tier,
+      getTierLabel(row.tier, language, row.lan),
       price !== null ? formatCurrency(price, language) : '—',
     ];
   });

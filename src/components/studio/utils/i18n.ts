@@ -1,4 +1,5 @@
 import {
+  EQUIPMENT_INVENTORY_COPY,
   LEGEND_PANEL_COPY,
   NETWORK_DIAGRAM_COPY,
   PDF_REPORT_COPY,
@@ -7,7 +8,9 @@ import {
   STUDIO_APP_COPY,
   STUDIO_PAGE_COPY,
   STUDIO_TOOLBAR_COPY,
+  TIER_LABEL_COPY,
 } from '../constants';
+import type { LayerTier } from '../../../features/network/types';
 import type { StudioLanguage } from '../types';
 
 export function getStudioToolbarCopy(language: StudioLanguage) {
@@ -40,6 +43,26 @@ export function getNetworkDiagramCopy(language: StudioLanguage) {
 
 export function getPdfReportCopy(language: StudioLanguage) {
   return PDF_REPORT_COPY[language];
+}
+
+export function getEquipmentInventoryCopy(language: StudioLanguage) {
+  return EQUIPMENT_INVENTORY_COPY[language];
+}
+
+/**
+ * Bug fix i18n — rótulo traduzido de um `LayerTier`. Para o tier `custom`
+ * (sem tradução fixa, ver `TIER_LABEL_COPY`) ou quando `tier` é
+ * `undefined` (nó sem camada associada), cai para `fallbackName` (em geral
+ * o nome da própria camada) e, na ausência dele, para `'—'` — mesma regra
+ * que já existia em `selectEquipmentInventory` antes desta correção.
+ */
+export function getTierLabel(
+  tier: LayerTier | undefined,
+  language: StudioLanguage,
+  fallbackName?: string,
+): string {
+  if (!tier) return '—';
+  return TIER_LABEL_COPY[language][tier] || fallbackName || '—';
 }
 
 export function getNextStudioLanguage(

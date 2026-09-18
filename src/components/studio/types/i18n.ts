@@ -1,3 +1,4 @@
+import type { LayerTier } from '../../../features/network/types';
 import type { AppLanguage } from '../../../types/i18n';
 
 /** Alias — o conjunto de idiomas é definido em `src/types/i18n.ts` (compartilhado com rotas/auth). */
@@ -300,4 +301,35 @@ export type NetworkDiagramCopy = {
   addressFamily: string;
   hosts: string;
   layers: string;
+};
+
+/**
+ * Rótulo traduzido por `LayerTier` — usado por `getTierLabel()` (bug fix
+ * i18n da tabela de inventário de equipamentos). O valor de `custom` fica
+ * vazio propositalmente: nesse caso o rótulo exibido é o nome da própria
+ * camada (texto livre do usuário, não precisa de tradução), resolvido pelo
+ * `fallbackName` passado a `getTierLabel`.
+ */
+export type TierLabelCopy = Record<LayerTier, string>;
+
+export type EquipmentInventoryPanelCopy = {
+  title: string;
+  colId: string;
+  colName: string;
+  colBrand: string;
+  colModel: string;
+  colFunction: string;
+  colSite: string;
+  colLan: string;
+  colTier: string;
+  filterAllSites: string;
+  filterAllLans: string;
+  filterAllTiers: string;
+  countSingular: string;
+  countPlural: string;
+  emptyState: string;
+  brandPlaceholder: string;
+  modelPlaceholder: string;
+  collapseAriaLabel: string;
+  expandAriaLabel: string;
 };
