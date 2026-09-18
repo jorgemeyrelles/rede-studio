@@ -1,4 +1,5 @@
 import type {
+  EquipmentInventoryPanelCopy,
   LanguageOption,
   LegendPanelCopy,
   NetworkDiagramCopy,
@@ -9,6 +10,7 @@ import type {
   StudioLanguage,
   StudioPageCopy,
   StudioToolbarCopy,
+  TierLabelCopy,
 } from '../types';
 
 export const STUDIO_LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -920,3 +922,112 @@ export const NETWORK_DIAGRAM_COPY: Record<StudioLanguage, NetworkDiagramCopy> =
       layers: 'Capas',
     },
   };
+
+/**
+ * Bug fix i18n — tabela de inventário de equipamentos (`EquipmentInventoryPanel.tsx`)
+ * era o único painel do Studio sem prop `language`/dicionário próprio.
+ */
+export const EQUIPMENT_INVENTORY_COPY: Record<
+  StudioLanguage,
+  EquipmentInventoryPanelCopy
+> = {
+  pt: {
+    title: 'Inventário de Equipamentos',
+    colId: 'ID',
+    colName: 'Nome',
+    colBrand: 'Marca',
+    colModel: 'Modelo',
+    colFunction: 'Função',
+    colSite: 'Site',
+    colLan: 'LAN',
+    colTier: 'Tier',
+    filterAllSites: 'Todos os sites',
+    filterAllLans: 'Todas as LANs',
+    filterAllTiers: 'Todos os tiers',
+    countSingular: 'equipamento',
+    countPlural: 'equipamentos',
+    emptyState: 'Nenhum equipamento de sustentação de rede cadastrado.',
+    brandPlaceholder: '— não definida —',
+    modelPlaceholder: '— não definido —',
+    collapseAriaLabel: 'Recolher',
+    expandAriaLabel: 'Expandir',
+  },
+  en: {
+    title: 'Equipment Inventory',
+    colId: 'ID',
+    colName: 'Name',
+    colBrand: 'Brand',
+    colModel: 'Model',
+    colFunction: 'Function',
+    colSite: 'Site',
+    colLan: 'LAN',
+    colTier: 'Tier',
+    filterAllSites: 'All sites',
+    filterAllLans: 'All LANs',
+    filterAllTiers: 'All tiers',
+    countSingular: 'device',
+    countPlural: 'devices',
+    emptyState: 'No network support equipment registered.',
+    brandPlaceholder: '— not set —',
+    modelPlaceholder: '— not set —',
+    collapseAriaLabel: 'Collapse',
+    expandAriaLabel: 'Expand',
+  },
+  es: {
+    title: 'Inventario de Equipos',
+    colId: 'ID',
+    colName: 'Nombre',
+    colBrand: 'Marca',
+    colModel: 'Modelo',
+    colFunction: 'Función',
+    colSite: 'Sitio',
+    colLan: 'LAN',
+    colTier: 'Tier',
+    filterAllSites: 'Todos los sitios',
+    filterAllLans: 'Todas las LAN',
+    filterAllTiers: 'Todos los tiers',
+    countSingular: 'equipo',
+    countPlural: 'equipos',
+    emptyState: 'No hay equipos de soporte de red registrados.',
+    brandPlaceholder: '— no definida —',
+    modelPlaceholder: '— no definido —',
+    collapseAriaLabel: 'Contraer',
+    expandAriaLabel: 'Expandir',
+  },
+};
+
+/**
+ * Bug fix i18n — rótulo traduzido por `LayerTier`, consumido por
+ * `getTierLabel()`. Valores em `pt` espelham os de `TIER_LABELS`
+ * (`features/network/constants/network.ts`), que continua sendo a fonte
+ * usada por `LegendPanel.tsx` (fora do escopo desta correção).
+ */
+export const TIER_LABEL_COPY: Record<StudioLanguage, TierLabelCopy> = {
+  pt: {
+    edge: 'Borda / Edge',
+    distribution: 'Distribuição',
+    access: 'Acesso',
+    endpoint: 'Endpoints',
+    dmz: 'DMZ',
+    management: 'Gerência',
+    custom: '',
+  },
+  en: {
+    edge: 'Edge',
+    distribution: 'Distribution',
+    access: 'Access',
+    endpoint: 'Endpoints',
+    dmz: 'DMZ',
+    management: 'Management',
+    custom: '',
+  },
+  es: {
+    edge: 'Borde / Edge',
+    distribution: 'Distribución',
+    access: 'Acceso',
+    endpoint: 'Endpoints',
+    dmz: 'DMZ',
+    management: 'Gestión',
+    custom: '',
+  },
+};
