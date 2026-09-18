@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useAppDispatch } from '../app/hooks';
+import { useSessionQuery } from '../features/auth/queries';
 import { hydrateNetworkState } from '../features/network/networkSlice';
-import { setActiveProjectId } from '../features/projects/projectsSlice';
 import { servicesRoutes } from '../services';
 import type { AppLanguage } from '../types/i18n';
 import StudioPage from './StudioPage';
 
 /**
- * Carrega o snapshot do projeto da rota (`:projectId`) pro slice
- * `network` antes de montar o Studio, e marca esse projeto como "ativo"
- * pro autosave (ver app/store.ts) saber em qual slot gravar. Projeto
- * inexistente ou de outro dono manda de volta pro dashboard.
+ * Carrega o snapshot do projeto da rota (`:projectId`) pro slice `network`
+ * antes de montar o Studio. Projeto inexistente ou de outro dono manda de
+ * volta pro dashboard. O autosave (`features/network/useAutosave.ts`, dentro
+ * de `StudioPage`) lê o `:projectId` direto da URL — não precisa de nenhum
+ * estado "projeto ativo" espelhado aqui.
  */
 export default function StudioProjectLoader() {
   const { lang, projectId } = useParams<{
@@ -21,7 +22,7 @@ export default function StudioProjectLoader() {
   const language = lang ?? 'pt';
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const currentUser = useAppSelector((state) => state.auth.currentUser);
+  const { data: currentUser } = useSessionQuery();
   const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +40,6 @@ export default function StudioProjectLoader() {
         return;
       }
 
-      dispatch(setActiveProjectId(projectId));
       // meta.projectName do snapshot pode estar desatualizado se o projeto
       // foi renomeado pelo dashboard depois do último autosave — o nome
       // em ProjectSummary é sempre a fonte da verdade.
@@ -54,7 +54,6 @@ export default function StudioProjectLoader() {
 
     return () => {
       cancelled = true;
-      dispatch(setActiveProjectId(null));
     };
   }, [projectId, currentUser, dispatch, navigate, language]);
 

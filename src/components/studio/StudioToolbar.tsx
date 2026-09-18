@@ -126,9 +126,13 @@ export default function StudioToolbar({
           <button
             type="button"
             onClick={() => setOpenFloatingPicker((prev) => !prev)}
-            className="rounded-md border border-[#2c4464] bg-[#0d1a2e] px-2 py-2 text-sm text-slate-100"
+            className="flex items-center gap-2 rounded-md border border-[#2c4464] bg-[#0d1a2e] px-2 py-2 text-sm text-slate-100"
           >
-            [{getNodeVisual(floatingCategory).short}]{' '}
+            <img
+              src={getNodeIconSrc(floatingCategory)}
+              alt=""
+              className="h-4 w-4 object-contain"
+            />
             {getNodeVisual(floatingCategory).label}
           </button>
 
@@ -179,9 +183,7 @@ export default function StudioToolbar({
                           alt={visual.label}
                           className="h-4 w-4 object-contain"
                         />
-                        <span>
-                          [{visual.short}] {visual.label}
-                        </span>
+                        <span>{visual.label}</span>
                       </span>
                     </button>
                   );

@@ -1,5 +1,5 @@
 import type { NodeCategory } from '../types';
-import type { QosClass, QosTrust } from '../types/entities';
+import type { LayerTier, QosClass, QosTrust } from '../types/entities';
 
 export const SCHEMA_VERSION = 4;
 
@@ -19,12 +19,12 @@ export const VLAN_COLOR_PALETTE: string[] = [
 
 /** P13 — DSCP padrão por classe de tráfego QoS */
 export const DSCP_BY_QOSCLASS: Record<QosClass, number> = {
-  voice: 46,    // EF
-  video: 34,    // AF41
+  voice: 46, // EF
+  video: 34, // AF41
   critical: 26, // AF31
-  infra: 16,    // CS2
-  default: 0,   // CS0 / BE
-  low: 8,       // CS1
+  infra: 16, // CS2
+  default: 0, // CS0 / BE
+  low: 8, // CS1
 };
 
 /** P13 — rótulo exibido na UI por classe QoS */
@@ -107,4 +107,57 @@ export const CATEGORY_HOST_BASE_MAP: Record<NodeCategory, number> = {
   wireguard: 200,
   mpls: 210,
   gre: 220,
+};
+
+/**
+ * Sprint equipamentos Fases 5/6 — categorias "de sustentação de rede":
+ * complemento de `ENDPOINT_CATEGORIES` (pc/smartphone/printer/.../server) e
+ * de `RELATION_OPTION_CATEGORIES` (vpn/ipsec/wireguard/sdwan/mpls/gre,
+ * ambas em `components/studio/constants/catalog.ts`) dentro do conjunto de
+ * categorias com opção no picker de nó. Fica aqui (não em `components/studio`)
+ * porque tanto o `NodeInspector` (UI) quanto `selectEquipmentInventory`
+ * (`features/network/selectors.ts`, domínio) precisam do mesmo critério —
+ * `selectors.ts` não pode importar de `components/studio` sem inverter o
+ * sentido de dependência do fluxo de dados.
+ */
+export const EQUIPMENT_SUPPORT_CATEGORIES: NodeCategory[] = [
+  'router',
+  'firewall',
+  'switch',
+  'load-balancer',
+  'access-point',
+  'ids',
+  'ips',
+  'proxy',
+  'modem',
+  'dns',
+  'dhcp',
+];
+
+/**
+ * Sprint equipamentos Fase 9 — mesmo conjunto de `RELATION_OPTION_CATEGORIES`
+ * (`components/studio/constants/catalog.ts`), duplicado aqui pela mesma razão
+ * de `EQUIPMENT_SUPPORT_CATEGORIES` acima: `networkSlice.ts` não pode
+ * importar de `components/studio` sem inverter o sentido de dependência do
+ * fluxo de dados. Usado por `inferLinkBidirectionalDefault` para garantir que
+ * todo elemento de conexão inter-site nasça bidirecional por padrão.
+ */
+export const RELATION_LINK_CATEGORIES: NodeCategory[] = [
+  'vpn',
+  'ipsec',
+  'wireguard',
+  'sdwan',
+  'mpls',
+  'gre',
+];
+
+/** Sprint equipamentos Fase 6 — rótulo exibido por tier de camada; fonte única compartilhada por `LegendPanel` e `EquipmentInventoryPanel`. */
+export const TIER_LABELS: Record<LayerTier, string> = {
+  edge: 'Borda / Edge',
+  distribution: 'Distribuição',
+  access: 'Acesso',
+  endpoint: 'Endpoints',
+  dmz: 'DMZ',
+  management: 'Gerência',
+  custom: '',
 };

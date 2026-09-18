@@ -133,3 +133,25 @@ export type NetworkReadinessRow = {
   level: 'ready' | 'warning' | 'critical';
   issues: string[];
 };
+
+/**
+ * Sprint equipamentos Fase 6 — linha da tabela única de inventário de
+ * equipamentos de sustentação de rede (`selectEquipmentInventory`).
+ */
+export type EquipmentInventoryRow = {
+  id: string;
+  nome: string;
+  marca: string;
+  modelo: string;
+  funcao: string;
+  site: string;
+  lan: string;
+  tier: string;
+  /**
+   * Sprint equipamentos Fase 12 — `true` para linhas derivadas de
+   * `node.hostAllocations[i]` (i >= 1), quando o nó representa mais de uma
+   * unidade física do mesmo equipamento (mesma marca/modelo/função/site/lan/
+   * tier do nó pai). `undefined`/`false` para a linha "pai" (1 por nó).
+   */
+  isDerivedAllocation?: boolean;
+};

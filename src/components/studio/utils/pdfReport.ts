@@ -2,11 +2,11 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type {
-    LinkItem,
-    NodeItem,
-    RouteRow,
-    Site,
-    SiteVlan,
+  LinkItem,
+  NodeItem,
+  RouteRow,
+  Site,
+  SiteVlan,
 } from '../../../features/network/types';
 import { ipToNumber, numberToIp } from '../../../features/network/utils/ip';
 import { NODE_VISUALS } from '../constants';
@@ -14,6 +14,25 @@ import type { StudioLanguage } from '../types';
 import { getPdfReportCopy, getRouteFirewallCopy } from './i18n';
 import { getSiteOtherIps } from './routeFirewall';
 import { formatCompactRange } from './siteVlan';
+
+// Sprint equipamentos Fase 13 — linha de inventário já cruzada com o
+// catálogo de equipamentos (preço/data de coleta), montada em
+// `StudioPage.tsx` a partir de `selectEquipmentInventory` (Fase 12, já
+// expandido em unidades) + `useEquipmentsQuery()`.
+type EquipmentInventoryPdfRow = {
+  id: string;
+  nome: string;
+  marca: string;
+  modelo: string;
+  funcao: string;
+  site: string;
+  lan: string;
+  tier: string;
+  isDerivedAllocation?: boolean;
+  priceUsd: number | null;
+  priceBrl: number | null;
+  scannedAt: string | null;
+};
 
 type FirewallRuleRow = {
   id: string;
@@ -44,6 +63,8 @@ type GenerateStudioPdfParams = {
   siteVlans: SiteVlan[];
   routes: RouteRow[];
   firewallRules: FirewallRuleRow[];
+  /** Sprint equipamentos Fase 13 — inventário (já expandido por unidade, Fase 12) com preço cruzado do catálogo. */
+  equipmentInventory: EquipmentInventoryPdfRow[];
   documentVersion?: string;
   lastSavedAt?: string | null;
   diagramImageData?: string | null;
@@ -109,6 +130,18 @@ function mapLocale(language: StudioLanguage) {
   if (language === 'en') return 'en-US';
   if (language === 'es') return 'es-ES';
   return 'pt-BR';
+}
+
+/**
+ * Sprint equipamentos Fase 13 — moeda por idioma: BRL em pt, USD em en/es
+ * (o catálogo só traz `approxPriceBrl`/`approxPriceUsd`, sem outras moedas).
+ */
+function formatCurrency(value: number, language: StudioLanguage) {
+  const currency = language === 'pt' ? 'BRL' : 'USD';
+  return new Intl.NumberFormat(mapLocale(language), {
+    style: 'currency',
+    currency,
+  }).format(value);
 }
 
 function getProjectModelCopy(language: StudioLanguage) {
@@ -397,7 +430,10 @@ function buildScopeDynamicContent(
   const isLargeDeployment =
     sites.length >= 6 || nodes.length >= 60 || links.length >= 120;
   const waveSize = isLargeDeployment ? 3 : 6;
-  const waveCount = Math.max(1, Math.ceil(Math.max(sites.length, 1) / waveSize));
+  const waveCount = Math.max(
+    1,
+    Math.ceil(Math.max(sites.length, 1) / waveSize),
+  );
 
   if (language === 'en') {
     const assumptions: string[] = [
@@ -807,22 +843,26 @@ function drawRevisionControlSection(
 
   autoTable(doc, {
     startY: CONTENT_TOP + 10,
-    head: [[
-      modelCopy.revisionVersion,
-      modelCopy.revisionDate,
-      modelCopy.revisionAuthor,
-      modelCopy.revisionStatus,
-      modelCopy.revisionChanges,
-    ]],
-    body: [[
-      params.documentVersion ?? 'v1.0',
-      generatedAt,
-      'Studio',
-      params.lastSavedAt
-        ? localeTerms.revisionStatusBaseline
-        : localeTerms.revisionStatusDraft,
-      localeTerms.revisionChangeSummary,
-    ]],
+    head: [
+      [
+        modelCopy.revisionVersion,
+        modelCopy.revisionDate,
+        modelCopy.revisionAuthor,
+        modelCopy.revisionStatus,
+        modelCopy.revisionChanges,
+      ],
+    ],
+    body: [
+      [
+        params.documentVersion ?? 'v1.0',
+        generatedAt,
+        'Studio',
+        params.lastSavedAt
+          ? localeTerms.revisionStatusBaseline
+          : localeTerms.revisionStatusDraft,
+        localeTerms.revisionChangeSummary,
+      ],
+    ],
     styles: {
       fontSize: 9.4,
       cellPadding: 2.2,
@@ -896,12 +936,22 @@ function drawScopePlanningSection(
 
   autoTable(doc, {
     startY: CONTENT_TOP + 45,
-    head: [[
-      modelCopy.implementationTitle,
-      language === 'en' ? 'Objective' : language === 'es' ? 'Objetivo' : 'Objetivo',
-      language === 'en' ? 'Expected Output' : language === 'es' ? 'Salida Esperada' : 'Saida Esperada',
-      modelCopy.owner,
-    ]],
+    head: [
+      [
+        modelCopy.implementationTitle,
+        language === 'en'
+          ? 'Objective'
+          : language === 'es'
+            ? 'Objetivo'
+            : 'Objetivo',
+        language === 'en'
+          ? 'Expected Output'
+          : language === 'es'
+            ? 'Salida Esperada'
+            : 'Saida Esperada',
+        modelCopy.owner,
+      ],
+    ],
     body: dynamicScope.implementationRows,
     styles: {
       fontSize: 8.8,
@@ -927,11 +977,17 @@ function drawScopePlanningSection(
 
   autoTable(doc, {
     startY: nextY,
-    head: [[
-      modelCopy.testsTitle,
-      language === 'en' ? 'Goal' : language === 'es' ? 'Meta' : 'Meta',
-      language === 'en' ? 'Acceptance Criterion' : language === 'es' ? 'Criterio de Aceptacion' : 'Criterio de Aceite',
-    ]],
+    head: [
+      [
+        modelCopy.testsTitle,
+        language === 'en' ? 'Goal' : language === 'es' ? 'Meta' : 'Meta',
+        language === 'en'
+          ? 'Acceptance Criterion'
+          : language === 'es'
+            ? 'Criterio de Aceptacion'
+            : 'Criterio de Aceite',
+      ],
+    ],
     body: dynamicScope.testRows,
     styles: {
       fontSize: 8.8,
@@ -962,10 +1018,12 @@ function drawRiskMatrixSection(
   const statelessMissingReturn = firewallRules.filter(
     (rule) => rule.stateful === false && rule.missingReturn,
   ).length;
-  const aclConflictCount = firewallRules.filter((rule) => rule.hasConflict)
-    .length;
-  const halfDuplexCount = links.filter((link) => link.duplexMode === 'half')
-    .length;
+  const aclConflictCount = firewallRules.filter(
+    (rule) => rule.hasConflict,
+  ).length;
+  const halfDuplexCount = links.filter(
+    (link) => link.duplexMode === 'half',
+  ).length;
   const noAclLinks = links.filter((link) => link.generateAcl === false).length;
   const sitesWithoutVlan = sites.filter(
     (site) => !siteVlans.some((vlan) => vlan.siteId === site.id),
@@ -996,13 +1054,15 @@ function drawRiskMatrixSection(
 
   autoTable(doc, {
     startY: CONTENT_TOP,
-    head: [[
-      modelCopy.risk,
-      modelCopy.impact,
-      modelCopy.probability,
-      modelCopy.mitigation,
-      modelCopy.owner,
-    ]],
+    head: [
+      [
+        modelCopy.risk,
+        modelCopy.impact,
+        modelCopy.probability,
+        modelCopy.mitigation,
+        modelCopy.owner,
+      ],
+    ],
     body: [
       [
         language === 'en'
@@ -1017,7 +1077,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Habilitar retorno o marcar bidireccional donde sea necesario.'
             : 'Habilitar caminho de retorno ou marcar bidirecional onde necessario.',
-        language === 'en' ? 'Security Team' : language === 'es' ? 'Equipo de Seguridad' : 'Time de Seguranca',
+        language === 'en'
+          ? 'Security Team'
+          : language === 'es'
+            ? 'Equipo de Seguridad'
+            : 'Time de Seguranca',
       ],
       [
         language === 'en'
@@ -1032,7 +1096,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Revisar prioridad y superposiciones deny/allow antes del go-live.'
             : 'Revisar prioridade e sobreposicao deny/allow antes do go-live.',
-        language === 'en' ? 'Security Team' : language === 'es' ? 'Equipo de Seguridad' : 'Time de Seguranca',
+        language === 'en'
+          ? 'Security Team'
+          : language === 'es'
+            ? 'Equipo de Seguridad'
+            : 'Time de Seguranca',
       ],
       [
         language === 'en'
@@ -1047,7 +1115,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Validar capacidad wireless/radio con simulacion de trafico pico.'
             : 'Validar capacidade wireless/radio com simulacao de trafego de pico.',
-        language === 'en' ? 'Network Team' : language === 'es' ? 'Equipo de Red' : 'Time de Redes',
+        language === 'en'
+          ? 'Network Team'
+          : language === 'es'
+            ? 'Equipo de Red'
+            : 'Time de Redes',
       ],
       [
         language === 'en'
@@ -1062,7 +1134,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Documentar excepciones y validar controles compensatorios.'
             : 'Documentar excecoes e validar controles compensatorios.',
-        language === 'en' ? 'Architecture Team' : language === 'es' ? 'Equipo de Arquitectura' : 'Time de Arquitetura',
+        language === 'en'
+          ? 'Architecture Team'
+          : language === 'es'
+            ? 'Equipo de Arquitectura'
+            : 'Time de Arquitetura',
       ],
       [
         language === 'en'
@@ -1077,7 +1153,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Mantener direccional por defecto y abrir retorno solo con justificacion.'
             : 'Manter direcional por padrao e abrir retorno apenas com justificativa.',
-        language === 'en' ? 'Security Team' : language === 'es' ? 'Equipo de Seguridad' : 'Time de Seguranca',
+        language === 'en'
+          ? 'Security Team'
+          : language === 'es'
+            ? 'Equipo de Seguridad'
+            : 'Time de Seguranca',
       ],
       [
         language === 'en'
@@ -1092,7 +1172,11 @@ function drawRiskMatrixSection(
           : language === 'es'
             ? 'Completar baseline de direccionamiento antes de la ventana de despliegue.'
             : 'Completar baseline de enderecamento antes da janela de deploy.',
-        language === 'en' ? 'Architecture Team' : language === 'es' ? 'Equipo de Arquitectura' : 'Time de Arquitetura',
+        language === 'en'
+          ? 'Architecture Team'
+          : language === 'es'
+            ? 'Equipo de Arquitectura'
+            : 'Time de Arquitetura',
       ],
     ],
     styles: {
@@ -1124,7 +1208,13 @@ function fillTableOfContentsPage(
   doc.setPage(2);
 
   doc.setFillColor(255, 255, 255);
-  doc.rect(MARGIN_X, CONTENT_TOP - 2, PAGE_WIDTH - MARGIN_X * 2, CONTENT_BOTTOM - CONTENT_TOP + 4, 'F');
+  doc.rect(
+    MARGIN_X,
+    CONTENT_TOP - 2,
+    PAGE_WIDTH - MARGIN_X * 2,
+    CONTENT_BOTTOM - CONTENT_TOP + 4,
+    'F',
+  );
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
@@ -1236,16 +1326,18 @@ function drawRoutesSection(
 
   autoTable(doc, {
     startY: tableTop,
-    head: [[
-      copy.site,
-      copy.type,
-      'VLAN',
-      'CIDR',
-      'Gateway',
-      'Interface',
-      modelCopy.zone,
-      modelCopy.networkName,
-    ]],
+    head: [
+      [
+        copy.site,
+        copy.type,
+        'VLAN',
+        'CIDR',
+        'Gateway',
+        'Interface',
+        modelCopy.zone,
+        modelCopy.networkName,
+      ],
+    ],
     body: bodyRows,
     styles: {
       fontSize: 9.4,
@@ -1324,7 +1416,8 @@ function drawFirewallSection(
   const otherColumnsWidth =
     22 + 17 + 47 + 47 + 35 + 22 + directionWidth + 16 + 18;
   const idFitWidth = firewallRules.reduce(
-    (maxWidth, rule) => Math.max(maxWidth, getHeaderMinWidth(doc, rule.id, 8.6)),
+    (maxWidth, rule) =>
+      Math.max(maxWidth, getHeaderMinWidth(doc, rule.id, 8.6)),
     getHeaderMinWidth(doc, 'ID', 9.2),
   );
   const idWidth = Math.max(
@@ -1347,18 +1440,20 @@ function drawFirewallSection(
 
   autoTable(doc, {
     startY: tableTop,
-    head: [[
-      'ID',
-      modelCopy.sourceType,
-      copy.type,
-      copy.source,
-      copy.destination,
-      localeTerms.serviceHeader,
-      modelCopy.sessionMode,
-      modelCopy.direction,
-      modelCopy.duplex,
-      localeTerms.protocolHeader,
-    ]],
+    head: [
+      [
+        'ID',
+        modelCopy.sourceType,
+        copy.type,
+        copy.source,
+        copy.destination,
+        localeTerms.serviceHeader,
+        modelCopy.sessionMode,
+        modelCopy.direction,
+        modelCopy.duplex,
+        localeTerms.protocolHeader,
+      ],
+    ],
     body: firewallRules.map((rule) => [
       rule.id,
       rule.source === 'manual'
@@ -1650,7 +1745,10 @@ function drawComponentsSection(
 
       const siteName =
         sites.find((site) => site.id === node.siteId)?.name ?? group.siteName;
-      const hostCount = Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1));
+      const hostCount = Math.max(
+        1,
+        Math.trunc(Number(node.hostCount ?? 1) || 1),
+      );
       const nodeRangeText = hostCount > 1 ? getNodeIpRangeText(node) : null;
       const vlanText = node.vlans.length
         ? node.vlans.join(', ')
@@ -1755,9 +1853,7 @@ function drawLinksInventorySection(
 
   autoTable(doc, {
     startY: tableTop,
-    head: [
-      linksHeaders,
-    ],
+    head: [linksHeaders],
     body: links.map((link) => {
       const from = nodes.find((item) => item.id === link.from);
       const to = nodes.find((item) => item.id === link.to);
@@ -1765,7 +1861,7 @@ function drawLinksInventorySection(
         `${from?.label ?? link.from} (${from?.ip ?? copy.notAvailable})`,
         `${to?.label ?? link.to} (${to?.ip ?? copy.notAvailable})`,
         link.kind.toUpperCase(),
-        link.bidirectional ?? true ? '<->' : '->',
+        (link.bidirectional ?? true) ? '<->' : '->',
         (link.duplexMode ?? 'full').toUpperCase(),
         link.generateAcl === false ? localeTerms.noLabel : localeTerms.yesLabel,
         link.statefulOverride === 'force-stateless'
@@ -1808,6 +1904,146 @@ function drawLinksInventorySection(
       setSectionTitle(pageSections, doc, copy.linksInventoryTitle);
     },
   });
+}
+
+/**
+ * Sprint equipamentos Fase 13 — inventário de equipamentos com preço
+ * aproximado (cruzado com o catálogo em `StudioPage.tsx`), seguindo o mesmo
+ * padrão de `drawVlansSection`/`drawLinksInventorySection`: `autoTable` +
+ * `didDrawPage: setSectionTitle(...)` pro Sumário reconhecer a seção.
+ */
+function drawEquipmentInventorySection(
+  doc: jsPDF,
+  pageSections: string[],
+  params: GenerateStudioPdfParams,
+) {
+  const { language, equipmentInventory } = params;
+  if (equipmentInventory.length === 0) return;
+
+  const copy = getPdfReportCopy(language);
+  const locale = mapLocale(language);
+  const currencyField = language === 'pt' ? 'priceBrl' : 'priceUsd';
+
+  doc.addPage();
+  setSectionTitle(pageSections, doc, copy.equipmentInventoryTitle);
+
+  const tableTop = CONTENT_TOP + 2.5;
+
+  const body: string[][] = equipmentInventory.map((row) => {
+    const price = row[currencyField];
+    const displayName = row.isDerivedAllocation ? `   ${row.nome}` : row.nome;
+    return [
+      row.id,
+      displayName,
+      row.marca,
+      row.modelo,
+      row.funcao,
+      row.site,
+      row.lan,
+      row.tier,
+      price !== null ? formatCurrency(price, language) : '—',
+    ];
+  });
+
+  const total = equipmentInventory.reduce((sum, row) => {
+    const price = row[currencyField];
+    return price !== null ? sum + price : sum;
+  }, 0);
+
+  const totalRowIndex = body.length;
+  body.push([
+    copy.equipmentInventoryTotal,
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    formatCurrency(total, language),
+  ]);
+
+  autoTable(doc, {
+    startY: tableTop,
+    head: [
+      [
+        copy.equipmentInventoryColId,
+        copy.equipmentInventoryColName,
+        copy.equipmentInventoryColBrand,
+        copy.equipmentInventoryColModel,
+        copy.equipmentInventoryColFunction,
+        copy.site,
+        copy.equipmentInventoryColLan,
+        copy.equipmentInventoryColTier,
+        copy.equipmentInventoryColPrice,
+      ],
+    ],
+    body,
+    styles: {
+      fontSize: 9,
+      cellPadding: 2,
+      overflow: 'linebreak',
+      textColor: [15, 23, 42],
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [241, 245, 249],
+      fontSize: 10,
+    },
+    columnStyles: {
+      8: { halign: 'right' },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.row.index === totalRowIndex) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [226, 232, 240];
+        data.cell.styles.textColor = [15, 23, 42];
+      }
+    },
+    margin: { left: MARGIN_X, right: MARGIN_X, top: tableTop, bottom: 18 },
+    didDrawPage: () => {
+      setSectionTitle(pageSections, doc, copy.equipmentInventoryTitle);
+    },
+  });
+
+  const scannedDates = equipmentInventory
+    .map((row) => row.scannedAt)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  const dateLabel =
+    scannedDates.length === 0
+      ? copy.notAvailable
+      : scannedDates[0].toDateString() ===
+          scannedDates[scannedDates.length - 1].toDateString()
+        ? scannedDates[0].toLocaleDateString(locale)
+        : `${scannedDates[0].toLocaleDateString(locale)} – ${scannedDates[scannedDates.length - 1].toLocaleDateString(locale)}`;
+
+  const disclaimerText = copy.equipmentInventoryDisclaimer.replace(
+    '{date}',
+    dateLabel,
+  );
+
+  const autoTableState = doc as jsPDF & {
+    lastAutoTable?: { finalY?: number };
+  };
+  let y = (autoTableState.lastAutoTable?.finalY ?? tableTop) + 6;
+  if (y > CONTENT_BOTTOM - 12) {
+    doc.addPage();
+    setSectionTitle(pageSections, doc, copy.equipmentInventoryTitle);
+    y = CONTENT_TOP + 6;
+  }
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8.4);
+  doc.setTextColor(100, 116, 139);
+  const wrappedDisclaimer = doc.splitTextToSize(
+    disclaimerText,
+    PAGE_WIDTH - MARGIN_X * 2,
+  );
+  doc.text(wrappedDisclaimer, MARGIN_X, y);
 }
 
 function drawTechnicalAnnexSection(
@@ -1937,7 +2173,15 @@ function drawHeaderAndFooter(
     const iconBoxSize = 11.4;
     doc.setFillColor(15, 23, 42);
     doc.setDrawColor(125, 211, 252);
-    doc.roundedRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 1.8, 1.8, 'FD');
+    doc.roundedRect(
+      iconBoxX,
+      iconBoxY,
+      iconBoxSize,
+      iconBoxSize,
+      1.8,
+      1.8,
+      'FD',
+    );
     if (brandIconDataUrl) {
       doc.addImage(
         brandIconDataUrl,
@@ -1996,14 +2240,27 @@ function drawHeaderAndFooter(
     const pageBadgeWidth = 28;
     const pageBadgeX = PAGE_WIDTH - MARGIN_X - pageBadgeWidth;
     doc.setFillColor(15, 23, 42);
-    doc.roundedRect(pageBadgeX, FOOTER_Y - 4.6, pageBadgeWidth, 3.4, 1.2, 1.2, 'F');
+    doc.roundedRect(
+      pageBadgeX,
+      FOOTER_Y - 4.6,
+      pageBadgeWidth,
+      3.4,
+      1.2,
+      1.2,
+      'F',
+    );
 
     doc.setFontSize(9.2);
     doc.setTextColor(71, 85, 105);
     doc.text(`${copy.generatedAt}: ${generatedAt}`, MARGIN_X, FOOTER_Y - 1.2);
-    doc.text(`${copy.rightsReserved} | ${version}`, PAGE_WIDTH / 2, FOOTER_Y - 1.2, {
-      align: 'center',
-    });
+    doc.text(
+      `${copy.rightsReserved} | ${version}`,
+      PAGE_WIDTH / 2,
+      FOOTER_Y - 1.2,
+      {
+        align: 'center',
+      },
+    );
     doc.setTextColor(241, 245, 249);
     doc.setFontSize(8.8);
     doc.text(
@@ -2040,6 +2297,7 @@ export async function generateStudioPdfReport(params: GenerateStudioPdfParams) {
   drawVlansSection(doc, pageSections, params);
   drawComponentsSection(doc, pageSections, params);
   drawLinksInventorySection(doc, pageSections, params);
+  drawEquipmentInventorySection(doc, pageSections, params);
   drawRiskMatrixSection(doc, pageSections, params);
   drawTechnicalAnnexSection(doc, pageSections, params);
   fillTableOfContentsPage(doc, pageSections, params);

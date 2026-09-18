@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { requestImmediateSave } from '../app/store';
 import CertificatePanel from '../components/studio/CertificatePanel';
 import CustomServicePanel from '../components/studio/CustomServicePanel';
+import EquipmentInventoryPanel from '../components/studio/EquipmentInventoryPanel';
 import LegendPanel from '../components/studio/LegendPanel';
 import type { NetworkDiagramHandle } from '../components/studio/NetworkDiagram';
 import NetworkDiagram from '../components/studio/NetworkDiagram';
@@ -12,30 +13,69 @@ import StudioToolbar from '../components/studio/StudioToolbar';
 import {
   generateStudioPdfReport,
   getStudioPageCopy,
-  type StudioPageProps
+  type StudioPageProps,
 } from '../components/studio/catalog';
-import { resetNetworkState } from '../features/network/networkSlice';
+import { useEquipmentsQuery } from '../features/equipments/queries';
+import { findEquipmentCatalogMatch } from '../features/equipments/utils';
 import {
+  resetNetworkState,
+  setProjectName,
+} from '../features/network/networkSlice';
+import {
+  selectEquipmentInventory,
   selectFirewallRules,
   selectRouteTable,
 } from '../features/network/selectors';
+import { useAutosave } from '../features/network/useAutosave';
+import { useRenameProjectMutation } from '../features/projects/queries';
 
 export default function StudioPage({ language }: StudioPageProps) {
   const dispatch = useAppDispatch();
+  const { projectId } = useParams<{ projectId: string }>();
   const { ui, meta, sites, nodes, links, siteVlans } = useAppSelector(
     (state) => state.network,
   );
   const routes = useAppSelector(selectRouteTable);
   const firewallRules = useAppSelector(selectFirewallRules);
+  const equipmentInventoryRows = useAppSelector(selectEquipmentInventory);
+  const equipmentCatalogQuery = useEquipmentsQuery();
+  const { forceSave } = useAutosave();
+  const renameProjectMutation = useRenameProjectMutation();
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [printShowLinkDescriptions, setPrintShowLinkDescriptions] =
     useState(true);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(meta.projectName);
   const diagramCaptureRef = useRef<HTMLDivElement | null>(null);
   const networkDiagramRef = useRef<NetworkDiagramHandle | null>(null);
   const copy = getStudioPageCopy(language);
+
+  function startEditingTitle() {
+    setTitleDraft(meta.projectName);
+    setIsEditingTitle(true);
+  }
+
+  function commitTitle() {
+    setIsEditingTitle(false);
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === meta.projectName) {
+      setTitleDraft(meta.projectName);
+      return;
+    }
+    dispatch(setProjectName(trimmed));
+    if (projectId) {
+      renameProjectMutation.mutate({ id: projectId, name: trimmed });
+    }
+    forceSave();
+  }
+
+  function handleTitleSubmit(event: FormEvent) {
+    event.preventDefault();
+    commitTitle();
+  }
 
   function handleReset() {
     setIsResetModalOpen(true);
@@ -75,10 +115,30 @@ export default function StudioPage({ language }: StudioPageProps) {
     setIsGeneratingPdf(true);
 
     try {
-      const diagramImageData =
-        networkDiagramRef.current?.exportImageDataForPdf({
+      const diagramImageData = networkDiagramRef.current?.exportImageDataForPdf(
+        {
           showLinkDescriptions: printShowLinkDescriptions,
-        });
+        },
+      );
+
+      // Sprint equipamentos Fase 13 — cruza o inventário (já expandido por
+      // unidade, Fase 12) com o catálogo (marca+modelo) para anexar preço
+      // aproximado; sem correspondência no catálogo (ou catálogo sem preço),
+      // os campos ficam `null` e a linha aparece como "—" no PDF.
+      const equipmentCatalog = equipmentCatalogQuery.data ?? [];
+      const equipmentInventory = equipmentInventoryRows.map((row) => {
+        const match = findEquipmentCatalogMatch(
+          equipmentCatalog,
+          row.marca,
+          row.modelo,
+        );
+        return {
+          ...row,
+          priceUsd: match?.price?.approxPriceUsd ?? null,
+          priceBrl: match?.price?.approxPriceBrl ?? null,
+          scannedAt: match?.price?.scannedAt ?? null,
+        };
+      });
 
       await generateStudioPdfReport({
         language,
@@ -91,6 +151,7 @@ export default function StudioPage({ language }: StudioPageProps) {
         siteVlans,
         routes,
         firewallRules,
+        equipmentInventory,
         diagramImageData,
         dashboardElement: diagramCaptureRef.current,
         targetWindow,
@@ -127,22 +188,45 @@ export default function StudioPage({ language }: StudioPageProps) {
         <section className="space-y-3">
           <div className="rounded-lg border border-[#315072] bg-[#0b172a]/75 px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
-                  {copy.proposalTitle}
-                </div>
-                <h2 className="mt-1 text-lg font-semibold text-slate-100">
-                  {copy.diagramTitle}
-                  {/* <span className="ml-2 text-sm font-medium text-cyan-300">
-                    Matriz | Tunelamento | Filial
-                  </span> */}
-                </h2>
+              <div className="min-w-0">
+                {isEditingTitle ? (
+                  <form onSubmit={handleTitleSubmit}>
+                    <input
+                      autoFocus
+                      value={titleDraft}
+                      onChange={(event) => setTitleDraft(event.target.value)}
+                      onBlur={commitTitle}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          setTitleDraft(meta.projectName);
+                          setIsEditingTitle(false);
+                        }
+                      }}
+                      className="w-full max-w-md rounded border border-cyan-600 bg-slate-950 px-2 py-1 text-lg font-semibold text-slate-100 outline-none"
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startEditingTitle}
+                    aria-label={copy.renameProjectAriaLabel}
+                    title={copy.renameProjectAriaLabel}
+                    className="group flex min-w-0 max-w-full items-center gap-2 rounded px-1 py-1 -mx-1 text-left hover:bg-white/5"
+                  >
+                    <h2 className="truncate text-lg font-semibold text-slate-100">
+                      {meta.projectName || copy.untitledProject}
+                    </h2>
+                    <span className="shrink-0 text-sm text-slate-500 opacity-0 transition group-hover:opacity-100">
+                      ✎
+                    </span>
+                  </button>
+                )}
                 <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
               </div>
 
               <button
                 type="button"
-                onClick={() => dispatch(requestImmediateSave())}
+                onClick={forceSave}
                 title={
                   meta.lastSavedAt
                     ? new Date(meta.lastSavedAt).toLocaleString(language)
@@ -196,6 +280,8 @@ export default function StudioPage({ language }: StudioPageProps) {
       <RouteFirewallPanel language={language} />
 
       <SiteVlanPanel language={language} />
+
+      <EquipmentInventoryPanel />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CustomServicePanel />

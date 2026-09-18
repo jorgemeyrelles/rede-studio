@@ -64,3 +64,17 @@ export const RELATION_OPTION_CATEGORIES: NodeCategory[] = [
   'mpls',
   'gre',
 ];
+
+/**
+ * Sprint equipamentos Fase 1 — categorias hoje consideradas "endpoint",
+ * cada uma ganha uma opção irmã "(remoto)" no picker de nó.
+ */
+export const ENDPOINT_CATEGORIES: NodeCategory[] = [
+  'pc',
+  'smartphone',
+  'printer',
+  'printer-3d',
+  'voip',
+  'nas',
+  'server',
+];

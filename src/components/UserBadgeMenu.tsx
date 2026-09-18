@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { logoutUser } from '../features/auth/authSlice';
-import { createProject } from '../features/projects/projectsSlice';
+import { useLogoutMutation, useSessionQuery } from '../features/auth/queries';
+import {
+    useCreateProjectMutation,
+    useProjectsQuery,
+} from '../features/projects/queries';
 import { getProjectsPageCopy, getUserMenuCopy } from '../i18n/utils';
 import type { AppLanguage } from '../types/i18n';
 import NewProjectModal from './NewProjectModal';
 import SettingsModal from './SettingsModal';
 
 export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const currentUser = useAppSelector((state) => state.auth.currentUser);
-  const projectCount = useAppSelector((state) => state.projects.items.length);
+  const { data: currentUser } = useSessionQuery();
+  const logoutMutation = useLogoutMutation();
+  const { data: projects } = useProjectsQuery(currentUser?.id);
+  const createProjectMutation = useCreateProjectMutation();
+  const projectCount = projects?.length ?? 0;
   const copy = getUserMenuCopy(language);
   const projectsCopy = getProjectsPageCopy(language);
 
@@ -39,11 +43,12 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
 
   const handleCreateProject = async (name: string) => {
     setCreating(true);
-    const result = await dispatch(createProject({ name }));
-    setCreating(false);
-    if (createProject.fulfilled.match(result)) {
+    try {
+      const record = await createProjectMutation.mutateAsync({ name });
       setNewProjectOpen(false);
-      navigate(`/${language}/studio/${result.payload.id}`);
+      navigate(`/${language}/studio/${record.id}`);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -98,7 +103,7 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
             type="button"
             onClick={() => {
               setMenuOpen(false);
-              dispatch(logoutUser());
+              logoutMutation.mutate();
             }}
             className="block w-full border-t border-slate-800 px-3 py-2 text-left text-xs text-rose-300 hover:bg-slate-800"
           >

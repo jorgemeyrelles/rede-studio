@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { replaceLangSegment } from '../app/routing/replaceLangSegment';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { updateUserProfile } from '../features/auth/authSlice';
+import { useSessionQuery, useUpdateProfileMutation } from '../features/auth/queries';
 import { getSettingsModalCopy } from '../i18n/utils';
 import type { AppLanguage } from '../types/i18n';
 import BrandMark from './BrandMark';
@@ -15,11 +14,10 @@ type SettingsModalProps = {
 };
 
 export default function SettingsModal({ language, onClose }: SettingsModalProps) {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const currentUser = useAppSelector((state) => state.auth.currentUser);
-  const status = useAppSelector((state) => state.auth.status);
+  const { data: currentUser } = useSessionQuery();
+  const updateProfileMutation = useUpdateProfileMutation();
   const copy = getSettingsModalCopy(language);
 
   const [name, setName] = useState(currentUser?.name ?? '');
@@ -30,10 +28,11 @@ export default function SettingsModal({ language, onClose }: SettingsModalProps)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const result = await dispatch(
-      updateUserProfile({ name, preferredLanguage: selectedLanguage }),
-    );
-    if (updateUserProfile.fulfilled.match(result)) {
+    const result = await updateProfileMutation.mutateAsync({
+      name,
+      preferredLanguage: selectedLanguage,
+    });
+    if (result.ok) {
       setJustSaved(true);
       if (selectedLanguage !== language) {
         navigate(replaceLangSegment(location.pathname, selectedLanguage));
@@ -116,10 +115,10 @@ export default function SettingsModal({ language, onClose }: SettingsModalProps)
           </button>
           <button
             type="submit"
-            disabled={status === 'loading'}
+            disabled={updateProfileMutation.isPending}
             className="rounded-md bg-cyan-500 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {status === 'loading'
+            {updateProfileMutation.isPending
               ? copy.saving
               : justSaved
                 ? copy.savedConfirmation

@@ -27,8 +27,8 @@ export type StudioAppCopy = {
 };
 
 export type StudioPageCopy = {
-  proposalTitle: string;
-  diagramTitle: string;
+  untitledProject: string;
+  renameProjectAriaLabel: string;
   infoHint: string;
   dashboardTitle: string;
   localPersistence: string;
@@ -105,6 +105,19 @@ export type PdfReportCopy = {
   addressingLine1: string;
   addressingLine2: string;
   addressingLine3: string;
+  /** Sprint equipamentos Fase 13 — seção de inventário com preços */
+  equipmentInventoryTitle: string;
+  equipmentInventoryColId: string;
+  equipmentInventoryColName: string;
+  equipmentInventoryColBrand: string;
+  equipmentInventoryColModel: string;
+  equipmentInventoryColFunction: string;
+  equipmentInventoryColLan: string;
+  equipmentInventoryColTier: string;
+  equipmentInventoryColPrice: string;
+  equipmentInventoryTotal: string;
+  /** Texto com placeholder `{date}`, substituído pela data (ou intervalo) da coleta de preços. */
+  equipmentInventoryDisclaimer: string;
 };
 
 export type LegendPanelCopy = {
@@ -145,6 +158,8 @@ export type LegendPanelCopy = {
   addLan: string;
   addLevel: string;
   lanLimitReached: string;
+  /** Sprint equipamentos Fase 1 — sufixo de opções de endpoint remoto */
+  remoteSuffix: string;
 };
 
 export type SiteVlanPanelCopy = {

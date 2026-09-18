@@ -1,95 +1,128 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { DEFAULT_QOS_TRUST, SCHEMA_VERSION, VLAN_COLOR_PALETTE } from './constants';
 import {
-    buildDefaultTechProfile,
-    ensureTechProfile,
-    normalizeTechProfile,
+  DEFAULT_QOS_TRUST,
+  MIN_LAYER_COLUMNS,
+  MIN_LAYER_ROWS,
+  RELATION_LINK_CATEGORIES,
+  SCHEMA_VERSION,
+  VLAN_COLOR_PALETTE,
+} from './constants';
+import {
+  buildDefaultTechProfile,
+  ensureTechProfile,
+  normalizeTechProfile,
 } from './techProfiles';
 import type {
-    AclRule,
-    AddActiveSessionPayload,
-    AddCertificatePayload,
-    AddCustomAclRulePayload,
-    AddCustomServicePayload,
-    AddFwPolicyPayload,
-    AddIpsecSaPayload,
-    AddLayerPayload,
-    AddLinkPayload,
-    AddNatRulePayload,
-    AddNodePayload,
-    AddSiteNetworkPayload,
-    AddSiteVlanPayload,
-    AddSslVpnProfilePayload,
-    AddSubnetPayload,
-    ClearActiveSessionsPayload,
-    DhcpScope,
-    Layer,
-    LinkDuplexMode,
-    NetworkState,
-    NodeCategory,
-    NodeVlanInterface,
-    RemoveCertificatePayload,
-    RemoveCustomAclRulePayload,
-    RemoveCustomServicePayload,
-    RemoveDhcpScopePayload,
-    RemoveFwPolicyPayload,
-    RemoveIpsecSaPayload,
-    RemoveNatRulePayload,
-    RemoveSiteNetworkPayload,
-    RemoveSiteVlanPayload,
-    RemoveSslVpnProfilePayload,
-    RemoveSubnetPayload,
-    ReorderCustomAclRulePayload,
-    SetAclChildOverridePayload,
-    SetVlanAssignmentPayload,
-    ToggleNodeVlanPayload,
-    UpdateAclRulePayload,
-    UpdateAclRuleQoSPayload,
-    UpdateCertificatePayload,
-    UpdateCustomServicePayload,
-    UpdateFwPolicyPayload,
-    UpdateIpsecSaPayload,
-    UpdateLayerTierPayload,
-    UpdateLinkPayload,
-    UpdateNatRulePayload,
-    UpdateNodePayload,
-    UpdateNodeTechFieldPayload,
-    UpdateNodeZonePayload,
-    UpdateSitePayload,
-    UpdateSslVpnProfilePayload,
-    UpsertDhcpScopePayload,
+  AclRule,
+  AddActiveSessionPayload,
+  AddCertificatePayload,
+  AddCustomAclRulePayload,
+  AddCustomServicePayload,
+  AddFwPolicyPayload,
+  AddIpsecSaPayload,
+  AddLayerPayload,
+  AddLinkPayload,
+  AddNatRulePayload,
+  AddNodePayload,
+  AddSiteNetworkPayload,
+  AddSiteVlanPayload,
+  AddSslVpnProfilePayload,
+  AddSubnetPayload,
+  ClearActiveSessionsPayload,
+  DhcpScope,
+  Layer,
+  LinkDuplexMode,
+  NetworkState,
+  NodeCategory,
+  NodeVlanInterface,
+  RemoveCertificatePayload,
+  RemoveCustomAclRulePayload,
+  RemoveCustomServicePayload,
+  RemoveDhcpScopePayload,
+  RemoveFwPolicyPayload,
+  RemoveIpsecSaPayload,
+  RemoveNatRulePayload,
+  RemoveSiteNetworkPayload,
+  RemoveSiteVlanPayload,
+  RemoveSslVpnProfilePayload,
+  RemoveSubnetPayload,
+  ReorderCustomAclRulePayload,
+  SetAclChildOverridePayload,
+  SetNodeOriginSitePayload,
+  SetVlanAssignmentPayload,
+  ToggleNodeVlanPayload,
+  UpdateAclRulePayload,
+  UpdateAclRuleQoSPayload,
+  UpdateCertificatePayload,
+  UpdateCustomServicePayload,
+  UpdateFwPolicyPayload,
+  UpdateHostAllocationEquipmentPayload,
+  UpdateIpsecSaPayload,
+  UpdateLayerTierPayload,
+  UpdateLinkPayload,
+  UpdateNatRulePayload,
+  UpdateNodePayload,
+  UpdateNodeTechFieldPayload,
+  UpdateNodeZonePayload,
+  UpdateSitePayload,
+  UpdateSslVpnProfilePayload,
+  UpsertDhcpScopePayload,
 } from './types';
 import {
-    assignNodeIpInsideVlan,
-    assignNodeIpOutsideVlans,
-    buildIpFromNetworkAndRadical,
-    buildIpFromSiteAndRadical,
-    buildNetworkAddress,
-    buildNodeHostAllocations,
-    buildNodeIp,
-    buildNodeIpv6,
-    buildNodeLabel,
-    getCategoryCode,
-    getCategoryHostBase,
-    getNextNodeSequence,
-    getVlanRange,
-    ipToNumber,
-    isIpInVlan,
-    makeLayerId,
-    makeNodeId,
-    makeSiteId,
-    managedAclRuleId,
-    networkRangeBounds,
-    normalizeAclRule,
-    normalizeNodeVlansForCatalog,
-    numberToIp,
-    parseTrailingNumber,
-    reconcileAclRules,
-    siteOwnsVlan,
-    siteRangeBounds,
-    suggestAclRuleQoS,
-    toValidVlanId,
+  assignNodeIpInsideVlan,
+  assignNodeIpOutsideVlans,
+  buildIpFromNetworkAndRadical,
+  buildIpFromSiteAndRadical,
+  buildNetworkAddress,
+  buildNodeHostAllocations,
+  buildNodeIp,
+  buildNodeIpv6,
+  buildNodeLabel,
+  buildNodeLabelForSite,
+  cellToPixel,
+  computeLayerGridSize,
+  deriveLayerGridFromLegacySize,
+  findFirstFreeCell,
+  getCategoryCode,
+  getNextNodeSequence,
+  getVlanRange,
+  ipToNumber,
+  isIpInVlan,
+  makeLayerId,
+  makeNodeId,
+  makeSiteId,
+  managedAclRuleId,
+  networkRangeBounds,
+  normalizeAclRule,
+  normalizeNodeVlansForCatalog,
+  numberToIp,
+  parseTrailingNumber,
+  reconcileAclRules,
+  siteOwnsVlan,
+  siteRangeBounds,
+  suggestAclRuleQoS,
+  toValidVlanId,
 } from './utils';
+
+// ── Sprint equipamentos Fase 1 — endpoints remotos ──────────────────────────
+
+/** Posição inicial (heurística) para nós remotos, sem acesso aos bounds reais
+ * dos sites (isso só existe no componente GoJS) — mesmo espírito do ponto
+ * fixo já usado por `addFloatingNode` para nós soltos. */
+const REMOTE_NODE_BASE_X = 1080;
+const REMOTE_NODE_BASE_Y = 140;
+const REMOTE_NODE_Y_STEP = 70;
+
+const REMOTE_TIER_LABELS: Record<import('./types/entities').LayerTier, string> =
+  {
+    edge: 'Borda / Edge',
+    distribution: 'Distribuição',
+    access: 'Acesso',
+    endpoint: 'Endpoints',
+    dmz: 'DMZ',
+    management: 'Gerência',
+    custom: 'Livre',
+  };
 
 function defaultTrafficPreferenceByStack(
   stackMode: import('./types/entities').NetworkStackMode | undefined,
@@ -103,9 +136,7 @@ function isStaticAddressAllocation(
   mode: import('./types/entities').AddressAllocationMode | undefined,
 ) {
   return (
-    mode === 'static-ipv4' ||
-    mode === 'static-ipv6' ||
-    mode === 'static-dual'
+    mode === 'static-ipv4' || mode === 'static-ipv6' || mode === 'static-dual'
   );
 }
 
@@ -157,6 +188,8 @@ export const networkInitialState: NetworkState = {
       vlans: [],
       x: 680,
       y: 80,
+      row: 0,
+      col: 0,
       description: 'Ponto central de conectividade externa.',
       techProfile: buildDefaultTechProfile('wan', {
         layerOrder: 0,
@@ -204,44 +237,6 @@ export const networkInitialState: NetworkState = {
 
 function getLayerOrder(layers: Layer[], siteId: string) {
   return layers.filter((layer) => layer.siteId === siteId).length + 1;
-}
-
-function getInitialNodePosition(
-  state: NetworkState,
-  siteId: string,
-  layerId: string,
-  layerOrder: number,
-  category: NodeCategory,
-) {
-  const nodesInLayer = state.nodes.filter(
-    (node) => node.layerId === layerId,
-  ).length;
-  const nodesInCategory = state.nodes.filter(
-    (node) => node.layerId === layerId && node.category === category,
-  ).length;
-  const siteIndex = state.sites.findIndex((site) => site.id === siteId);
-  const safeSiteIndex = Math.max(0, siteIndex);
-
-  // Aproxima a malha usada no diagrama para que o nó nasça visível dentro da camada.
-  const cols = state.sites.length <= 4 ? 2 : 3;
-  const col = safeSiteIndex % cols;
-  const row = Math.floor(safeSiteIndex / cols);
-
-  const siteBaseX = 120 + col * 420;
-  const siteBaseY = 180 + row * 340;
-  const layerYOffset = (Math.max(1, layerOrder) - 1) * 230;
-
-  const categoryLane = Math.max(
-    0,
-    Math.min(5, Math.floor(getCategoryHostBase(category) / 40)),
-  );
-  const offsetX = 70 + categoryLane * 52 + (nodesInCategory % 2) * 30;
-  const offsetY = 70 + (nodesInLayer % 4) * 62;
-
-  return {
-    x: siteBaseX + offsetX,
-    y: siteBaseY + layerYOffset + offsetY,
-  };
 }
 
 function shouldNodeBeGateway(
@@ -358,16 +353,25 @@ function inferLinkKind(
   return 'other';
 }
 
+const RELATION_LINK_CATEGORY_SET = new Set(RELATION_LINK_CATEGORIES);
+
 function inferLinkBidirectionalDefault(
   nodes: NetworkState['nodes'],
   fromNodeId: string,
   toNodeId: string,
-  kind: AddLinkPayload['kind'] | NetworkState['links'][number]['kind'],
+  _kind: AddLinkPayload['kind'] | NetworkState['links'][number]['kind'],
 ) {
-  if (kind === 'vpn' || kind === 'ipsec') return true;
-
   const fromNode = nodes.find((node) => node.id === fromNodeId);
   const toNode = nodes.find((node) => node.id === toNodeId);
+
+  // Sprint equipamentos Fase 9 — todo elemento de conexão inter-site
+  // (vpn/ipsec/wireguard/sdwan/mpls/gre) nasce bidirecional, de forma
+  // explícita e garantida, independente de zona DMZ.
+  const isRelationLink = [fromNode, toNode].some(
+    (node) => node && RELATION_LINK_CATEGORY_SET.has(node.category),
+  );
+  if (isRelationLink) return true;
+
   const hasDmz = [fromNode, toNode].some(
     (node) => (node?.zone ?? '').toLowerCase() === 'dmz',
   );
@@ -385,9 +389,7 @@ function inferLinkDuplexModeDefault(
   const fromNode = nodes.find((node) => node.id === fromNodeId);
   const toNode = nodes.find((node) => node.id === toNodeId);
 
-  const isWirelessNode = (
-    node: NetworkState['nodes'][number] | undefined,
-  ) => {
+  const isWirelessNode = (node: NetworkState['nodes'][number] | undefined) => {
     if (!node) return false;
     if (node.category === 'access-point') return true;
 
@@ -411,8 +413,7 @@ function inferLinkDuplexModeDefault(
     );
   };
 
-  const hasWirelessHop =
-    isWirelessNode(fromNode) || isWirelessNode(toNode);
+  const hasWirelessHop = isWirelessNode(fromNode) || isWirelessNode(toNode);
   if (hasWirelessHop) return 'half';
 
   if (kind === 'wan' || kind === 'vpn' || kind === 'ipsec') {
@@ -453,7 +454,10 @@ function isAccessPointL3Mode(
   node: Pick<NetworkState['nodes'][number], 'category' | 'techProfile'>,
 ) {
   if (node.category !== 'access-point') return false;
-  return String(node.techProfile?.fields?.apInterfaceMode ?? 'l2-bridge') === 'l3-routed';
+  return (
+    String(node.techProfile?.fields?.apInterfaceMode ?? 'l2-bridge') ===
+    'l3-routed'
+  );
 }
 
 function resolveAccessPointManagementVlanId(
@@ -480,7 +484,10 @@ function findNextFreeGatewayIpInVlan(
   const occupied = new Set<number>();
 
   state.nodes
-    .filter((candidate) => candidate.siteId === vlan.siteId && candidate.category !== 'wan')
+    .filter(
+      (candidate) =>
+        candidate.siteId === vlan.siteId && candidate.category !== 'wan',
+    )
     .forEach((candidate) => {
       const allocationIps =
         (candidate.hostAllocations ?? []).length > 0
@@ -556,7 +563,9 @@ function syncAccessPointVlanInterfacesByMode(
     return;
   }
 
-  const vlanIds = new Set((node.vlans ?? []).map((value) => toValidVlanId(Number(value))));
+  const vlanIds = new Set(
+    (node.vlans ?? []).map((value) => toValidVlanId(Number(value))),
+  );
 
   state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
     (iface) => iface.nodeId !== node.id || vlanIds.has(iface.vlanId),
@@ -591,6 +600,17 @@ function normalizeState(input: NetworkState): NetworkState {
   });
 
   const layerIdMap = new Map<string, string>();
+  // Fase pré-grade: quantos nós cada layer (id antigo) tinha, pra garantir
+  // que a grade derivada tenha células suficientes pra todos eles.
+  const legacyNodeCountByLayerId = new Map<string, number>();
+  for (const node of input.nodes ?? []) {
+    if (!node.layerId) continue;
+    legacyNodeCountByLayerId.set(
+      node.layerId,
+      (legacyNodeCountByLayerId.get(node.layerId) ?? 0) + 1,
+    );
+  }
+
   const normalizedLayers = (input.layers ?? []).map((layer, index) => {
     const mappedSiteId = siteIdMap.get(layer.siteId) ?? layer.siteId;
     const layerIndex = Math.max(
@@ -604,10 +624,27 @@ function normalizeState(input: NetworkState): NetworkState {
       : makeLayerId(mappedSiteId, layerIndex);
     layerIdMap.set(layer.id, compactId);
 
+    // Grid de quadrantes — layer salvo antes dessa mudança não tem
+    // columns/rows; deriva do width/height antigo (formato em pixel livre).
+    const hasGrid =
+      typeof layer.columns === 'number' && typeof layer.rows === 'number';
+    const { columns, rows } = hasGrid
+      ? { columns: layer.columns, rows: layer.rows }
+      : deriveLayerGridFromLegacySize(
+          layer.width,
+          layer.height,
+          legacyNodeCountByLayerId.get(layer.id) ?? 0,
+        );
+    const gridSize = computeLayerGridSize(columns, rows);
+
     return {
       ...layer,
       id: compactId,
       siteId: mappedSiteId,
+      columns,
+      rows,
+      width: hasGrid ? layer.width : gridSize.width,
+      height: hasGrid ? layer.height : gridSize.height,
     };
   });
 
@@ -632,8 +669,11 @@ function normalizeState(input: NetworkState): NetworkState {
             item.networkId.trim() !== '' &&
             Array.isArray(input.siteNetworks) &&
             input.siteNetworks.some((network) => {
-              const networkSiteId = siteIdMap.get(network.siteId) ?? network.siteId;
-              return network.id === item.networkId && networkSiteId === mappedSiteId;
+              const networkSiteId =
+                siteIdMap.get(network.siteId) ?? network.siteId;
+              return (
+                network.id === item.networkId && networkSiteId === mappedSiteId
+              );
             })
               ? item.networkId
               : undefined;
@@ -699,14 +739,24 @@ function normalizeState(input: NetworkState): NetworkState {
             ipv6Prefix: item.ipv6Prefix?.trim() || undefined,
             addressAllocation: item.addressAllocation ?? 'dhcpv4',
             // P2 — preserva cor existente; se ausente, atribui pela paleta
-            color: typeof item.color === 'string' && item.color
-              ? item.color
-              : undefined,
+            color:
+              typeof item.color === 'string' && item.color
+                ? item.color
+                : undefined,
           };
         })
     : [];
 
   const nodeIdMap = new Map<string, string>();
+  // Grid de quadrantes — acumula, por layer já remapeado, quais células vão
+  // sendo ocupadas nesta mesma passagem de normalização (nós com row/col
+  // válidos mantêm sua célula; nós legados sem row/col ganham a próxima
+  // célula livre em ordem de leitura).
+  const occupiedCellsByLayerId = new Map<
+    string,
+    Array<{ row: number; col: number }>
+  >();
+
   const normalizedNodes = normalizeNodeVlansForCatalog(
     input.nodes.map((node, index) => {
       const mappedSiteId = node.siteId
@@ -719,6 +769,38 @@ function normalizeState(input: NetworkState): NetworkState {
         ? (normalizedLayers.find((layer) => layer.id === mappedLayerId)
             ?.order ?? 1)
         : 0;
+
+      let row = node.row;
+      let col = node.col;
+      if (mappedLayerId) {
+        const layer = normalizedLayers.find((l) => l.id === mappedLayerId);
+        const occupied = occupiedCellsByLayerId.get(mappedLayerId) ?? [];
+        const hasValidCell =
+          layer &&
+          typeof row === 'number' &&
+          typeof col === 'number' &&
+          row >= 0 &&
+          row < layer.rows &&
+          col >= 0 &&
+          col < layer.columns &&
+          !occupied.some((cell) => cell.row === row && cell.col === col);
+        if (!hasValidCell && layer) {
+          const freeCell = findFirstFreeCell(
+            occupied,
+            layer.columns,
+            layer.rows,
+          ) ?? { row: 0, col: 0 };
+          row = freeCell.row;
+          col = freeCell.col;
+        }
+        occupiedCellsByLayerId.set(mappedLayerId, [
+          ...occupied,
+          { row: row ?? 0, col: col ?? 0 },
+        ]);
+      } else {
+        row = row ?? 0;
+        col = col ?? 0;
+      }
       const shouldBeGateway =
         mappedSiteId &&
         (node.category === 'router' || node.category === 'firewall') &&
@@ -738,25 +820,40 @@ function normalizeState(input: NetworkState): NetworkState {
         return `${getCategoryCode(node.category)}${seq}`;
       })();
       nodeIdMap.set(node.id, compactId);
+      const gridPos = cellToPixel(row ?? 0, col ?? 0);
 
       return {
         ...node,
         id: compactId,
         siteId: mappedSiteId,
         layerId: mappedLayerId,
+        row: row ?? 0,
+        col: col ?? 0,
+        // Sprint equipamentos Fase 7 — endpoint remoto tem layerId "de
+        // verdade" pros dados, mas sua posição x/y é livre (fora do site na
+        // camada visual), não deve ser recalculada a partir da célula.
+        x: mappedLayerId && !node.isRemote ? gridPos.x : node.x,
+        y: mappedLayerId && !node.isRemote ? gridPos.y : node.y,
         ipv6: node.ipv6?.trim() || undefined,
         hostCount:
           node.category === 'wan'
             ? 1
             : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
-        hostAllocations: buildNodeHostAllocations({
-          id: compactId,
-          ip: node.ip,
-          hostCount:
-            node.category === 'wan'
-              ? 1
-              : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
-        }),
+        // Sprint equipamentos Fase 12 (correção) — preserva marca/modelo por
+        // unidade já persistidos ao renormalizar (ex. hydrate de projeto).
+        hostAllocations: buildNodeHostAllocations(
+          {
+            id: compactId,
+            ip: node.ip,
+            hostCount:
+              node.category === 'wan'
+                ? 1
+                : Math.max(1, Math.trunc(Number(node.hostCount ?? 1) || 1)),
+            equipmentBrand: node.equipmentBrand,
+            equipmentModel: node.equipmentModel,
+          },
+          { previousAllocations: node.hostAllocations },
+        ),
         originalIp:
           node.category === 'wan'
             ? undefined
@@ -790,7 +887,10 @@ function normalizeState(input: NetworkState): NetworkState {
     }
 
     const usedIds = collectScopedUsedHostIds(normalizedNodes, node);
-    node.hostAllocations = buildNodeHostAllocations(node, { usedIds });
+    node.hostAllocations = buildNodeHostAllocations(node, {
+      usedIds,
+      previousAllocations: node.hostAllocations,
+    });
   });
 
   const normalizedLinks = (input.links ?? []).map((link) => {
@@ -833,11 +933,16 @@ function normalizeState(input: NetworkState): NetworkState {
     if (vlan.color) return vlan;
     const idx = siteVlanColorCounters.get(vlan.siteId) ?? 0;
     siteVlanColorCounters.set(vlan.siteId, idx + 1);
-    return { ...vlan, color: VLAN_COLOR_PALETTE[idx % VLAN_COLOR_PALETTE.length] };
+    return {
+      ...vlan,
+      color: VLAN_COLOR_PALETTE[idx % VLAN_COLOR_PALETTE.length],
+    };
   });
 
   const normalizedDhcpScopes = (() => {
-    const sourceScopes = Array.isArray(input.dhcpScopes) ? input.dhcpScopes : [];
+    const sourceScopes = Array.isArray(input.dhcpScopes)
+      ? input.dhcpScopes
+      : [];
 
     const remappedScopes = sourceScopes
       .map((scope) => {
@@ -855,7 +960,10 @@ function normalizeState(input: NetworkState): NetworkState {
         const cleanList = (values: string[] | undefined) =>
           (values ?? [])
             .map((value) => value.trim())
-            .filter((value, index, self) => value !== '' && self.indexOf(value) === index);
+            .filter(
+              (value, index, self) =>
+                value !== '' && self.indexOf(value) === index,
+            );
 
         return {
           id: scope.id || `${siteId}-vlan-${vlanId}-dhcp`,
@@ -864,10 +972,10 @@ function normalizeState(input: NetworkState): NetworkState {
           allocationMode,
           providerType: scope.providerType ?? 'node',
           providerNodeId: scope.providerNodeId
-            ? nodeIdMap.get(scope.providerNodeId) ?? scope.providerNodeId
+            ? (nodeIdMap.get(scope.providerNodeId) ?? scope.providerNodeId)
             : undefined,
           relayNodeId: scope.relayNodeId
-            ? nodeIdMap.get(scope.relayNodeId) ?? scope.relayNodeId
+            ? (nodeIdMap.get(scope.relayNodeId) ?? scope.relayNodeId)
             : undefined,
           poolStartIp: scope.poolStartIp?.trim() || vlan.startIp,
           poolEndIp: scope.poolEndIp?.trim() || vlan.endIp,
@@ -1049,7 +1157,11 @@ export const networkSlice = createSlice({
       activeSessions: [],
       nodes: [...networkInitialState.nodes],
       counters: { ...networkInitialState.counters },
-      ui: { ...networkInitialState.ui, activeLinkId: null, vlanAssignment: null },
+      ui: {
+        ...networkInitialState.ui,
+        activeLinkId: null,
+        vlanAssignment: null,
+      },
       meta: { ...networkInitialState.meta },
     }),
     hydrateNetworkState: (_state, action: PayloadAction<NetworkState>) => {
@@ -1299,10 +1411,7 @@ export const networkSlice = createSlice({
         state.ui.vlanAssignment = null;
       }
     },
-    upsertDhcpScope: (
-      state,
-      action: PayloadAction<UpsertDhcpScopePayload>,
-    ) => {
+    upsertDhcpScope: (state, action: PayloadAction<UpsertDhcpScopePayload>) => {
       const siteId = action.payload.siteId;
       const vlanId = toValidVlanId(action.payload.vlanId);
       const vlan = state.siteVlans.find(
@@ -1322,7 +1431,10 @@ export const networkSlice = createSlice({
       const cleanList = (values: string[] | undefined) =>
         (values ?? [])
           .map((value) => value.trim())
-          .filter((value, index, self) => value !== '' && self.indexOf(value) === index);
+          .filter(
+            (value, index, self) =>
+              value !== '' && self.indexOf(value) === index,
+          );
 
       const candidateId = action.payload.id || `${siteId}-vlan-${vlanId}-dhcp`;
       const existing = state.dhcpScopes.find(
@@ -1347,7 +1459,9 @@ export const networkSlice = createSlice({
           vlan.startIp,
         poolEndIp:
           action.payload.poolEndIp?.trim() || existing?.poolEndIp || vlan.endIp,
-        excludedIps: cleanList(action.payload.excludedIps ?? existing?.excludedIps),
+        excludedIps: cleanList(
+          action.payload.excludedIps ?? existing?.excludedIps,
+        ),
         leaseMinutes: Math.max(
           1,
           Math.min(
@@ -1359,7 +1473,9 @@ export const networkSlice = createSlice({
             ),
           ),
         ),
-        dnsServers: cleanList(action.payload.dnsServers ?? existing?.dnsServers),
+        dnsServers: cleanList(
+          action.payload.dnsServers ?? existing?.dnsServers,
+        ),
         ipv6Mode:
           action.payload.ipv6Mode ??
           existing?.ipv6Mode ??
@@ -1376,10 +1492,7 @@ export const networkSlice = createSlice({
         state.dhcpScopes.push(nextScope);
       }
     },
-    removeDhcpScope: (
-      state,
-      action: PayloadAction<RemoveDhcpScopePayload>,
-    ) => {
+    removeDhcpScope: (state, action: PayloadAction<RemoveDhcpScopePayload>) => {
       if ('id' in action.payload) {
         state.dhcpScopes = state.dhcpScopes.filter(
           (scope) => scope.id !== action.payload.id,
@@ -1616,10 +1729,7 @@ export const networkSlice = createSlice({
         description,
       });
     },
-    removeNodeVlanInterface: (
-      state,
-      action: PayloadAction<{ id: string }>,
-    ) => {
+    removeNodeVlanInterface: (state, action: PayloadAction<{ id: string }>) => {
       state.nodeVlanInterfaces = state.nodeVlanInterfaces.filter(
         (i) => i.id !== action.payload.id,
       );
@@ -1628,10 +1738,16 @@ export const networkSlice = createSlice({
     // ── P13 — QoS Class por VLAN ──────────────────────────────────────────
     updateSiteVlanQos: (
       state,
-      action: PayloadAction<{ siteId: string; vlanId: number; qosClass: import('./types/entities').QosClass | undefined }>,
+      action: PayloadAction<{
+        siteId: string;
+        vlanId: number;
+        qosClass: import('./types/entities').QosClass | undefined;
+      }>,
     ) => {
       const vlan = state.siteVlans.find(
-        (v) => v.siteId === action.payload.siteId && v.vlanId === action.payload.vlanId,
+        (v) =>
+          v.siteId === action.payload.siteId &&
+          v.vlanId === action.payload.vlanId,
       );
       if (!vlan) return;
       vlan.qosClass = action.payload.qosClass;
@@ -1640,7 +1756,10 @@ export const networkSlice = createSlice({
     // ── P14 — Trust Boundary por Nó ───────────────────────────────────────
     updateNodeQosTrust: (
       state,
-      action: PayloadAction<{ nodeId: string; qosTrust: import('./types/entities').QosTrust }>,
+      action: PayloadAction<{
+        nodeId: string;
+        qosTrust: import('./types/entities').QosTrust;
+      }>,
     ) => {
       const node = state.nodes.find((n) => n.id === action.payload.nodeId);
       if (!node) return;
@@ -1671,7 +1790,9 @@ export const networkSlice = createSlice({
         changes: Partial<Omit<import('./types/entities').QosQueue, 'id'>>;
       }>,
     ) => {
-      const profile = state.nodeQosProfiles.find((p) => p.nodeId === action.payload.nodeId);
+      const profile = state.nodeQosProfiles.find(
+        (p) => p.nodeId === action.payload.nodeId,
+      );
       if (!profile) return;
       const queue = profile.queues.find((q) => q.id === action.payload.queueId);
       if (!queue) return;
@@ -1681,9 +1802,13 @@ export const networkSlice = createSlice({
       state,
       action: PayloadAction<{ nodeId: string; queueId: string }>,
     ) => {
-      const profile = state.nodeQosProfiles.find((p) => p.nodeId === action.payload.nodeId);
+      const profile = state.nodeQosProfiles.find(
+        (p) => p.nodeId === action.payload.nodeId,
+      );
       if (!profile) return;
-      profile.queues = profile.queues.filter((q) => q.id !== action.payload.queueId);
+      profile.queues = profile.queues.filter(
+        (q) => q.id !== action.payload.queueId,
+      );
     },
 
     // ── P17 — QoS WAN por Link ────────────────────────────────────────────
@@ -1754,18 +1879,24 @@ export const networkSlice = createSlice({
           ? (tierDefaultNames[tier] ?? `Camada ${order}`)
           : `Camada ${order}`);
 
+      const columns = 4;
+      const rows = 2;
+      const { width, height } = computeLayerGridSize(columns, rows);
+
       state.layers.push({
         id: layerId,
         siteId,
         name: layerName,
         order,
-        width: 416,
-        height: 180,
+        width,
+        height,
         minWidth: 286,
-        // Sem teto fixo de largura; validacao dinamica ocorre no resize.
+        // Sem teto fixo de largura; validacao dinamica ocorre no crescimento por coluna.
         maxWidth: Number.MAX_SAFE_INTEGER,
         minHeight: 180,
         maxHeight: 300,
+        columns,
+        rows,
         tier,
         networkId,
       });
@@ -1792,35 +1923,58 @@ export const networkSlice = createSlice({
         state.ui.inspectorNodeId = null;
       }
     },
-    resizeLayer: (
-      state,
-      action: PayloadAction<{
-        layerId: string;
-        width: number;
-        height: number;
-        maxWidth?: number;
-      }>,
-    ) => {
+    addLayerRow: (state, action: PayloadAction<{ layerId: string }>) => {
       const layer = state.layers.find(
         (item) => item.id === action.payload.layerId,
       );
       if (!layer) return;
-      const dynamicMaxWidth =
-        typeof action.payload.maxWidth === 'number' &&
-        Number.isFinite(action.payload.maxWidth)
-          ? Math.max(layer.minWidth, action.payload.maxWidth)
-          : layer.maxWidth;
-      layer.width = Math.max(
-        layer.minWidth,
-        Math.min(dynamicMaxWidth, action.payload.width),
+      layer.rows += 1;
+      const { width, height } = computeLayerGridSize(layer.columns, layer.rows);
+      layer.width = width;
+      layer.height = height;
+    },
+    addLayerColumn: (state, action: PayloadAction<{ layerId: string }>) => {
+      const layer = state.layers.find(
+        (item) => item.id === action.payload.layerId,
       );
-      layer.height = Math.max(
-        layer.minHeight,
-        Math.min(layer.maxHeight, action.payload.height),
+      if (!layer) return;
+      layer.columns += 1;
+      const { width, height } = computeLayerGridSize(layer.columns, layer.rows);
+      layer.width = width;
+      layer.height = height;
+    },
+    removeLayerRow: (state, action: PayloadAction<{ layerId: string }>) => {
+      const layer = state.layers.find(
+        (item) => item.id === action.payload.layerId,
       );
+      if (!layer || layer.rows <= MIN_LAYER_ROWS) return;
+      const lastRow = layer.rows - 1;
+      const hasNodeInLastRow = state.nodes.some(
+        (node) => node.layerId === layer.id && node.row === lastRow,
+      );
+      if (hasNodeInLastRow) return;
+      layer.rows -= 1;
+      const { width, height } = computeLayerGridSize(layer.columns, layer.rows);
+      layer.width = width;
+      layer.height = height;
+    },
+    removeLayerColumn: (state, action: PayloadAction<{ layerId: string }>) => {
+      const layer = state.layers.find(
+        (item) => item.id === action.payload.layerId,
+      );
+      if (!layer || layer.columns <= MIN_LAYER_COLUMNS) return;
+      const lastColumn = layer.columns - 1;
+      const hasNodeInLastColumn = state.nodes.some(
+        (node) => node.layerId === layer.id && node.col === lastColumn,
+      );
+      if (hasNodeInLastColumn) return;
+      layer.columns -= 1;
+      const { width, height } = computeLayerGridSize(layer.columns, layer.rows);
+      layer.width = width;
+      layer.height = height;
     },
     addNode: (state, action: PayloadAction<AddNodePayload>) => {
-      const { siteId, layerId, category } = action.payload;
+      const { siteId, layerId, category, isRemote } = action.payload;
       const site = state.sites.find((item) => item.id === siteId);
       const layer = state.layers.find((item) => item.id === layerId);
       if (!site || !layer) return;
@@ -1829,6 +1983,111 @@ export const networkSlice = createSlice({
       const network = layer.networkId
         ? state.siteNetworks.find((n) => n.id === layer.networkId)
         : undefined;
+
+      if (isRemote) {
+        // Sprint equipamentos Fases 1/7 \u2014 endpoint remoto: segue o MESMO
+        // caminho de cria\u00e7\u00e3o de um n\u00f3 normal (site/layer/VLANs/IP via
+        // buildNodeIp/buildNodeIpv6, c\u00e9lula de grade real) \u2014 s\u00f3 a camada
+        // visual (NetworkDiagram) o trata como solto. `x`/`y` aqui \u00e9 s\u00f3 uma
+        // semente inicial; o efeito de posicionamento no NetworkDiagram
+        // recoloca o n\u00f3 ao lado do site de origem no primeiro render.
+        const remoteCategoryCount = getNextNodeSequence(
+          state.nodes,
+          category,
+          siteId,
+          layerId,
+        );
+        const remoteNodeId = makeNodeId(
+          category,
+          remoteCategoryCount,
+          siteId,
+          layerId,
+        );
+        const remoteNodeIp = buildNodeIp(
+          site.ipOctet,
+          layer.order,
+          category,
+          remoteCategoryCount,
+          network,
+        );
+        const remoteOccupiedCells = state.nodes
+          .filter((item) => item.layerId === layerId)
+          .map((item) => ({ row: item.row, col: item.col }));
+        let remoteFreeCell = findFirstFreeCell(
+          remoteOccupiedCells,
+          layer.columns,
+          layer.rows,
+        );
+        if (!remoteFreeCell) {
+          // Grade cheia: cresce uma linha automaticamente para n\u00e3o bloquear a cria\u00e7\u00e3o.
+          layer.rows += 1;
+          const gridSize = computeLayerGridSize(layer.columns, layer.rows);
+          layer.width = gridSize.width;
+          layer.height = gridSize.height;
+          remoteFreeCell = findFirstFreeCell(
+            remoteOccupiedCells,
+            layer.columns,
+            layer.rows,
+          );
+        }
+        const { row: remoteRow, col: remoteCol } = remoteFreeCell ?? {
+          row: 0,
+          col: 0,
+        };
+        const remoteIndex = state.nodes.filter((node) => node.isRemote).length;
+        const tierLabel = layer.tier
+          ? (REMOTE_TIER_LABELS[layer.tier] ?? layer.tier)
+          : '\u2014';
+
+        state.nodes.push({
+          id: remoteNodeId,
+          siteId,
+          layerId,
+          networkId: layer.networkId,
+          category,
+          label: `${buildNodeLabel(category, siteId, layer.order, remoteCategoryCount)} (remoto)`,
+          ip: remoteNodeIp,
+          ipv6: buildNodeIpv6(
+            site.ipOctet,
+            layer.order,
+            category,
+            remoteCategoryCount,
+            network,
+          ),
+          originalIp: remoteNodeIp,
+          originalIpv6: buildNodeIpv6(
+            site.ipOctet,
+            layer.order,
+            category,
+            remoteCategoryCount,
+            network,
+          ),
+          hostCount: 1,
+          hostAllocations: [{ id: remoteNodeId, ip: remoteNodeIp }],
+          cidr: site.cidr,
+          vlans: [],
+          x: REMOTE_NODE_BASE_X,
+          y: REMOTE_NODE_BASE_Y + remoteIndex * REMOTE_NODE_Y_STEP,
+          row: remoteRow,
+          col: remoteCol,
+          isRemote: true,
+          description: `Endpoint remoto \u2014 origem: Site ${site.name} / LAN ${network?.name ?? '\u2014'} / Tier ${tierLabel}`,
+          qosTrust: DEFAULT_QOS_TRUST[category] ?? 'untrusted',
+          techProfile: buildDefaultTechProfile(category, {
+            layerOrder: layer.order,
+            shouldBeGateway: shouldNodeBeGateway(
+              state,
+              siteId,
+              layer.order,
+              category,
+            ),
+            siteNodeCount: state.nodes.filter((node) => node.siteId === siteId)
+              .length,
+          }),
+        });
+        state.counters.node += 1;
+        return;
+      }
 
       const categoryCount = getNextNodeSequence(
         state.nodes,
@@ -1844,13 +2103,24 @@ export const networkSlice = createSlice({
         categoryCount,
         network,
       );
-      const position = getInitialNodePosition(
-        state,
-        siteId,
-        layerId,
-        layer.order,
-        category,
+      const occupiedCells = state.nodes
+        .filter((item) => item.layerId === layerId)
+        .map((item) => ({ row: item.row, col: item.col }));
+      let freeCell = findFirstFreeCell(
+        occupiedCells,
+        layer.columns,
+        layer.rows,
       );
+      if (!freeCell) {
+        // Grade cheia: cresce uma linha automaticamente para não bloquear a criação.
+        layer.rows += 1;
+        const gridSize = computeLayerGridSize(layer.columns, layer.rows);
+        layer.width = gridSize.width;
+        layer.height = gridSize.height;
+        freeCell = findFirstFreeCell(occupiedCells, layer.columns, layer.rows);
+      }
+      const { row, col } = freeCell ?? { row: 0, col: 0 };
+      const position = cellToPixel(row, col);
       state.nodes.push({
         id: nodeId,
         siteId,
@@ -1886,6 +2156,8 @@ export const networkSlice = createSlice({
         vlans: [],
         x: position.x,
         y: position.y,
+        row,
+        col,
         description: 'Componente criado no Studio.',
         // P14 — trust boundary padrão por categoria
         qosTrust: DEFAULT_QOS_TRUST[category] ?? 'untrusted',
@@ -1926,6 +2198,8 @@ export const networkSlice = createSlice({
         vlans: [],
         x: 860,
         y: 120,
+        row: 0,
+        col: 0,
         description: 'Componente de comunicação no quadro principal.',
         techProfile: buildDefaultTechProfile(category, {
           layerOrder: 0,
@@ -1946,14 +2220,97 @@ export const networkSlice = createSlice({
         state.ui.inspectorNodeId = null;
       }
     },
+    // Sprint equipamentos Fase 2 — site de referência de um elemento de
+    // conexão inter-site; troca o site regenera id/label do nó.
+    setNodeOriginSite: (
+      state,
+      action: PayloadAction<SetNodeOriginSitePayload>,
+    ) => {
+      const { id, originSiteId } = action.payload;
+      const node = state.nodes.find((item) => item.id === id);
+      if (!node) return;
+      if (node.originSiteId === originSiteId) return;
+      const site = state.sites.find((item) => item.id === originSiteId);
+      if (!site) return;
+
+      const categoryCount = getNextNodeSequence(
+        state.nodes,
+        node.category,
+        originSiteId,
+      );
+      const newId = makeNodeId(node.category, categoryCount, originSiteId);
+      const newLabel = buildNodeLabelForSite(
+        node.category,
+        originSiteId,
+        categoryCount,
+      );
+      const oldId = node.id;
+
+      node.id = newId;
+      node.label = newLabel;
+      node.originSiteId = originSiteId;
+
+      state.links.forEach((link) => {
+        if (link.from === oldId) link.from = newId;
+        if (link.to === oldId) link.to = newId;
+      });
+      state.aclRules.forEach((rule) => {
+        if (rule.sourceNodeId === oldId) rule.sourceNodeId = newId;
+        if (rule.destinationNodeId === oldId) rule.destinationNodeId = newId;
+      });
+      if (state.ui.inspectorNodeId === oldId) {
+        state.ui.inspectorNodeId = newId;
+      }
+      state.aclRules = reconcileAclRules(state);
+    },
     updateNodePosition: (
       state,
-      action: PayloadAction<{ id: string; x: number; y: number }>,
+      action: PayloadAction<
+        { id: string } & (
+          | { row: number; col: number }
+          | { x: number; y: number }
+        )
+      >,
     ) => {
-      const node = state.nodes.find((item) => item.id === action.payload.id);
+      const { id } = action.payload;
+      const node = state.nodes.find((item) => item.id === id);
       if (!node) return;
-      node.x = action.payload.x;
-      node.y = action.payload.y;
+
+      // Nó solto (sem layer — ex.: elemento de relação entre sites, WAN) ou
+      // endpoint remoto (Sprint equipamentos Fase 7 — tem layerId "de
+      // verdade" pros dados, mas continua com posição livre por pixel na
+      // camada visual): não tem grade, posição livre por pixel.
+      if (!node.layerId || node.isRemote) {
+        if ('x' in action.payload) {
+          node.x = action.payload.x;
+          node.y = action.payload.y;
+        }
+        return;
+      }
+
+      if (!('row' in action.payload)) return;
+      const { row, col } = action.payload;
+
+      const occupant = state.nodes.find(
+        (item) =>
+          item.id !== id &&
+          item.layerId === node.layerId &&
+          item.row === row &&
+          item.col === col,
+      );
+      if (occupant) {
+        // Quadrante ocupado: troca os dois de lugar, nenhum nó fica sem posição.
+        occupant.row = node.row;
+        occupant.col = node.col;
+        const occupantPos = cellToPixel(occupant.row, occupant.col);
+        occupant.x = occupantPos.x;
+        occupant.y = occupantPos.y;
+      }
+      node.row = row;
+      node.col = col;
+      const nodePos = cellToPixel(row, col);
+      node.x = nodePos.x;
+      node.y = nodePos.y;
     },
     updateNode: (state, action: PayloadAction<UpdateNodePayload>) => {
       const node = state.nodes.find((item) => item.id === action.payload.id);
@@ -2037,40 +2394,76 @@ export const networkSlice = createSlice({
       if (typeof action.payload.changes.description === 'string') {
         node.description = action.payload.changes.description;
       }
+      if (typeof action.payload.changes.equipmentBrand === 'string') {
+        node.equipmentBrand =
+          action.payload.changes.equipmentBrand || undefined;
+      }
+      if (typeof action.payload.changes.equipmentModel === 'string') {
+        node.equipmentModel =
+          action.payload.changes.equipmentModel || undefined;
+      }
 
       if (!isWan && needsAddressRefresh) {
         if (isAccessPointL3Mode(node)) {
           syncAccessPointVlanInterfacesByMode(state, node);
         } else {
-        const siteId = node.siteId;
-        const targetVlan =
-          node.vlans.length > 0 && siteId
-            ? (state.siteVlans.find(
-                (item) =>
-                  item.siteId === siteId && item.vlanId === node.vlans[0],
-              ) ?? null)
-            : null;
+          const siteId = node.siteId;
+          const targetVlan =
+            node.vlans.length > 0 && siteId
+              ? (state.siteVlans.find(
+                  (item) =>
+                    item.siteId === siteId && item.vlanId === node.vlans[0],
+                ) ?? null)
+              : null;
 
-        if (!targetVlan) {
-          node.hostCount = 1;
-          assignNodeIpOutsideVlans(state, node);
-        } else {
-          const moved = assignNodeIpInsideVlan(
-            state,
-            node,
-            targetVlan,
-            requestedIp ?? node.ip,
-          );
+          if (!targetVlan) {
+            node.hostCount = 1;
+            assignNodeIpOutsideVlans(state, node);
+          } else {
+            const moved = assignNodeIpInsideVlan(
+              state,
+              node,
+              targetVlan,
+              requestedIp ?? node.ip,
+            );
 
-          if (!moved) {
-            state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para reservar ${node.hostCount} IP(s) para ${node.label}.`;
+            if (!moved) {
+              state.meta.persistWarning = `VLAN ${targetVlan.vlanId} sem IP livre para reservar ${node.hostCount} IP(s) para ${node.label}.`;
+            }
           }
-        }
         }
       }
 
+      // Sprint equipamentos Fase 12 (correção) — preserva marca/modelo por
+      // unidade já setados antes de reconstruir hostAllocations.
+      const previousAllocations = node.hostAllocations;
       const usedIds = collectScopedUsedHostIds(state.nodes, node);
-      node.hostAllocations = buildNodeHostAllocations(node, { usedIds });
+      node.hostAllocations = buildNodeHostAllocations(node, {
+        usedIds,
+        previousAllocations,
+      });
+    },
+    // Sprint equipamentos Fase 12 (correção) — marca/modelo próprios de uma
+    // unidade extra (hostAllocations[1..]), independentes das outras unidades
+    // e do nó pai (que continua usando node.equipmentBrand/equipmentModel).
+    updateHostAllocationEquipment: (
+      state,
+      action: PayloadAction<UpdateHostAllocationEquipmentPayload>,
+    ) => {
+      const { nodeId, allocationId, equipmentBrand, equipmentModel } =
+        action.payload;
+      const node = state.nodes.find((item) => item.id === nodeId);
+      if (!node) return;
+      const allocation = node.hostAllocations.find(
+        (item) => item.id === allocationId,
+      );
+      if (!allocation) return;
+      if (equipmentBrand !== undefined) {
+        allocation.equipmentBrand = equipmentBrand || undefined;
+      }
+      if (equipmentModel !== undefined) {
+        allocation.equipmentModel = equipmentModel || undefined;
+      }
     },
     updateNodeTechField: (
       state,
@@ -2115,18 +2508,13 @@ export const networkSlice = createSlice({
         }
       }
 
-      if (
-        node.category === 'router' &&
-        action.payload.key === 'routingMode'
-      ) {
+      if (node.category === 'router' && action.payload.key === 'routingMode') {
         const routingMode = String(action.payload.value ?? 'static');
         if (routingMode === 'bgp' || routingMode === 'mixed') {
           const dedupe = (items: string[]) =>
             Array.from(
               new Set(
-                items
-                  .map((item) => item.trim())
-                  .filter((item) => item !== ''),
+                items.map((item) => item.trim()).filter((item) => item !== ''),
               ),
             );
 
@@ -2140,8 +2528,8 @@ export const networkSlice = createSlice({
               .map((link) => (link.from === node.id ? link.to : link.from))
               .map(
                 (peerId) =>
-                  state.nodes.find((candidate) => candidate.id === peerId)?.ip ??
-                  '',
+                  state.nodes.find((candidate) => candidate.id === peerId)
+                    ?.ip ?? '',
               ),
           );
 
@@ -2184,17 +2572,23 @@ export const networkSlice = createSlice({
             profile.fields.bgpAsn = String(65000 + site.ipOctet);
           }
 
-          const currentNeighbors = String(profile.fields.bgpNeighbors ?? '').trim();
+          const currentNeighbors = String(
+            profile.fields.bgpNeighbors ?? '',
+          ).trim();
           if (!currentNeighbors && directPeerIps.length > 0) {
             profile.fields.bgpNeighbors = directPeerIps.join(', ');
           }
 
-          const currentPrefixIn = String(profile.fields.bgpPrefixListIn ?? '').trim();
+          const currentPrefixIn = String(
+            profile.fields.bgpPrefixListIn ?? '',
+          ).trim();
           if (!currentPrefixIn && suggestedPrefixIn.length > 0) {
             profile.fields.bgpPrefixListIn = suggestedPrefixIn.join(', ');
           }
 
-          const currentPrefixOut = String(profile.fields.bgpPrefixListOut ?? '').trim();
+          const currentPrefixOut = String(
+            profile.fields.bgpPrefixListOut ?? '',
+          ).trim();
           if (!currentPrefixOut && localSiteNetworks.length > 0) {
             profile.fields.bgpPrefixListOut = localSiteNetworks.join(', ');
           }
@@ -2558,8 +2952,7 @@ export const networkSlice = createSlice({
                 priority:
                   state.aclRules
                     .filter((r) => !r.managed)
-                    .reduce((max, r) => Math.max(max, r.priority ?? 0), 0) +
-                  10,
+                    .reduce((max, r) => Math.max(max, r.priority ?? 0), 0) + 10,
                 source: 'manual',
                 stateful: forwardRule?.stateful ?? true,
                 bidirectional: false,
@@ -2628,6 +3021,13 @@ export const networkSlice = createSlice({
       state.meta.lastSavedAt = action.payload;
       state.meta.persistWarning = null;
       state.meta.saveStatus = 'saved';
+    },
+    // Reflete o nome no snapshot local imediatamente (título editável do
+    // Studio, PDF); a fonte da verdade de verdade é `ProjectSummary.name`
+    // via `useRenameProjectMutation` (chamado junto no componente) — ver
+    // nota de re-sync em `StudioProjectLoader.tsx`.
+    setProjectName: (state, action: PayloadAction<string>) => {
+      state.meta.projectName = action.payload;
     },
 
     // ── Fase 3 — CustomService ──────────────────────────────────────────────
@@ -2840,12 +3240,17 @@ export const {
   addLayer,
   removeLayer,
   updateLayerTier,
-  resizeLayer,
+  addLayerRow,
+  addLayerColumn,
+  removeLayerRow,
+  removeLayerColumn,
   addNode,
   addFloatingNode,
   removeNode,
+  setNodeOriginSite,
   updateNodePosition,
   updateNode,
+  updateHostAllocationEquipment,
   updateNodeTechField,
   updateNodeZone,
   addLink,
@@ -2863,6 +3268,7 @@ export const {
   setPersistWarning,
   setSaveStatus,
   markSaved,
+  setProjectName,
   hydrateNetworkState,
   // Fase 3
   addCustomService,

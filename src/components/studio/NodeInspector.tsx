@@ -1,26 +1,29 @@
 import { useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { DSCP_BY_QOSCLASS, QOSCLASS_LABEL } from '../../features/network/constants';
 import {
-    addActiveSession,
-    addFwPolicy,
-    addNatRule,
-    addQosQueue,
-    clearActiveSessions,
-    removeFwPolicy,
-    removeNatRule,
-    removeQosQueue,
-    setInspectorNodeId,
-    updateFwPolicy,
-    updateNatRule,
-    updateNode,
-    updateQosQueue,
+  DSCP_BY_QOSCLASS,
+  QOSCLASS_LABEL,
+} from '../../features/network/constants';
+import {
+  addActiveSession,
+  addFwPolicy,
+  addNatRule,
+  addQosQueue,
+  clearActiveSessions,
+  removeFwPolicy,
+  removeNatRule,
+  removeQosQueue,
+  setInspectorNodeId,
+  updateFwPolicy,
+  updateNatRule,
+  updateNode,
+  updateQosQueue,
 } from '../../features/network/networkSlice';
 import type {
-    FwPolicyAction,
-    NatType,
-    SessionProto,
-    SessionState,
+  FwPolicyAction,
+  NatType,
+  SessionProto,
+  SessionState,
 } from '../../features/network/types';
 import type { QosClass, QosQueue } from '../../features/network/types/entities';
 import { getNodeVisual, parseVlans } from './catalog';
@@ -88,9 +91,8 @@ const SESSION_STATE_COLOR: Record<SessionState, string> = {
 
 export default function NodeInspector() {
   const dispatch = useAppDispatch();
-  const { nodes, ui, fwPolicies, natRules, activeSessions, nodeQosProfiles } = useAppSelector(
-    (state) => state.network,
-  );
+  const { nodes, ui, fwPolicies, natRules, activeSessions, nodeQosProfiles } =
+    useAppSelector((state) => state.network);
   const node = useMemo(
     () => nodes.find((item) => item.id === ui.inspectorNodeId) ?? null,
     [nodes, ui.inspectorNodeId],
@@ -99,7 +101,8 @@ export default function NodeInspector() {
   // P16 — QoS Profile form state
   const [qosFormName, setQosFormName] = useState('');
   const [qosFormClass, setQosFormClass] = useState<QosClass>('default');
-  const [qosFormPriority, setQosFormPriority] = useState<QosQueue['priority']>('best-effort');
+  const [qosFormPriority, setQosFormPriority] =
+    useState<QosQueue['priority']>('best-effort');
   const [qosFormMinBw, setQosFormMinBw] = useState<number | ''>('');
 
   // Estado local para novo formulário de sessão simulada
@@ -686,170 +689,255 @@ export default function NodeInspector() {
         )}
 
         {/* ── P16 — QoS Profile (router / firewall / switch) ───────── */}
-        {(node.category === 'router' || node.category === 'firewall' || node.category === 'switch') && (() => {
-          const profile = nodeQosProfiles.find((p) => p.nodeId === node.id);
-          const queues = profile?.queues ?? [];
-          const sumBw = queues.reduce((acc, q) => acc + (q.minBandwidthPercent ?? 0), 0);
-          const strictCount = queues.filter((q) => q.priority === 'strict').length;
-          const hasBestEffort = queues.some((q) => q.priority === 'best-effort');
+        {(node.category === 'router' ||
+          node.category === 'firewall' ||
+          node.category === 'switch') &&
+          (() => {
+            const profile = nodeQosProfiles.find((p) => p.nodeId === node.id);
+            const queues = profile?.queues ?? [];
+            const sumBw = queues.reduce(
+              (acc, q) => acc + (q.minBandwidthPercent ?? 0),
+              0,
+            );
+            const strictCount = queues.filter(
+              (q) => q.priority === 'strict',
+            ).length;
+            const hasBestEffort = queues.some(
+              (q) => q.priority === 'best-effort',
+            );
 
-          return (
-            <details className="rounded border border-orange-700/40 bg-orange-950/15">
-              <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-orange-300">
-                <span>◆ QoS Profile — Filas</span>
-                <span className="text-slate-500">{queues.length} fila{queues.length !== 1 ? 's' : ''}</span>
-              </summary>
-              <div className="px-2 pb-2 pt-1">
-                {/* Warnings */}
-                {sumBw > 100 && (
-                  <p className="mb-1 rounded bg-red-950/40 px-1.5 py-0.5 text-[9px] text-red-400">
-                    ⚠ Soma de % mínima ({sumBw}%) excede 100%.
-                  </p>
-                )}
-                {strictCount > 1 && (
-                  <p className="mb-1 rounded bg-amber-950/40 px-1.5 py-0.5 text-[9px] text-amber-400">
-                    ⚠ Mais de uma fila strict — apenas uma é recomendada.
-                  </p>
-                )}
-                {queues.length > 0 && !hasBestEffort && (
-                  <p className="mb-1 rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">
-                    ℹ Adicione uma fila best-effort como fallback.
-                  </p>
-                )}
+            return (
+              <details className="rounded border border-orange-700/40 bg-orange-950/15">
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-orange-300">
+                  <span>◆ QoS Profile — Filas</span>
+                  <span className="text-slate-500">
+                    {queues.length} fila{queues.length !== 1 ? 's' : ''}
+                  </span>
+                </summary>
+                <div className="px-2 pb-2 pt-1">
+                  {/* Warnings */}
+                  {sumBw > 100 && (
+                    <p className="mb-1 rounded bg-red-950/40 px-1.5 py-0.5 text-[9px] text-red-400">
+                      ⚠ Soma de % mínima ({sumBw}%) excede 100%.
+                    </p>
+                  )}
+                  {strictCount > 1 && (
+                    <p className="mb-1 rounded bg-amber-950/40 px-1.5 py-0.5 text-[9px] text-amber-400">
+                      ⚠ Mais de uma fila strict — apenas uma é recomendada.
+                    </p>
+                  )}
+                  {queues.length > 0 && !hasBestEffort && (
+                    <p className="mb-1 rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">
+                      ℹ Adicione uma fila best-effort como fallback.
+                    </p>
+                  )}
 
-                {/* Lista de filas */}
-                {queues.length === 0 && (
-                  <p className="mb-1.5 text-[10px] italic text-slate-600">Nenhuma fila configurada.</p>
-                )}
-                <div className="mb-2 space-y-1">
-                  {queues.map((q) => (
-                    <div key={q.id} className="rounded border border-slate-700/50 bg-slate-800/30 px-1.5 py-1">
-                      <div className="flex items-center gap-1">
-                        <span className="flex-1 font-mono text-[10px] text-slate-200">{q.name}</span>
-                        <span className="rounded bg-orange-900/30 px-1 text-[9px] text-orange-300">
-                          {QOSCLASS_LABEL[q.trafficClass]}
-                        </span>
-                        <span className="text-[9px] text-slate-500">DSCP {DSCP_BY_QOSCLASS[q.trafficClass]}</span>
-                        <button
-                          type="button"
-                          onClick={() => dispatch(removeQosQueue({ nodeId: node.id, queueId: q.id }))}
-                          className="text-red-600 hover:text-red-400"
-                        >✕</button>
-                      </div>
-                      <div className="mt-1 grid grid-cols-2 gap-1">
-                        <div>
-                          <label className="text-[9px] text-slate-500">% mín</label>
-                          <input
-                            type="number" min={0} max={100}
-                            value={q.minBandwidthPercent ?? ''}
-                            onChange={(e) => dispatch(updateQosQueue({
-                              nodeId: node.id,
-                              queueId: q.id,
-                              changes: { minBandwidthPercent: e.target.value !== '' ? Number(e.target.value) : undefined },
-                            }))}
-                            placeholder="—"
-                            className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] text-slate-500">Disciplina</label>
-                          <select
-                            value={q.priority}
-                            onChange={(e) => dispatch(updateQosQueue({
-                              nodeId: node.id,
-                              queueId: q.id,
-                              changes: { priority: e.target.value as QosQueue['priority'] },
-                            }))}
-                            className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                  {/* Lista de filas */}
+                  {queues.length === 0 && (
+                    <p className="mb-1.5 text-[10px] italic text-slate-600">
+                      Nenhuma fila configurada.
+                    </p>
+                  )}
+                  <div className="mb-2 space-y-1">
+                    {queues.map((q) => (
+                      <div
+                        key={q.id}
+                        className="rounded border border-slate-700/50 bg-slate-800/30 px-1.5 py-1"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="flex-1 font-mono text-[10px] text-slate-200">
+                            {q.name}
+                          </span>
+                          <span className="rounded bg-orange-900/30 px-1 text-[9px] text-orange-300">
+                            {QOSCLASS_LABEL[q.trafficClass]}
+                          </span>
+                          <span className="text-[9px] text-slate-500">
+                            DSCP {DSCP_BY_QOSCLASS[q.trafficClass]}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              dispatch(
+                                removeQosQueue({
+                                  nodeId: node.id,
+                                  queueId: q.id,
+                                }),
+                              )
+                            }
+                            className="text-red-600 hover:text-red-400"
                           >
-                            <option value="strict">strict</option>
-                            <option value="weighted">weighted</option>
-                            <option value="best-effort">best-effort</option>
-                          </select>
+                            ✕
+                          </button>
+                        </div>
+                        <div className="mt-1 grid grid-cols-2 gap-1">
+                          <div>
+                            <label className="text-[9px] text-slate-500">
+                              % mín
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={q.minBandwidthPercent ?? ''}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateQosQueue({
+                                    nodeId: node.id,
+                                    queueId: q.id,
+                                    changes: {
+                                      minBandwidthPercent:
+                                        e.target.value !== ''
+                                          ? Number(e.target.value)
+                                          : undefined,
+                                    },
+                                  }),
+                                )
+                              }
+                              placeholder="—"
+                              className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-slate-500">
+                              Disciplina
+                            </label>
+                            <select
+                              value={q.priority}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateQosQueue({
+                                    nodeId: node.id,
+                                    queueId: q.id,
+                                    changes: {
+                                      priority: e.target
+                                        .value as QosQueue['priority'],
+                                    },
+                                  }),
+                                )
+                              }
+                              className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                            >
+                              <option value="strict">strict</option>
+                              <option value="weighted">weighted</option>
+                              <option value="best-effort">best-effort</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Formulário nova fila */}
-                <div className="border-t border-slate-700/50 pt-1.5">
-                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-slate-500">+ Nova fila</p>
-                  <div className="grid grid-cols-2 gap-1">
-                    <div>
-                      <label className="text-[9px] text-slate-500">Nome</label>
-                      <input
-                        value={qosFormName}
-                        onChange={(e) => setQosFormName(e.target.value)}
-                        placeholder="ex: q0"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
-                      />
+                  {/* Formulário nova fila */}
+                  <div className="border-t border-slate-700/50 pt-1.5">
+                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-slate-500">
+                      + Nova fila
+                    </p>
+                    <div className="grid grid-cols-2 gap-1">
+                      <div>
+                        <label className="text-[9px] text-slate-500">
+                          Nome
+                        </label>
+                        <input
+                          value={qosFormName}
+                          onChange={(e) => setQosFormName(e.target.value)}
+                          placeholder="ex: q0"
+                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-slate-500">
+                          Classe
+                        </label>
+                        <select
+                          value={qosFormClass}
+                          onChange={(e) =>
+                            setQosFormClass(e.target.value as QosClass)
+                          }
+                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                        >
+                          {(Object.keys(QOSCLASS_LABEL) as QosClass[]).map(
+                            (c) => (
+                              <option key={c} value={c}>
+                                {QOSCLASS_LABEL[c]}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-slate-500">
+                          Disciplina
+                        </label>
+                        <select
+                          value={qosFormPriority}
+                          onChange={(e) =>
+                            setQosFormPriority(
+                              e.target.value as QosQueue['priority'],
+                            )
+                          }
+                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                        >
+                          <option value="strict">strict</option>
+                          <option value="weighted">weighted</option>
+                          <option value="best-effort">best-effort</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-slate-500">
+                          % mín
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={qosFormMinBw}
+                          onChange={(e) =>
+                            setQosFormMinBw(
+                              e.target.value !== ''
+                                ? Number(e.target.value)
+                                : '',
+                            )
+                          }
+                          placeholder="—"
+                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">Classe</label>
-                      <select
-                        value={qosFormClass}
-                        onChange={(e) => setQosFormClass(e.target.value as QosClass)}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                    <div className="mt-1 flex justify-end">
+                      <button
+                        type="button"
+                        disabled={!qosFormName.trim()}
+                        onClick={() => {
+                          if (!qosFormName.trim()) return;
+                          dispatch(
+                            addQosQueue({
+                              nodeId: node.id,
+                              queue: {
+                                name: qosFormName.trim(),
+                                trafficClass: qosFormClass,
+                                priority: qosFormPriority,
+                                minBandwidthPercent:
+                                  qosFormMinBw !== ''
+                                    ? qosFormMinBw
+                                    : undefined,
+                              },
+                            }),
+                          );
+                          setQosFormName('');
+                          setQosFormMinBw('');
+                          setQosFormPriority('best-effort');
+                          setQosFormClass('default');
+                        }}
+                        className="rounded border border-orange-600/50 bg-orange-900/30 px-2 py-0.5 text-[9px] text-orange-300 hover:bg-orange-800/40 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {(Object.keys(QOSCLASS_LABEL) as QosClass[]).map((c) => (
-                          <option key={c} value={c}>{QOSCLASS_LABEL[c]}</option>
-                        ))}
-                      </select>
+                        + Fila
+                      </button>
                     </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">Disciplina</label>
-                      <select
-                        value={qosFormPriority}
-                        onChange={(e) => setQosFormPriority(e.target.value as QosQueue['priority'])}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
-                      >
-                        <option value="strict">strict</option>
-                        <option value="weighted">weighted</option>
-                        <option value="best-effort">best-effort</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">% mín</label>
-                      <input
-                        type="number" min={0} max={100}
-                        value={qosFormMinBw}
-                        onChange={(e) => setQosFormMinBw(e.target.value !== '' ? Number(e.target.value) : '')}
-                        placeholder="—"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-1 flex justify-end">
-                    <button
-                      type="button"
-                      disabled={!qosFormName.trim()}
-                      onClick={() => {
-                        if (!qosFormName.trim()) return;
-                        dispatch(addQosQueue({
-                          nodeId: node.id,
-                          queue: {
-                            name: qosFormName.trim(),
-                            trafficClass: qosFormClass,
-                            priority: qosFormPriority,
-                            minBandwidthPercent: qosFormMinBw !== '' ? qosFormMinBw : undefined,
-                          },
-                        }));
-                        setQosFormName('');
-                        setQosFormMinBw('');
-                        setQosFormPriority('best-effort');
-                        setQosFormClass('default');
-                      }}
-                      className="rounded border border-orange-600/50 bg-orange-900/30 px-2 py-0.5 text-[9px] text-orange-300 hover:bg-orange-800/40 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      + Fila
-                    </button>
                   </div>
                 </div>
-              </div>
-            </details>
-          );
-        })()}
+              </details>
+            );
+          })()}
 
         {/* ── Fase 3 — Sessões Ativas ───────────────────────────────── */}
         {isFw && (

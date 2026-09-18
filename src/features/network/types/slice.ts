@@ -1,23 +1,23 @@
 import type {
-    AclEndpointScope,
-    AddressAllocationMode,
-    AddressFamily,
-    CertificateType,
-    CustomServiceProto,
-    DhcpScope,
-    FwPolicyAction,
-    IpsecSaState,
-    LayerTier,
-    LinkDuplexMode,
-    NatType,
-    NetworkDnsPolicy,
-    NetworkGatewayMode,
-    NetworkPurpose,
-    NetworkStackMode,
-    NetworkTrafficPreference,
-    SessionProto,
-    SessionState,
-    SslVpnAuthMode,
+  AclEndpointScope,
+  AddressAllocationMode,
+  AddressFamily,
+  CertificateType,
+  CustomServiceProto,
+  DhcpScope,
+  FwPolicyAction,
+  IpsecSaState,
+  LayerTier,
+  LinkDuplexMode,
+  NatType,
+  NetworkDnsPolicy,
+  NetworkGatewayMode,
+  NetworkPurpose,
+  NetworkStackMode,
+  NetworkTrafficPreference,
+  SessionProto,
+  SessionState,
+  SslVpnAuthMode,
 } from './entities';
 import type { AclAction, LinkKind, NodeCategory } from './primitives';
 import type { TechValue } from './techProfile.type';
@@ -26,6 +26,13 @@ export type AddNodePayload = {
   siteId: string;
   layerId: string;
   category: NodeCategory;
+  /** Sprint equipamentos Fase 1 — cria o nó fora do site/layer (endpoint remoto) */
+  isRemote?: boolean;
+};
+
+export type SetNodeOriginSitePayload = {
+  id: string;
+  originSiteId: string;
 };
 
 export type AddLayerPayload = {
@@ -48,7 +55,24 @@ export type UpdateNodePayload = {
     cidr: number;
     vlans: number[];
     description: string;
+    /** Sprint equipamentos Fase 5 */
+    equipmentBrand: string;
+    /** Sprint equipamentos Fase 5 */
+    equipmentModel: string;
   }>;
+};
+
+/**
+ * Sprint equipamentos Fase 12 (correção) — marca/modelo de uma unidade
+ * extra (`node.hostAllocations[i]`, i >= 1), independentes das outras
+ * unidades e do nó pai. `undefined` = campo não alterado nesta chamada;
+ * string vazia limpa o valor (mesma convenção de `UpdateNodePayload`).
+ */
+export type UpdateHostAllocationEquipmentPayload = {
+  nodeId: string;
+  allocationId: string;
+  equipmentBrand?: string;
+  equipmentModel?: string;
 };
 
 export type UpdateLayerTierPayload = {

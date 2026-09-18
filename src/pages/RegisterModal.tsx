@@ -1,20 +1,19 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useRegisterMutation } from '../features/auth/queries';
+import { useMigrateLegacyProjectMutation } from '../features/projects/queries';
+import { getAuthErrorMessage, getRegisterPageCopy } from '../i18n/utils';
+import type { AppLanguage } from '../types/i18n';
 import BrandMark from '../components/BrandMark';
 import Modal from '../components/Modal';
 import OAuthButtons from '../components/OAuthButtons';
-import { clearAuthError, registerUser } from '../features/auth/authSlice';
-import { migrateLegacyProject } from '../features/projects/projectsSlice';
-import { getAuthErrorMessage, getRegisterPageCopy } from '../i18n/utils';
-import type { AppLanguage } from '../types/i18n';
 
 export default function RegisterModal() {
   const { lang } = useParams<{ lang: AppLanguage }>();
   const language = lang ?? 'pt';
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { error, status } = useAppSelector((state) => state.auth);
+  const registerMutation = useRegisterMutation();
+  const migrateLegacyProject = useMigrateLegacyProjectMutation();
   const copy = getRegisterPageCopy(language);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,14 +21,10 @@ export default function RegisterModal() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [mismatch, setMismatch] = useState(false);
 
-  useEffect(() => {
-    dispatch(clearAuthError());
-  }, [dispatch]);
-
   const close = () => navigate(`/${language}`);
 
   const goToProjects = async () => {
-    await dispatch(migrateLegacyProject());
+    await migrateLegacyProject.mutateAsync();
     navigate(`/${language}/projects`);
   };
 
@@ -42,11 +37,16 @@ export default function RegisterModal() {
     }
     setMismatch(false);
 
-    const result = await dispatch(registerUser({ name, email, password }));
-    if (registerUser.fulfilled.match(result)) {
+    const result = await registerMutation.mutateAsync({ name, email, password });
+    if (result.ok) {
       await goToProjects();
     }
   };
+
+  const error =
+    registerMutation.data && !registerMutation.data.ok
+      ? registerMutation.data.error
+      : null;
 
   return (
     <Modal onClose={close}>
@@ -132,10 +132,10 @@ export default function RegisterModal() {
 
         <button
           type="submit"
-          disabled={status === 'loading'}
+          disabled={registerMutation.isPending}
           className="mt-1 rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === 'loading' ? copy.submitting : copy.submit}
+          {registerMutation.isPending ? copy.submitting : copy.submit}
         </button>
 
         <OAuthButtons

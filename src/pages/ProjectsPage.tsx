@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
 import NewProjectModal from '../components/NewProjectModal';
+import { useSessionQuery } from '../features/auth/queries';
 import {
-    createProject,
-    fetchProjects,
-    renameProject,
-} from '../features/projects/projectsSlice';
+    useCreateProjectMutation,
+    useProjectsQuery,
+    useRenameProjectMutation,
+} from '../features/projects/queries';
 import type { ProjectSummary } from '../features/projects/types';
 import type { ProjectsPageCopy } from '../i18n/types';
 import { getProjectsPageCopy } from '../i18n/utils';
@@ -91,26 +91,24 @@ function ProjectCard({
 export default function ProjectsPage() {
   const { lang } = useParams<{ lang: AppLanguage }>();
   const language = lang ?? 'pt';
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const copy = getProjectsPageCopy(language);
 
-  const currentUser = useAppSelector((state) => state.auth.currentUser);
-  const { items, status } = useAppSelector((state) => state.projects);
+  const { data: currentUser } = useSessionQuery();
+  const { data: items = [], isLoading } = useProjectsQuery(currentUser?.id);
+  const createProjectMutation = useCreateProjectMutation();
+  const renameProjectMutation = useRenameProjectMutation();
   const [isModalOpen, setModalOpen] = useState(false);
   const [isCreating, setCreating] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) dispatch(fetchProjects(currentUser.id));
-  }, [currentUser, dispatch]);
 
   const handleCreate = async (name: string) => {
     if (!currentUser) return;
     setCreating(true);
-    const result = await dispatch(createProject({ name }));
-    setCreating(false);
-    if (createProject.fulfilled.match(result)) {
-      navigate(`/${language}/studio/${result.payload.id}`);
+    try {
+      const record = await createProjectMutation.mutateAsync({ name });
+      navigate(`/${language}/studio/${record.id}`);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -132,7 +130,7 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {status === 'idle' && items.length === 0 && (
+      {!isLoading && items.length === 0 && (
         <div className="rounded-lg border border-dashed border-slate-800 py-16 text-center">
           <p className="text-sm font-semibold text-slate-300">
             {copy.emptyStateTitle}
@@ -151,7 +149,9 @@ export default function ProjectsPage() {
             language={language}
             copy={copy}
             onOpen={() => navigate(`/${language}/studio/${project.id}`)}
-            onRename={(name) => dispatch(renameProject({ id: project.id, name }))}
+            onRename={(name) =>
+              renameProjectMutation.mutate({ id: project.id, name })
+            }
           />
         ))}
       </div>
