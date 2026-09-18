@@ -12,6 +12,13 @@ import {
     SITE_BOTTOM_PADDING,
     WAN_Y,
 } from '../constants';
+export {
+  cellToPixel,
+  computeLayerGridSize,
+  deriveLayerGridFromLegacySize,
+  findFirstFreeCell,
+  pixelToCell,
+} from '../../../features/network/utils/grid';
 import type { GridLayoutResult, TooltipPlacement } from '../types';
 
 export function parseCsvItems(raw: string): string[] {
@@ -515,37 +522,3 @@ export function resolveLinkDescription(
   return `${fromLabel} ${arrow} ${toLabel}`;
 }
 
-export function isInsideLayerBounds(
-  x: number,
-  y: number,
-  layerX: number,
-  layerY: number,
-  layerWidth: number,
-  layerHeight: number,
-) {
-  const margin = 28;
-  return (
-    x >= layerX + margin &&
-    x <= layerX + layerWidth - margin &&
-    y >= layerY + margin &&
-    y <= layerY + layerHeight - margin
-  );
-}
-
-export function getLayerFallbackPosition(
-  layerX: number,
-  layerY: number,
-  layerWidth: number,
-  layerHeight: number,
-  index: number,
-) {
-  const cols = Math.max(1, Math.min(4, Math.floor((layerWidth - 40) / 105)));
-  const col = index % cols;
-  const row = Math.floor(index / cols);
-  const x = layerX + 54 + col * 98;
-  const y = layerY + 54 + row * 76;
-  return {
-    x: Math.max(layerX + 28, Math.min(layerX + layerWidth - 28, x)),
-    y: Math.max(layerY + 28, Math.min(layerY + layerHeight - 28, y)),
-  };
-}

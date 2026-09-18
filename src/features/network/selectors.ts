@@ -1,19 +1,23 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/store';
+import { EQUIPMENT_SUPPORT_CATEGORIES, TIER_LABELS } from './constants';
 import type {
-    BgpNeighborEntry,
-    FirewallGroupedResult,
-    FirewallRuleRow,
-    NetworkReadinessRow,
-    RouteRow,
-    RoutingProtocolRow,
-    SubnetRouteRow,
+  BgpNeighborEntry,
+  EquipmentInventoryRow,
+  FirewallGroupedResult,
+  FirewallRuleRow,
+  NetworkReadinessRow,
+  RouteRow,
+  RoutingProtocolRow,
+  SubnetRouteRow,
 } from './types';
 import {
-    getNodeReservedRange, getSiteReserveRange, resolveGateway,
-    resolveGatewayIpv6,
-    resolveInterface,
-    resolveRouteType
+  getNodeReservedRange,
+  getSiteReserveRange,
+  resolveGateway,
+  resolveGatewayIpv6,
+  resolveInterface,
+  resolveRouteType,
 } from './utils';
 
 export const selectNetworkState = (state: RootState) => state.network;
@@ -372,75 +376,75 @@ export const selectFirewallRules = createSelector(
         (sourceAllocation, sourceIndex) => {
           return destinationAllocations.map(
             (destinationAllocation, destinationIndex) => {
-            const origem =
-              rule.sourceScope === 'vlan'
-                ? `${sourceAllocation.ip} / ${sourceAllocation.id} (${formatVlanTarget(rule.sourceNodeId, rule.sourceVlanId)})`
-                : rule.sourceScope === 'ip'
-                  ? formatIpTarget(rule.sourceNodeId, rule.sourceIp)
-                  : `${sourceAllocation.ip} / ${sourceAllocation.id}`;
+              const origem =
+                rule.sourceScope === 'vlan'
+                  ? `${sourceAllocation.ip} / ${sourceAllocation.id} (${formatVlanTarget(rule.sourceNodeId, rule.sourceVlanId)})`
+                  : rule.sourceScope === 'ip'
+                    ? formatIpTarget(rule.sourceNodeId, rule.sourceIp)
+                    : `${sourceAllocation.ip} / ${sourceAllocation.id}`;
 
-            const destino =
-              rule.destinationScope === 'vlan'
-                ? `${destinationAllocation.ip} / ${destinationAllocation.id} (${formatVlanTarget(rule.destinationNodeId, rule.destinationVlanId)})`
-                : rule.destinationScope === 'ip'
-                  ? formatIpTarget(rule.destinationNodeId, rule.destinationIp)
-                  : `${destinationAllocation.ip} / ${destinationAllocation.id}`;
+              const destino =
+                rule.destinationScope === 'vlan'
+                  ? `${destinationAllocation.ip} / ${destinationAllocation.id} (${formatVlanTarget(rule.destinationNodeId, rule.destinationVlanId)})`
+                  : rule.destinationScope === 'ip'
+                    ? formatIpTarget(rule.destinationNodeId, rule.destinationIp)
+                    : `${destinationAllocation.ip} / ${destinationAllocation.id}`;
 
-            const sourceVlanLabel =
-              rule.sourceScope === 'node'
-                ? getNodeVlanLabel(rule.sourceNodeId)
-                : '-';
-            const destinationVlanLabel =
-              rule.destinationScope === 'node'
-                ? getNodeVlanLabel(rule.destinationNodeId)
-                : '-';
-            const vlan =
-              sourceVlanLabel === '-' && destinationVlanLabel === '-'
-                ? 'Nao'
-                : `O: ${sourceVlanLabel} | D: ${destinationVlanLabel}`;
+              const sourceVlanLabel =
+                rule.sourceScope === 'node'
+                  ? getNodeVlanLabel(rule.sourceNodeId)
+                  : '-';
+              const destinationVlanLabel =
+                rule.destinationScope === 'node'
+                  ? getNodeVlanLabel(rule.destinationNodeId)
+                  : '-';
+              const vlan =
+                sourceVlanLabel === '-' && destinationVlanLabel === '-'
+                  ? 'Nao'
+                  : `O: ${sourceVlanLabel} | D: ${destinationVlanLabel}`;
 
-            const row: FirewallRuleRow = {
-              id:
-                sourceIndex === 0 && destinationIndex === 0
-                  ? rule.id
-                  : `${rule.id}#${sourceIndex + 1}-${destinationIndex + 1}`,
-              aclRuleId: rule.id,
-              priority: rulePriority,
-              source: ruleSource,
-              acao: rule.action,
-              origem,
-              destino,
-              vlan,
-              servico: rule.service,
-              enabled: rule.enabled,
-              managed: rule.managed,
-              stateful: rule.stateful ?? true,
-              bidirectional: effectiveBidirectional,
-              duplexMode: effectiveDuplexMode,
-              passthrough: rule.passthrough ?? false,
-              natExempt: rule.natExempt ?? false,
-              protocol: rule.protocol ?? 'any',
-              isReturnRule: rule.isReturnRule,
-              hasConflict,
-              missingReturn,
-              isDerivedAllocation: sourceIndex > 0 || destinationIndex > 0,
-              sourceNodeId: rule.sourceNodeId,
-              destinationNodeId: rule.destinationNodeId,
-              sourceNodeSiteId: sourceNode?.siteId,
-              destinationNodeSiteId: destinationNode?.siteId,
-              sourceScope: rule.sourceScope,
-              sourceVlanId: rule.sourceVlanId,
-              sourceIp: rule.sourceIp,
-              destinationScope: rule.destinationScope,
-              destinationVlanId: rule.destinationVlanId,
-              destinationIp: rule.destinationIp,
-              parentRuleId: rule.parentRuleId,
-              linkId: rule.linkId,
-              fwNatMode: fwNatMode !== 'none' ? fwNatMode : undefined,
-              ipsecAuthBadge,
-            };
+              const row: FirewallRuleRow = {
+                id:
+                  sourceIndex === 0 && destinationIndex === 0
+                    ? rule.id
+                    : `${rule.id}#${sourceIndex + 1}-${destinationIndex + 1}`,
+                aclRuleId: rule.id,
+                priority: rulePriority,
+                source: ruleSource,
+                acao: rule.action,
+                origem,
+                destino,
+                vlan,
+                servico: rule.service,
+                enabled: rule.enabled,
+                managed: rule.managed,
+                stateful: rule.stateful ?? true,
+                bidirectional: effectiveBidirectional,
+                duplexMode: effectiveDuplexMode,
+                passthrough: rule.passthrough ?? false,
+                natExempt: rule.natExempt ?? false,
+                protocol: rule.protocol ?? 'any',
+                isReturnRule: rule.isReturnRule,
+                hasConflict,
+                missingReturn,
+                isDerivedAllocation: sourceIndex > 0 || destinationIndex > 0,
+                sourceNodeId: rule.sourceNodeId,
+                destinationNodeId: rule.destinationNodeId,
+                sourceNodeSiteId: sourceNode?.siteId,
+                destinationNodeSiteId: destinationNode?.siteId,
+                sourceScope: rule.sourceScope,
+                sourceVlanId: rule.sourceVlanId,
+                sourceIp: rule.sourceIp,
+                destinationScope: rule.destinationScope,
+                destinationVlanId: rule.destinationVlanId,
+                destinationIp: rule.destinationIp,
+                parentRuleId: rule.parentRuleId,
+                linkId: rule.linkId,
+                fwNatMode: fwNatMode !== 'none' ? fwNatMode : undefined,
+                ipsecAuthBadge,
+              };
 
-            return row;
+              return row;
             },
           );
         },
@@ -570,9 +574,7 @@ export const selectRoutingProtocolRows = createSelector(
           bgpNeighborsRaw:
             mode === 'bgp' || mode === 'mixed' ? bgpNeighborsRaw : undefined,
           bgpNeighborCandidates:
-            mode === 'bgp' || mode === 'mixed'
-              ? neighborCandidates
-              : undefined,
+            mode === 'bgp' || mode === 'mixed' ? neighborCandidates : undefined,
           bgpPrefixListIn:
             mode === 'bgp' || mode === 'mixed'
               ? String(fields.bgpPrefixListIn ?? '')
@@ -598,7 +600,14 @@ export const selectRoutingProtocolRows = createSelector(
 export const selectSubnetRouteTable = createSelector(
   [selectNetworkState],
   (network): SubnetRouteRow[] => {
-    const { subnets, siteVlans, sites, nodes, nodeVlanInterfaces, siteNetworks } = network;
+    const {
+      subnets,
+      siteVlans,
+      sites,
+      nodes,
+      nodeVlanInterfaces,
+      siteNetworks,
+    } = network;
 
     const resolveGatewayIface = (siteId: string, vlanId: number) => {
       const candidates = (nodeVlanInterfaces ?? []).filter(
@@ -671,7 +680,9 @@ export const selectSubnetRouteTable = createSelector(
         vlanId: subnet.vlanId ?? 0,
         vlanName: vlan?.name ?? `VLAN ${subnet.vlanId ?? '—'}`,
         destination,
-        destinationIpv6: subnet.ipv6Prefix?.trim() || (vlan ? resolveVlanIpv6Prefix(vlan) : undefined),
+        destinationIpv6:
+          subnet.ipv6Prefix?.trim() ||
+          (vlan ? resolveVlanIpv6Prefix(vlan) : undefined),
         gateway: iface?.gatewayIp ?? '',
         gatewayIpv6: iface?.gatewayIpv6 ?? '',
         gatewayNodeId: iface?.nodeId ?? '',
@@ -690,7 +701,8 @@ export const selectNetworkReadiness = createSelector(
     const { siteNetworks, sites, nodes, siteVlans } = network;
 
     return (siteNetworks ?? []).map((net) => {
-      const siteName = sites.find((s) => s.id === net.siteId)?.name ?? net.siteId;
+      const siteName =
+        sites.find((s) => s.id === net.siteId)?.name ?? net.siteId;
       const issues: string[] = [];
 
       const stackMode = net.stackMode ?? 'ipv4';
@@ -705,12 +717,17 @@ export const selectNetworkReadiness = createSelector(
         (n) => !(n.ipv6 && n.ipv6.trim() !== ''),
       ).length;
 
-      const vlansInNetwork = (siteVlans ?? []).filter((v) => v.networkId === net.id);
+      const vlansInNetwork = (siteVlans ?? []).filter(
+        (v) => v.networkId === net.id,
+      );
       const vlansMissingIpv6 = vlansInNetwork.filter(
         (v) => !(v.ipv6Prefix && v.ipv6Prefix.trim() !== ''),
       ).length;
 
-      if (stackMode !== 'ipv4' && !(net.ipv6Prefix && net.ipv6Prefix.trim() !== '')) {
+      if (
+        stackMode !== 'ipv4' &&
+        !(net.ipv6Prefix && net.ipv6Prefix.trim() !== '')
+      ) {
         issues.push('Stack dual/IPv6 sem prefixo IPv6 definido na LAN.');
       }
 
@@ -730,18 +747,24 @@ export const selectNetworkReadiness = createSelector(
       }
 
       if (preference === 'ipv6-strict' && stackMode === 'ipv4') {
-        issues.push('Preferência IPv6 strict incompatível com stack IPv4 only.');
+        issues.push(
+          'Preferência IPv6 strict incompatível com stack IPv4 only.',
+        );
       }
 
       if (preference === 'ipv6-strict' && vlansMissingIpv6 > 0) {
-        issues.push(`${vlansMissingIpv6} VLAN(s) sem prefixo IPv6 em modo strict.`);
+        issues.push(
+          `${vlansMissingIpv6} VLAN(s) sem prefixo IPv6 em modo strict.`,
+        );
       }
 
       const level: NetworkReadinessRow['level'] =
         issues.length === 0
           ? 'ready'
-          : issues.some((i) =>
-                i.includes('strict') || i.includes('sem prefixo IPv6 definido'),
+          : issues.some(
+                (i) =>
+                  i.includes('strict') ||
+                  i.includes('sem prefixo IPv6 definido'),
               )
             ? 'critical'
             : 'warning';
@@ -755,5 +778,73 @@ export const selectNetworkReadiness = createSelector(
         issues,
       };
     });
+  },
+);
+
+/**
+ * Sprint equipamentos Fase 6 — tabela única de inventário de equipamentos
+ * de sustentação de rede (mesmo critério de `EQUIPMENT_SUPPORT_CATEGORIES`
+ * usado pelo `NodeInspector` na Fase 5): exclui endpoints, endpoints
+ * remotos e nós de relação inter-site (vpn/ipsec/...).
+ *
+ * Fase 12 — quando `node.hostAllocations.length > 1` (mais de uma unidade
+ * física do mesmo equipamento), a linha "pai" (1 por nó, `id: node.id`,
+ * `isDerivedAllocation: false`) é seguida por uma linha "filha" por unidade
+ * adicional (`hostAllocations[1..]`), com `id` = id da alocação (já gerado
+ * sem colisão por `buildNodeHostAllocations`) e função/site/lan/tier
+ * herdados do nó pai — mesmo nó lógico, mesma posição na rede. Marca/modelo
+ * (Fase 12, correção), ao contrário, são próprios de cada unidade
+ * (`hostAllocations[i].equipmentBrand/equipmentModel`): na vida real, as N
+ * unidades atrás de um mesmo nó podem ser de marcas/modelos diferentes.
+ */
+export const selectEquipmentInventory = createSelector(
+  [selectNetworkState],
+  (network): EquipmentInventoryRow[] => {
+    const { nodes, sites, layers } = network;
+    const supportedCategories = new Set(EQUIPMENT_SUPPORT_CATEGORIES);
+
+    return nodes
+      .filter(
+        (node) => supportedCategories.has(node.category) && !node.isRemote,
+      )
+      .flatMap((node) => {
+        const site = sites.find((s) => s.id === node.siteId);
+        const layer = layers.find((l) => l.id === node.layerId);
+        const tierLabel = layer?.tier
+          ? TIER_LABELS[layer.tier] || layer.name || '—'
+          : '—';
+
+        const baseRow = {
+          nome: node.label,
+          marca: node.equipmentBrand ?? '—',
+          modelo: node.equipmentModel ?? '—',
+          funcao: node.description || '—',
+          site: site?.name ?? '—',
+          lan: layer?.name ?? '—',
+          tier: tierLabel,
+        };
+
+        const parentRow: EquipmentInventoryRow = {
+          id: node.id,
+          ...baseRow,
+          isDerivedAllocation: false,
+        };
+
+        const extraAllocations = (node.hostAllocations ?? []).slice(1);
+        const childRows: EquipmentInventoryRow[] = extraAllocations.map(
+          (allocation) => ({
+            id: allocation.id,
+            ...baseRow,
+            // Sprint equipamentos Fase 12 (correção) — marca/modelo próprios
+            // da unidade, não mais herdados do nó pai (unidades atrás do
+            // mesmo nó podem ser de marcas/modelos diferentes entre si).
+            marca: allocation.equipmentBrand ?? '—',
+            modelo: allocation.equipmentModel ?? '—',
+            isDerivedAllocation: true,
+          }),
+        );
+
+        return [parentRow, ...childRows];
+      });
   },
 );

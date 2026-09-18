@@ -20,6 +20,9 @@ export function makeNodeId(
   if (siteId && layerId) {
     return `${siteId}.${layerId}.${categoryCode}${index}`;
   }
+  if (siteId) {
+    return `${siteId}.${categoryCode}${index}`;
+  }
   return `${categoryCode}${index}`;
 }
 
@@ -47,9 +50,29 @@ export function getNodeIdPrefix(value: string) {
   };
 }
 
+/**
+ * Sprint equipamentos Fase 12 (correção) — cada unidade extra
+ * (`hostAllocations[1..]`) pode ter marca/modelo próprios, independentes
+ * das outras unidades e do nó pai. `previousAllocations` (o array anterior
+ * à reconstrução) é usado pra preservar esses valores: se uma unidade já
+ * existia (mesmo `id`), seus `equipmentBrand`/`equipmentModel` — inclusive
+ * se `undefined`, ou seja, explicitamente limpos pelo usuário — são
+ * copiados como estão; se é uma unidade nova (id nunca visto antes), ela
+ * herda o valor atual do nó pai como default inicial, editável depois.
+ */
 export function buildNodeHostAllocations(
-  node: Pick<NodeItem, 'id' | 'ip' | 'hostCount'>,
-  options?: { usedIds?: Iterable<string> },
+  node: Pick<
+    NodeItem,
+    'id' | 'ip' | 'hostCount' | 'equipmentBrand' | 'equipmentModel'
+  >,
+  options?: {
+    usedIds?: Iterable<string>;
+    previousAllocations?: Array<{
+      id: string;
+      equipmentBrand?: string;
+      equipmentModel?: string;
+    }>;
+  },
 ) {
   const startIp = ipToNumber(node.ip);
   if (startIp === null) {
@@ -69,6 +92,12 @@ export function buildNodeHostAllocations(
   scopedUsedIds.delete(node.id);
 
   const generatedIds = new Set<string>([node.id]);
+  const previousById = new Map(
+    (options?.previousAllocations ?? []).map((allocation) => [
+      allocation.id,
+      allocation,
+    ]),
+  );
 
   return Array.from({ length: count }, (_entry, index) => {
     if (index === 0) {
@@ -86,9 +115,12 @@ export function buildNodeHostAllocations(
     }
 
     generatedIds.add(candidateId);
+    const previous = previousById.get(candidateId);
     return {
       id: candidateId,
       ip: numberToIp(startIp + index),
+      equipmentBrand: previous ? previous.equipmentBrand : node.equipmentBrand,
+      equipmentModel: previous ? previous.equipmentModel : node.equipmentModel,
     };
   });
 }
@@ -100,12 +132,21 @@ export function getNextNodeSequence(
   layerId?: string,
 ) {
   const categoryCode = getCategoryCode(category);
-  const relevant = nodes.filter(
-    (node) =>
-      node.category === category &&
-      node.siteId === siteId &&
-      node.layerId === layerId,
-  );
+  const relevant = nodes.filter((node) => {
+    if (node.category !== category) return false;
+    if (layerId !== undefined) {
+      return node.siteId === siteId && node.layerId === layerId;
+    }
+    if (siteId !== undefined) {
+      // Sprint equipamentos Fase 2 — escopo "só site, sem layer": nós de
+      // relação entre sites nunca têm siteId, só originSiteId.
+      return (
+        node.layerId === undefined &&
+        (node.siteId === siteId || node.originSiteId === siteId)
+      );
+    }
+    return node.siteId === undefined && node.layerId === undefined;
+  });
 
   const maxUsed = relevant.reduce((highest, node) => {
     const allocations =
@@ -133,6 +174,22 @@ export function buildNodeLabel(
   const safeLayer = Math.max(1, layerOrder);
   const seq = String(Math.max(1, categoryCount)).padStart(2, '0');
   return `${categoryCode}-S${siteNumber}-C${safeLayer}-${seq}`;
+}
+
+/**
+ * Sprint equipamentos Fase 2 — variante "só site, sem layer" de
+ * `buildNodeLabel`, usada por elementos de conexão inter-site que
+ * referenciam um site de origem mas não pertencem a nenhuma layer.
+ */
+export function buildNodeLabelForSite(
+  category: NodeCategory,
+  siteId: string,
+  categoryCount: number,
+) {
+  const categoryCode = getCategoryCode(category);
+  const siteNumber = parseTrailingNumber(siteId, 1);
+  const seq = String(Math.max(1, categoryCount)).padStart(2, '0');
+  return `${categoryCode}-S${siteNumber}-${seq}`;
 }
 
 export function getCategoryHostBase(category: NodeCategory) {

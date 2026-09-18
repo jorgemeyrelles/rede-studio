@@ -24,11 +24,3 @@ export type ProjectsDocument = {
   legacyProjectMigrated: boolean;
 };
 
-export type ProjectsState = {
-  /** só os projetos do usuário logado no momento */
-  items: ProjectSummary[];
-  status: 'idle' | 'loading';
-  error: string | null;
-  /** projeto aberto no Studio agora — é nele que o autosave grava (ver store.ts) */
-  activeProjectId: string | null;
-};

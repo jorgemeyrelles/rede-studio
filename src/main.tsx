@@ -1,8 +1,10 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
+import { queryClient } from './app/queryClient';
 import { store } from './app/store';
 import { initClarity } from './services/observability/clarity';
 import './styles/tailwind.css';
@@ -30,15 +32,17 @@ if (
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <Provider store={store}>
-      <HashRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        <App />
-      </HashRouter>
-    </Provider>
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <HashRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <App />
+        </HashRouter>
+      </Provider>
+    </QueryClientProvider>
   </React.StrictMode>,
 );

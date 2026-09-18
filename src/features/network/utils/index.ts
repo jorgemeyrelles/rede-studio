@@ -1,4 +1,5 @@
 export * from './node';
+export * from './grid';
 export * from './ip';
 export * from './vlan';
 export * from './acl';

@@ -59,12 +59,12 @@ export type DhcpScopeIpv6Mode =
  * Determina DSCP padrão e prioridade de fila.
  */
 export type QosClass =
-  | 'voice'     // DSCP EF 46 — voz/tempo-real, menor latência
-  | 'video'     // DSCP AF41 34 — videoconferência
-  | 'critical'  // DSCP AF31 26 — sistemas críticos
-  | 'infra'     // DSCP CS2 16 — DNS, DHCP, AD, NTP
-  | 'default'   // DSCP CS0 0  — best effort
-  | 'low';      // DSCP CS1 8  — backup, impressão pesada
+  | 'voice' // DSCP EF 46 — voz/tempo-real, menor latência
+  | 'video' // DSCP AF41 34 — videoconferência
+  | 'critical' // DSCP AF31 26 — sistemas críticos
+  | 'infra' // DSCP CS2 16 — DNS, DHCP, AD, NTP
+  | 'default' // DSCP CS0 0  — best effort
+  | 'low'; // DSCP CS1 8  — backup, impressão pesada
 
 /** P14 — Nível de confiança QoS de um nó (trust boundary). */
 export type QosTrust = 'trusted' | 'untrusted' | 'partial';
@@ -147,6 +147,9 @@ export type Layer = {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
+  /** Grid de quadrantes — número de colunas/linhas da grade de nós; width/height são derivados destes valores */
+  columns: number;
+  rows: number;
   /** Fase 1 — papel arquitetural da camada */
   tier?: LayerTier;
   /** Fase 2 — rede lógica à qual esta camada pertence */
@@ -185,11 +188,21 @@ export type NodeItem = {
   originalIp?: string;
   originalIpv6?: string;
   hostCount: number;
-  hostAllocations: Array<{ id: string; ip: string }>;
+  hostAllocations: Array<{
+    id: string;
+    ip: string;
+    /** Sprint equipamentos Fase 12 (correção) — marca própria da unidade, independente do nó pai */
+    equipmentBrand?: string;
+    /** Sprint equipamentos Fase 12 (correção) — modelo próprio da unidade, independente do nó pai */
+    equipmentModel?: string;
+  }>;
   cidr: number;
   vlans: number[];
   x: number;
   y: number;
+  /** Grid de quadrantes — célula ocupada dentro do layer (0-based); x/y são derivados destes valores */
+  row: number;
+  col: number;
   description: string;
   techProfile?: NodeTechProfile;
   /** Fase 1 — zona de segurança do nó (wan/dmz/lan/guest/vpn) */
@@ -198,6 +211,14 @@ export type NodeItem = {
   networkId?: string;
   /** P14 — nível de confiança QoS (trust boundary) */
   qosTrust?: QosTrust;
+  /** Sprint equipamentos Fase 1 — endpoint que acessa a rede remotamente (fora de qualquer site/layer) */
+  isRemote?: boolean;
+  /** Sprint equipamentos Fase 2 — site de referência de um elemento de conexão inter-site (vpn/ipsec/...) */
+  originSiteId?: string;
+  /** Sprint equipamentos Fase 5 — marca do equipamento, escolhida no catálogo (`EQUIPMENT_SUPPORT_CATEGORIES`) */
+  equipmentBrand?: string;
+  /** Sprint equipamentos Fase 5 — modelo do equipamento, filtrado por `equipmentBrand` */
+  equipmentModel?: string;
 };
 
 export type LinkItem = {

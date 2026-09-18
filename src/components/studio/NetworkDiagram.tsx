@@ -1,64 +1,71 @@
 import * as go from 'gojs';
 import {
-    forwardRef,
-    useEffect,
-    useImperativeHandle,
-    useMemo,
-    useRef,
-    useState,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
-    addLink,
-    removeLink,
-    resizeLayer,
-    setActiveLinkId,
-    setZoom,
-    toggleNodeVlanAssignment,
-    updateNode,
-    updateNodePosition,
-    updateNodeTechField,
-    updateSite,
+  addLayerColumn,
+  addLayerRow,
+  addLink,
+  removeLayerColumn,
+  removeLayerRow,
+  removeLink,
+  removeNode,
+  setActiveLinkId,
+  setNodeOriginSite,
+  setZoom,
+  toggleNodeVlanAssignment,
+  updateNode,
+  updateNodePosition,
+  updateNodeTechField,
+  updateSite,
 } from '../../features/network/networkSlice';
 import {
-    ensureTechProfile,
-    getTechProfileWarnings,
-    getVisibleTechSchema,
+  ensureTechProfile,
+  getTechProfileWarnings,
+  getVisibleTechSchema,
 } from '../../features/network/techProfiles';
+import {
+  MIN_LAYER_COLUMNS,
+  MIN_LAYER_ROWS,
+} from '../../features/network/constants';
 import type { NodeItem } from '../../features/network/types';
 import {
-    buildNetworkAddress,
-    cidrToHostCount,
-    getAvailableVlanCapacityForNode,
-    getNodeReservedRange,
-    getSiteReserveRange,
+  buildNetworkAddress,
+  cidrToHostCount,
+  getAvailableVlanCapacityForNode,
+  getNodeReservedRange,
+  getSiteReserveRange,
 } from '../../features/network/utils';
 import {
-    BASE_Y,
-    CENTER_CHANNEL_WIDTH,
-    DEFAULT_DIAGRAM_WIDTH,
-    DIAGRAM_SIDE_PADDING,
-    GRID_COLUMN_GAP,
-    buildGridLayout,
-    calculateTooltipPosition,
-    colorByCategory,
-    getLayerFallbackPosition,
-    getNetworkDiagramCopy,
-    getNodeIconSrc,
-    getNodeVisual,
-    getSiteHeaderIp,
-    isInsideLayerBounds,
-    parseCsvItems,
-    parseTechValue,
-    parseVlans,
-    resolveLinkDescription,
-    resolveLinkVisual,
-    serializeCsvItems,
-    type CreatableOption,
-    type DiagramTooltip,
-    type NetworkDiagramProps,
-    type NetworkTooltip,
-    type SiteTooltip,
+  BASE_Y,
+  DEFAULT_DIAGRAM_WIDTH,
+  buildGridLayout,
+  calculateTooltipPosition,
+  cellToPixel,
+  colorByCategory,
+  getNetworkDiagramCopy,
+  getNodeIconSrc,
+  getNodeVisual,
+  getSiteHeaderIp,
+  parseCsvItems,
+  parseTechValue,
+  parseVlans,
+  pixelToCell,
+  RELATION_OPTION_CATEGORIES,
+  resolveLinkDescription,
+  resolveLinkVisual,
+  serializeCsvItems,
+  type CreatableOption,
+  type DiagramTooltip,
+  type NetworkDiagramProps,
+  type NetworkTooltip,
+  type SiteTooltip,
 } from './catalog';
 
 function CreatableMultiSelectField({
@@ -174,6 +181,61 @@ export type NetworkDiagramHandle = {
   }) => string | null;
 };
 
+/**
+ * Sprint equipamentos Fase 1 — empurra um nó remoto para fora do retângulo
+ * de qualquer site com o qual esteja sobreposto, pela borda mais próxima
+ * (heurística de vetor de translação mínimo). Muta `part.location` em GoJS
+ * a cada ajuste para que `actualBounds` reflita a nova posição na próxima
+ * iteração, e retorna a posição final (mesmo sistema de coordenadas de
+ * `part.location`) para ser persistida no Redux.
+ */
+function pushRemoteNodeOutsideSites(
+  part: go.Node,
+  diagram: go.Diagram,
+  sites: Array<{ id: string }>,
+): { x: number; y: number } {
+  const margin = 16;
+  const maxPasses = 6;
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let adjusted = false;
+
+    for (const site of sites) {
+      const siteGroup = diagram.findPartForKey(site.id);
+      if (!siteGroup) continue;
+      const siteBounds = siteGroup.actualBounds;
+      const nodeBounds = part.actualBounds;
+      if (!nodeBounds.intersectsRect(siteBounds)) continue;
+
+      const toLeft = nodeBounds.right - siteBounds.left + margin;
+      const toRight = siteBounds.right - nodeBounds.left + margin;
+      const toTop = nodeBounds.bottom - siteBounds.top + margin;
+      const toBottom = siteBounds.bottom - nodeBounds.top + margin;
+      const min = Math.min(toLeft, toRight, toTop, toBottom);
+
+      let dx = 0;
+      let dy = 0;
+      if (min === toLeft) dx = -toLeft;
+      else if (min === toRight) dx = toRight;
+      else if (min === toTop) dy = -toTop;
+      else dy = toBottom;
+
+      part.location = new go.Point(part.location.x + dx, part.location.y + dy);
+      adjusted = true;
+    }
+
+    if (!adjusted) break;
+  }
+
+  return { x: part.location.x, y: part.location.y };
+}
+
+// Sprint equipamentos Fase 7 — folga entre a borda direita do site e o
+// primeiro endpoint remoto, e passo vertical entre remotos empilhados do
+// mesmo site.
+const REMOTE_NODE_SITE_MARGIN = 60;
+const REMOTE_NODE_STACK_STEP = 90;
+
 const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
   function NetworkDiagram({ language }, ref) {
     const dispatch = useAppDispatch();
@@ -185,7 +247,15 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       null,
     );
     const layersRef = useRef<typeof layers>([]);
+    const sitesRef = useRef<typeof sites>([]);
+    const layerRectByIdRef = useRef<
+      Map<string, { x: number; y: number; w: number; h: number }>
+    >(new Map());
     const activeLinkIdRef = useRef<string | null>(null);
+    // Sprint equipamentos Fase 7 — ids de nós isRemote já vistos, pra
+    // detectar quais são recém-criados e posicioná-los ao lado do site de
+    // origem só uma vez (não a cada render).
+    const previousRemoteNodeIdsRef = useRef<Set<string>>(new Set());
     const [diagramWidth, setDiagramWidth] = useState(DEFAULT_DIAGRAM_WIDTH);
     const [activeTooltip, setActiveTooltip] = useState<DiagramTooltip | null>(
       null,
@@ -223,6 +293,33 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       );
     }, [activeNetworkTooltip, siteNetworks]);
 
+    const layerRectById = useMemo(() => {
+      const map = new Map<
+        string,
+        { x: number; y: number; w: number; h: number }
+      >();
+      for (const layer of layers) {
+        const pos = layout.layerPositions.get(layer.id);
+        if (!pos) continue;
+        // O box (LAYER_BG) às vezes renderiza mais largo que a grade deste
+        // layer precisa (esticado pra bater com o tier mais largo do site —
+        // ver `uniformLayerWidth` mais abaixo). `x` aqui é a origem usada
+        // pro cálculo de célula (render/arrasto/drop), não a posição do
+        // box em si — deslocá-la pela metade da folga centraliza a grade
+        // dentro do box esticado, em vez de deixá-la ancorada à esquerda.
+        const renderedWidth =
+          layout.siteMaxLayerWidths.get(layer.siteId) ?? layer.width;
+        const centeringOffsetX = Math.max(0, (renderedWidth - layer.width) / 2);
+        map.set(layer.id, {
+          x: pos.x + centeringOffsetX,
+          y: pos.y,
+          w: renderedWidth,
+          h: layer.height,
+        });
+      }
+      return map;
+    }, [layers, layout.layerPositions, layout.siteMaxLayerWidths]);
+
     const nodeData = useMemo(() => {
       const NETWORK_PURPOSE_COLORS: Record<string, string> = {
         principal: '#3b82f6',
@@ -240,10 +337,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         string,
         { stroke: string; siteFill: string; layerFill: string }
       >();
-      const layerRectById = new Map<
-        string,
-        { x: number; y: number; w: number; h: number }
-      >();
 
       limitedSites.forEach((site, index) => {
         const stroke = sitePalette[index % sitePalette.length];
@@ -253,25 +346,6 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           layerFill: `${stroke}12`,
         });
       });
-
-      for (const layer of layers) {
-        const pos = layout.layerPositions.get(layer.id);
-        if (!pos) continue;
-        layerRectById.set(layer.id, {
-          x: pos.x,
-          y: pos.y,
-          w: layer.width,
-          h: layer.height,
-        });
-      }
-
-      const nodesByLayer = new Map<string, NodeItem[]>();
-      for (const node of nodes) {
-        if (!node.layerId) continue;
-        const list = nodesByLayer.get(node.layerId) ?? [];
-        list.push(node);
-        nodesByLayer.set(node.layerId, list);
-      }
 
       for (const site of limitedSites) {
         const visual = siteVisualById.get(site.id) ?? {
@@ -318,6 +392,13 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           const layerPos = layout.layerPositions.get(layer.id);
           const uniformLayerWidth =
             layout.siteMaxLayerWidths.get(site.id) ?? layer.width;
+          const layerNodes = nodes.filter((node) => node.layerId === layer.id);
+          const canRemoveRow =
+            layer.rows > MIN_LAYER_ROWS &&
+            !layerNodes.some((node) => node.row === layer.rows - 1);
+          const canRemoveColumn =
+            layer.columns > MIN_LAYER_COLUMNS &&
+            !layerNodes.some((node) => node.col === layer.columns - 1);
           items.push({
             key: layer.id,
             text: layer.name,
@@ -331,6 +412,10 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             layerId: layer.id,
             minHeight: layer.minHeight,
             maxHeight: layer.maxHeight,
+            columns: layer.columns,
+            rows: layer.rows,
+            canRemoveRow,
+            canRemoveColumn,
           });
         });
       }
@@ -340,42 +425,32 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         const visual = getNodeVisual(node.category);
         let loc = `${node.x} ${node.y}`;
 
-        if (!isWan && node.layerId) {
+        // Sprint equipamentos Fase 7 — endpoint remoto tem layerId "de
+        // verdade" pros dados (VLAN/IP/tech profile), mas continua solto na
+        // camada visual: não é recolocado na grade do layer nem contido
+        // visualmente pelo grupo GoJS do layer (ver `group` abaixo).
+        if (!isWan && node.layerId && !node.isRemote) {
           const rect = layerRectById.get(node.layerId);
           if (rect) {
-            const inBounds = isInsideLayerBounds(
-              node.x,
-              node.y,
-              rect.x,
-              rect.y,
-              rect.w,
-              rect.h,
-            );
-            if (!inBounds) {
-              const indexInLayer = (
-                nodesByLayer.get(node.layerId) ?? []
-              ).findIndex((candidate) => candidate.id === node.id);
-              const fallback = getLayerFallbackPosition(
-                rect.x,
-                rect.y,
-                rect.w,
-                rect.h,
-                Math.max(0, indexInLayer),
-              );
-              loc = `${fallback.x} ${fallback.y}`;
-            }
+            // Posição sempre recalculada a partir da célula (row/col) — a
+            // grade é a fonte da verdade, não o x/y absoluto salvo, que
+            // fica desatualizado sempre que o layout do site é recalculado
+            // (janela redimensionada, site adicionado/removido, etc.).
+            const cellPos = cellToPixel(node.row, node.col);
+            loc = `${rect.x + cellPos.x} ${rect.y + cellPos.y}`;
           }
         }
 
         items.push({
           key: node.id,
-          group: node.layerId,
+          group: node.isRemote ? undefined : node.layerId,
           text: node.label,
           marker: visual.short,
           category: node.category,
           iconSrc: getNodeIconSrc(node.category),
           loc: isWan ? `${layout.wanPosition.x} ${layout.wanPosition.y}` : loc,
           nodeId: node.id,
+          isRemote: Boolean(node.isRemote),
           // P3 — cores das VLANs às quais o nó pertence
           vlanColors: (node.vlans ?? [])
             .map((vlanId) => {
@@ -390,6 +465,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
       return items;
     }, [
+      layerRectById,
       layout.layerPositions,
       layout.sitePositions,
       layout.wanPosition,
@@ -462,6 +538,50 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     useEffect(() => {
       layersRef.current = layers;
     }, [layers]);
+
+    useEffect(() => {
+      sitesRef.current = sites;
+    }, [sites]);
+
+    useEffect(() => {
+      layerRectByIdRef.current = layerRectById;
+    }, [layerRectById]);
+
+    // Sprint equipamentos Fase 7 — posiciona um endpoint remoto recém-criado
+    // ao lado do site de origem (não precisa esperar os bounds reais do
+    // GoJS; `layout.sitePositions`/`siteWidths` já dão posição suficiente).
+    // Remotos existentes que o usuário já arrastou não são reposicionados.
+    useEffect(() => {
+      const currentRemoteIds = new Set(
+        nodes.filter((node) => node.isRemote).map((node) => node.id),
+      );
+      const previousRemoteIds = previousRemoteNodeIdsRef.current;
+      const newRemoteNodes = nodes.filter(
+        (node) => node.isRemote && !previousRemoteIds.has(node.id),
+      );
+      previousRemoteNodeIdsRef.current = currentRemoteIds;
+
+      if (newRemoteNodes.length === 0) return;
+
+      newRemoteNodes.forEach((remoteNode) => {
+        if (!remoteNode.siteId) return;
+        const sitePos = layout.sitePositions.get(remoteNode.siteId);
+        const siteWidth = layout.siteWidths.get(remoteNode.siteId);
+        if (!sitePos || siteWidth === undefined) return;
+
+        const stackIndex = nodes
+          .filter((node) => node.isRemote && node.siteId === remoteNode.siteId)
+          .findIndex((node) => node.id === remoteNode.id);
+
+        dispatch(
+          updateNodePosition({
+            id: remoteNode.id,
+            x: sitePos.x + siteWidth + REMOTE_NODE_SITE_MARGIN,
+            y: sitePos.y + Math.max(0, stackIndex) * REMOTE_NODE_STACK_STEP,
+          }),
+        );
+      });
+    }, [nodes, layout.sitePositions, layout.siteWidths, dispatch]);
 
     useEffect(() => {
       activeLinkIdRef.current = ui.activeLinkId;
@@ -740,97 +860,254 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         'layer',
         $(
           go.Group,
-          'Vertical',
+          'Spot',
           {
             movable: false,
-            resizable: true,
             selectable: true,
-            resizeObjectName: 'LAYER_BG',
             locationSpot: go.Spot.TopLeft,
-            mouseEnter: (_event, obj) => {
-              (obj as go.Group).isHighlighted = true;
-            },
-            mouseLeave: (_event, obj) => {
-              (obj as go.Group).isHighlighted = false;
-            },
+            // O `loc` (abaixo) precisa mapear exatamente pro topo-esquerda do
+            // box (LAYER_BG), não pro bounding box do grupo inteiro — que
+            // agora inclui o label e as zonas de hover, ambos "vazando" pra
+            // fora da área do box. Sem isso, todo o cálculo de célula
+            // (relativo a `loc`) fica deslocado pela altura do label, e o
+            // padding de cima acaba menor que o de baixo.
+            locationObjectName: 'LAYER_BG',
           },
           new go.Binding('location', 'loc', go.Point.parse),
+          $(
+            go.Panel,
+            'Auto',
+            $(
+              go.Shape,
+              'RoundedRectangle',
+              {
+                name: 'LAYER_BG',
+                fill: 'rgba(2, 6, 23, 0.55)',
+                stroke: '#475569',
+                strokeDashArray: [5, 4],
+              },
+              new go.Binding('fill', 'layerFill'),
+              new go.Binding('stroke', 'layerStroke'),
+              new go.Binding('desiredSize', 'size', go.Size.parse),
+            ),
+          ),
+          // Nome do tier — sobreposto acima do box (não empilhado antes dele
+          // num painel Vertical), pra não deslocar o `loc`/referência de
+          // célula usada acima.
           $(
             go.TextBlock,
             {
               stroke: '#f8fafc',
               font: '600 12px Barlow',
-              margin: new go.Margin(0, 0, 4, 2),
+              alignment: new go.Spot(0, 0, 2, -4),
+              alignmentFocus: go.Spot.BottomLeft,
               pickable: false,
             },
             new go.Binding('text', 'text'),
           ),
+          // Zona de hover na borda inferior — +/-linha, escondidos até o mouse
+          // passar por cima (o retângulo quase-transparente é o alvo de hover
+          // persistente; os botões só aparecem/desaparecem por cima dele).
           $(
             go.Panel,
             'Spot',
+            {
+              alignment: new go.Spot(0.5, 1, 0, 7),
+              alignmentFocus: go.Spot.Center,
+              mouseEnter: (_event, obj) => {
+                const panel = obj as go.Panel;
+                const canRemoveRow = Boolean(
+                  (panel.part?.data as { canRemoveRow?: boolean } | undefined)
+                    ?.canRemoveRow,
+                );
+                const addBtn = panel.findObject('LAYERADDROWBTN');
+                const removeBtn = panel.findObject('LAYERREMOVEROWBTN');
+                if (addBtn) addBtn.visible = true;
+                if (removeBtn) removeBtn.visible = canRemoveRow;
+              },
+              mouseLeave: (_event, obj) => {
+                const panel = obj as go.Panel;
+                const addBtn = panel.findObject('LAYERADDROWBTN');
+                const removeBtn = panel.findObject('LAYERREMOVEROWBTN');
+                if (addBtn) addBtn.visible = false;
+                if (removeBtn) removeBtn.visible = false;
+              },
+            },
             $(
-              go.Panel,
-              'Auto',
-              $(
-                go.Shape,
-                'RoundedRectangle',
-                {
-                  name: 'LAYER_BG',
-                  fill: 'rgba(2, 6, 23, 0.55)',
-                  stroke: '#475569',
-                  strokeDashArray: [5, 4],
-                },
-                new go.Binding('fill', 'layerFill'),
-                new go.Binding('stroke', 'layerStroke'),
-                new go.Binding('desiredSize', 'size', go.Size.parse).makeTwoWay(
-                  go.Size.stringify,
-                ),
-                // Mínimo = altura na criação; máximo = ~3 nós empilhados
-                new go.Binding(
-                  'minSize',
-                  'minHeight',
-                  (h) => new go.Size(286, Number(h) || 180),
-                ),
-                new go.Binding(
-                  'maxSize',
-                  'maxHeight',
-                  (h) => new go.Size(NaN, Number(h) || 300),
-                ),
+              go.Shape,
+              'Rectangle',
+              { height: 14, fill: 'rgba(148, 163, 184, 0.001)', stroke: null },
+              new go.Binding(
+                'desiredSize',
+                'size',
+                (sizeStr: string) =>
+                  new go.Size(go.Size.parse(sizeStr).width, 14),
               ),
             ),
-            // ▶ Indicador de resize — borda direita
             $(
-              go.Shape,
-              'TriangleRight',
-              {
-                alignment: new go.Spot(1, 0.5, -3, 0),
-                alignmentFocus: go.Spot.Right,
-                width: 7,
-                height: 13,
-                fill: '#94a3b8',
-                stroke: null,
-                cursor: 'e-resize',
-                pickable: false,
-                visible: false,
-              },
-              new go.Binding('visible', 'isHighlighted').ofObject(),
+              go.Panel,
+              'Horizontal',
+              { alignment: go.Spot.Center },
+              $(
+                go.Panel,
+                'Auto',
+                {
+                  name: 'LAYERADDROWBTN',
+                  visible: false,
+                  width: 14,
+                  height: 14,
+                  cursor: 'pointer',
+                  click: (_event, obj) => {
+                    const layerId = String(obj.part?.data?.layerId ?? '');
+                    if (!layerId) return;
+                    dispatch(addLayerRow({ layerId }));
+                  },
+                },
+                $(go.Shape, 'Circle', {
+                  fill: '#334155',
+                  stroke: '#64748b',
+                  strokeWidth: 1,
+                }),
+                $(go.TextBlock, {
+                  text: '+',
+                  font: 'bold 10px sans-serif',
+                  stroke: '#e2e8f0',
+                  textAlign: 'center',
+                  verticalAlignment: go.Spot.Center,
+                }),
+              ),
+              $(
+                go.Panel,
+                'Auto',
+                {
+                  name: 'LAYERREMOVEROWBTN',
+                  visible: false,
+                  width: 14,
+                  height: 14,
+                  cursor: 'pointer',
+                  margin: new go.Margin(0, 0, 0, 3),
+                  click: (_event, obj) => {
+                    const layerId = String(obj.part?.data?.layerId ?? '');
+                    if (!layerId) return;
+                    dispatch(removeLayerRow({ layerId }));
+                  },
+                },
+                $(go.Shape, 'Circle', {
+                  fill: '#334155',
+                  stroke: '#64748b',
+                  strokeWidth: 1,
+                }),
+                $(go.TextBlock, {
+                  text: '−',
+                  font: 'bold 10px sans-serif',
+                  stroke: '#e2e8f0',
+                  textAlign: 'center',
+                  verticalAlignment: go.Spot.Center,
+                }),
+              ),
             ),
-            // ▼ Indicador de resize — borda inferior
+          ),
+          // Zona de hover na borda direita — +/-coluna, mesmo padrão acima.
+          $(
+            go.Panel,
+            'Spot',
+            {
+              alignment: new go.Spot(1, 0.5, 7, 0),
+              alignmentFocus: go.Spot.Center,
+              mouseEnter: (_event, obj) => {
+                const panel = obj as go.Panel;
+                const canRemoveColumn = Boolean(
+                  (
+                    panel.part?.data as
+                      | { canRemoveColumn?: boolean }
+                      | undefined
+                  )?.canRemoveColumn,
+                );
+                const addBtn = panel.findObject('LAYERADDCOLBTN');
+                const removeBtn = panel.findObject('LAYERREMOVECOLBTN');
+                if (addBtn) addBtn.visible = true;
+                if (removeBtn) removeBtn.visible = canRemoveColumn;
+              },
+              mouseLeave: (_event, obj) => {
+                const panel = obj as go.Panel;
+                const addBtn = panel.findObject('LAYERADDCOLBTN');
+                const removeBtn = panel.findObject('LAYERREMOVECOLBTN');
+                if (addBtn) addBtn.visible = false;
+                if (removeBtn) removeBtn.visible = false;
+              },
+            },
             $(
               go.Shape,
-              'TriangleDown',
-              {
-                alignment: new go.Spot(0.5, 1, 0, -3),
-                alignmentFocus: go.Spot.Bottom,
-                width: 13,
-                height: 7,
-                fill: '#94a3b8',
-                stroke: null,
-                cursor: 's-resize',
-                pickable: false,
-                visible: false,
-              },
-              new go.Binding('visible', 'isHighlighted').ofObject(),
+              'Rectangle',
+              { width: 14, fill: 'rgba(148, 163, 184, 0.001)', stroke: null },
+              new go.Binding(
+                'desiredSize',
+                'size',
+                (sizeStr: string) =>
+                  new go.Size(14, go.Size.parse(sizeStr).height),
+              ),
+            ),
+            $(
+              go.Panel,
+              'Vertical',
+              { alignment: go.Spot.Center },
+              $(
+                go.Panel,
+                'Auto',
+                {
+                  name: 'LAYERADDCOLBTN',
+                  visible: false,
+                  width: 14,
+                  height: 14,
+                  cursor: 'pointer',
+                  click: (_event, obj) => {
+                    const layerId = String(obj.part?.data?.layerId ?? '');
+                    if (!layerId) return;
+                    dispatch(addLayerColumn({ layerId }));
+                  },
+                },
+                $(go.Shape, 'Circle', {
+                  fill: '#334155',
+                  stroke: '#64748b',
+                  strokeWidth: 1,
+                }),
+                $(go.TextBlock, {
+                  text: '+',
+                  font: 'bold 10px sans-serif',
+                  stroke: '#e2e8f0',
+                  textAlign: 'center',
+                  verticalAlignment: go.Spot.Center,
+                }),
+              ),
+              $(
+                go.Panel,
+                'Auto',
+                {
+                  name: 'LAYERREMOVECOLBTN',
+                  visible: false,
+                  width: 14,
+                  height: 14,
+                  cursor: 'pointer',
+                  margin: new go.Margin(3, 0, 0, 0),
+                  click: (_event, obj) => {
+                    const layerId = String(obj.part?.data?.layerId ?? '');
+                    if (!layerId) return;
+                    dispatch(removeLayerColumn({ layerId }));
+                  },
+                },
+                $(go.Shape, 'Circle', {
+                  fill: '#334155',
+                  stroke: '#64748b',
+                  strokeWidth: 1,
+                }),
+                $(go.TextBlock, {
+                  text: '−',
+                  font: 'bold 10px sans-serif',
+                  stroke: '#e2e8f0',
+                  textAlign: 'center',
+                  verticalAlignment: go.Spot.Center,
+                }),
+              ),
             ),
           ),
         ),
@@ -842,8 +1119,31 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         {
           locationSpot: go.Spot.Center,
           avoidable: true,
-          avoidableMargin: new go.Margin(14, 18, 14, 18),
+          // Folga maior em torno de cada nó pro roteamento (`AvoidsNodes`)
+          // passar mais longe do ícone, não só rente à borda.
+          avoidableMargin: new go.Margin(22, 26, 22, 26),
           movable: true,
+          // Snap em tempo real durante o arrasto — o nó "pula" de célula em
+          // célula da grade do seu layer, nunca aparece solto entre elas
+          // (o handler `SelectionMoved`, mais abaixo, só confirma no Redux a
+          // célula onde o nó já apareceu visualmente aqui).
+          dragComputation: (part, pt) => {
+            const data = part.data as
+              | { layerId?: string; isRemote?: boolean }
+              | undefined;
+            if (!data?.layerId || data.isRemote) return pt;
+            const layer = layersRef.current.find((l) => l.id === data.layerId);
+            const rect = layerRectByIdRef.current.get(data.layerId);
+            if (!layer || !rect) return pt;
+            const { row, col } = pixelToCell(
+              pt.x - rect.x,
+              pt.y - rect.y,
+              layer.columns,
+              layer.rows,
+            );
+            const cell = cellToPixel(row, col);
+            return new go.Point(rect.x + cell.x, rect.y + cell.y);
+          },
           mouseEnter: (_event, obj) => {
             const node = obj as go.Node;
             node.isHighlighted = true;
@@ -881,6 +1181,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           },
         },
         new go.Binding('movable', 'category', (category) => category !== 'wan'),
+        // WAN é único e sempre presente — não deve ser removível pelo Del
+        // agora que a exclusão de nó é persistida de verdade (ver listener
+        // de nodeDataArray mais abaixo).
+        new go.Binding(
+          'deletable',
+          'category',
+          (category) => category !== 'wan',
+        ),
         new go.Binding('location', 'loc', go.Point.parse),
         $(
           go.Panel,
@@ -961,35 +1269,92 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             alignmentFocus: go.Spot.TopLeft,
             visible: false,
           },
-          new go.Binding('visible', 'vlanColors', (colors: string[]) =>
-            Array.isArray(colors) && colors.length >= 1,
+          new go.Binding(
+            'visible',
+            'vlanColors',
+            (colors: string[]) => Array.isArray(colors) && colors.length >= 1,
           ),
           $(
             go.Shape,
             'Circle',
-            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent' },
-            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[0] ?? 'transparent'),
+            {
+              width: 8,
+              height: 8,
+              margin: 0,
+              stroke: null,
+              fill: 'transparent',
+            },
+            new go.Binding(
+              'fill',
+              'vlanColors',
+              (colors: string[]) => colors[0] ?? 'transparent',
+            ),
           ),
           $(
             go.Shape,
             'Circle',
-            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
-            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[1] ?? 'transparent'),
-            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 2),
+            {
+              width: 8,
+              height: 8,
+              margin: 0,
+              stroke: null,
+              fill: 'transparent',
+              visible: false,
+            },
+            new go.Binding(
+              'fill',
+              'vlanColors',
+              (colors: string[]) => colors[1] ?? 'transparent',
+            ),
+            new go.Binding(
+              'visible',
+              'vlanColors',
+              (colors: string[]) => Array.isArray(colors) && colors.length >= 2,
+            ),
           ),
           $(
             go.Shape,
             'Circle',
-            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
-            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[2] ?? 'transparent'),
-            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 3),
+            {
+              width: 8,
+              height: 8,
+              margin: 0,
+              stroke: null,
+              fill: 'transparent',
+              visible: false,
+            },
+            new go.Binding(
+              'fill',
+              'vlanColors',
+              (colors: string[]) => colors[2] ?? 'transparent',
+            ),
+            new go.Binding(
+              'visible',
+              'vlanColors',
+              (colors: string[]) => Array.isArray(colors) && colors.length >= 3,
+            ),
           ),
           $(
             go.Shape,
             'Circle',
-            { width: 8, height: 8, margin: 0, stroke: null, fill: 'transparent', visible: false },
-            new go.Binding('fill', 'vlanColors', (colors: string[]) => colors[3] ?? 'transparent'),
-            new go.Binding('visible', 'vlanColors', (colors: string[]) => Array.isArray(colors) && colors.length >= 4),
+            {
+              width: 8,
+              height: 8,
+              margin: 0,
+              stroke: null,
+              fill: 'transparent',
+              visible: false,
+            },
+            new go.Binding(
+              'fill',
+              'vlanColors',
+              (colors: string[]) => colors[3] ?? 'transparent',
+            ),
+            new go.Binding(
+              'visible',
+              'vlanColors',
+              (colors: string[]) => Array.isArray(colors) && colors.length >= 4,
+            ),
           ),
         ),
         $(
@@ -1166,67 +1531,45 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           if (!(part instanceof go.Node)) return;
           const data = part.data as { nodeId?: string };
           if (!data?.nodeId) return;
-          dispatch(
-            updateNodePosition({
-              id: data.nodeId,
-              x: part.location.x,
-              y: part.location.y,
-            }),
+          const node = nodesByIdRef.current.get(data.nodeId);
+          if (!node) return;
+
+          // Nó solto (sem layer — ex.: elemento de relação entre sites) ou
+          // endpoint remoto (tem layerId "de verdade" pros dados, mas segue
+          // solto na camada visual): posição livre por pixel, sem grade.
+          if (!node.layerId || node.isRemote) {
+            // Endpoint remoto: nunca pode ficar visualmente sobreposto ao
+            // retângulo de um site, mesmo se o usuário arrastar pra cima.
+            const finalPosition = node.isRemote
+              ? pushRemoteNodeOutsideSites(
+                  part,
+                  event.diagram,
+                  sitesRef.current,
+                )
+              : { x: part.location.x, y: part.location.y };
+
+            dispatch(
+              updateNodePosition({
+                id: data.nodeId,
+                x: finalPosition.x,
+                y: finalPosition.y,
+              }),
+            );
+            return;
+          }
+
+          const layer = layersRef.current.find((l) => l.id === node.layerId);
+          const rect = layerRectByIdRef.current.get(node.layerId);
+          if (!layer || !rect) return;
+
+          const { row, col } = pixelToCell(
+            part.location.x - rect.x,
+            part.location.y - rect.y,
+            layer.columns,
+            layer.rows,
           );
+          dispatch(updateNodePosition({ id: data.nodeId, row, col }));
         });
-      });
-
-      diagram.addDiagramListener('PartResized', (event) => {
-        const part = event.subject?.part as go.Part | undefined;
-        if (!(part instanceof go.Group)) return;
-        const data = part.data as { layerId?: string };
-        if (!data?.layerId) return;
-        const shape = part.resizeObject;
-        if (!shape) return;
-        const newWidth = shape.desiredSize.width;
-        const newHeight = shape.desiredSize.height;
-
-        const resizedLayer = layersRef.current.find(
-          (l) => l.id === data.layerId,
-        );
-        if (!resizedLayer) return;
-
-        const uniqueSiteCount = new Set(
-          layersRef.current.map((layer) => layer.siteId),
-        ).size;
-        const columns = uniqueSiteCount <= 1 ? 1 : 2;
-        const canvasWidth = Math.max(
-          1,
-          diagramDivRef.current?.clientWidth ?? DEFAULT_DIAGRAM_WIDTH,
-        );
-        const availableWidth = Math.max(
-          resizedLayer.minWidth,
-          columns === 1
-            ? canvasWidth - DIAGRAM_SIDE_PADDING * 2
-            : canvasWidth -
-                DIAGRAM_SIDE_PADDING * 2 -
-                  CENTER_CHANNEL_WIDTH -
-                  GRID_COLUMN_GAP * 2,
-        );
-        const dynamicMaxWidth = Math.max(
-          resizedLayer.minWidth,
-          Math.floor(availableWidth / columns),
-        );
-
-        // Propaga mesma largura para todas as camadas do mesmo site
-        const siblings = layersRef.current.filter(
-          (l) => l.siteId === resizedLayer.siteId,
-        );
-        for (const sibling of siblings) {
-          dispatch(
-            resizeLayer({
-              layerId: sibling.id,
-              width: newWidth,
-              maxWidth: dynamicMaxWidth,
-              height: sibling.id === data.layerId ? newHeight : sibling.height,
-            }),
-          );
-        }
       });
 
       diagram.addDiagramListener('ViewportBoundsChanged', () => {
@@ -1276,6 +1619,23 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           const linkId = String(oldLink?.key ?? '');
           if (linkId) {
             dispatch(removeLink(linkId));
+          }
+        }
+        // Deletar um nó pelo teclado (Del) só removia do model efêmero do
+        // GoJS — nada avisava o Redux, então o nó reaparecia na próxima
+        // reconstrução do diagrama. Grupos (site/layer/network) também
+        // passam por `nodeDataArray`, mas não têm `nodeId` — só equipamentos
+        // de verdade (incl. o elemento de relação entre sites) têm.
+        if (
+          evt.change === go.ChangeType.Remove &&
+          evt.modelChange === 'nodeDataArray'
+        ) {
+          const oldNode = evt.oldValue as {
+            nodeId?: string;
+            isGroup?: boolean;
+          } | null;
+          if (oldNode?.nodeId && !oldNode.isGroup) {
+            dispatch(removeNode(oldNode.nodeId));
           }
         }
       });
@@ -1538,7 +1898,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 siteNodeCount,
               },
             );
-            const routingMode = String(techProfile.fields.routingMode ?? 'static');
+            const routingMode = String(
+              techProfile.fields.routingMode ?? 'static',
+            );
             const isBgpMode = routingMode === 'bgp' || routingMode === 'mixed';
 
             const bgpNeighborOptions: CreatableOption[] = isBgpMode
@@ -1548,13 +1910,20 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                       .filter((candidate) => {
                         if (candidate.id === tooltipNode.id) return false;
                         if (candidate.category !== 'router') return false;
-                        if (!candidate.siteId || candidate.siteId === tooltipNode.siteId) {
+                        if (
+                          !candidate.siteId ||
+                          candidate.siteId === tooltipNode.siteId
+                        ) {
                           return false;
                         }
                         const candidateMode = String(
-                          candidate.techProfile?.fields?.routingMode ?? 'static',
+                          candidate.techProfile?.fields?.routingMode ??
+                            'static',
                         );
-                        if (candidateMode !== 'bgp' && candidateMode !== 'mixed') {
+                        if (
+                          candidateMode !== 'bgp' &&
+                          candidateMode !== 'mixed'
+                        ) {
                           return false;
                         }
                         return Boolean(candidate.ip?.trim());
@@ -1571,41 +1940,47 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 )
               : [];
 
-            const localNetworkPrefixOptions: CreatableOption[] = tooltipNode.siteId
-              ? siteNetworks
-                  .filter((network) => network.siteId === tooltipNode.siteId)
-                  .map((network) => {
-                    const siteRef = sites.find((site) => site.id === network.siteId);
-                    const address = buildNetworkAddress(
-                      network.addressFamily,
-                      network.thirdOctet,
-                      siteRef?.ipOctet,
-                    );
-                    const value = `${address}/${network.cidr}`;
-                    return {
-                      value,
-                      label: `${value} - ${network.name}`,
-                    };
-                  })
-              : [];
+            const localNetworkPrefixOptions: CreatableOption[] =
+              tooltipNode.siteId
+                ? siteNetworks
+                    .filter((network) => network.siteId === tooltipNode.siteId)
+                    .map((network) => {
+                      const siteRef = sites.find(
+                        (site) => site.id === network.siteId,
+                      );
+                      const address = buildNetworkAddress(
+                        network.addressFamily,
+                        network.thirdOctet,
+                        siteRef?.ipOctet,
+                      );
+                      const value = `${address}/${network.cidr}`;
+                      return {
+                        value,
+                        label: `${value} - ${network.name}`,
+                      };
+                    })
+                : [];
 
-            const remoteNetworkPrefixOptions: CreatableOption[] = tooltipNode.siteId
-              ? siteNetworks
-                  .filter((network) => network.siteId !== tooltipNode.siteId)
-                  .map((network) => {
-                    const siteRef = sites.find((site) => site.id === network.siteId);
-                    const address = buildNetworkAddress(
-                      network.addressFamily,
-                      network.thirdOctet,
-                      siteRef?.ipOctet,
-                    );
-                    const value = `${address}/${network.cidr}`;
-                    return {
-                      value,
-                      label: `${value} - ${network.name} (${siteRef?.name ?? network.siteId})`,
-                    };
-                  })
-              : [];
+            const remoteNetworkPrefixOptions: CreatableOption[] =
+              tooltipNode.siteId
+                ? siteNetworks
+                    .filter((network) => network.siteId !== tooltipNode.siteId)
+                    .map((network) => {
+                      const siteRef = sites.find(
+                        (site) => site.id === network.siteId,
+                      );
+                      const address = buildNetworkAddress(
+                        network.addressFamily,
+                        network.thirdOctet,
+                        siteRef?.ipOctet,
+                      );
+                      const value = `${address}/${network.cidr}`;
+                      return {
+                        value,
+                        label: `${value} - ${network.name} (${siteRef?.name ?? network.siteId})`,
+                      };
+                    })
+                : [];
 
             return (
               <div
@@ -1791,6 +2166,38 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                     </div>
                   )}
 
+                  {/* Sprint equipamentos Fase 8 — site de origem, só pra elementos de conexão inter-site (vpn/ipsec/wireguard/sdwan/mpls/gre) */}
+                  {RELATION_OPTION_CATEGORIES.includes(
+                    tooltipNode.category,
+                  ) && (
+                    <label className="gojs-tooltip-row">
+                      <span className="gojs-tooltip-label">
+                        Site de origem:
+                      </span>
+                      <select
+                        value={tooltipNode.originSiteId ?? ''}
+                        onChange={(event) => {
+                          const originSiteId = event.target.value;
+                          if (!originSiteId) return;
+                          dispatch(
+                            setNodeOriginSite({
+                              id: tooltipNode.id,
+                              originSiteId,
+                            }),
+                          );
+                        }}
+                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      >
+                        <option value="">— não definido —</option>
+                        {sites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
                   <label className="gojs-tooltip-row">
                     <span className="gojs-tooltip-label">{copy.info}:</span>
                     <textarea
@@ -1845,11 +2252,18 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                   ? remoteNetworkPrefixOptions
                                   : localNetworkPrefixOptions;
 
-                            const currentValues = parseCsvItems(String(value ?? ''));
+                            const currentValues = parseCsvItems(
+                              String(value ?? ''),
+                            );
 
                             return (
-                              <label key={field.key} className="gojs-tooltip-row">
-                                <span className="gojs-tooltip-label">{fieldLabel}:</span>
+                              <label
+                                key={field.key}
+                                className="gojs-tooltip-row"
+                              >
+                                <span className="gojs-tooltip-label">
+                                  {fieldLabel}:
+                                </span>
                                 <CreatableMultiSelectField
                                   values={currentValues}
                                   options={options}

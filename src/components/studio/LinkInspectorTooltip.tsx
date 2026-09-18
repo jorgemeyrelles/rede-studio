@@ -3,18 +3,22 @@ import { createPortal } from 'react-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { QOSCLASS_LABEL } from '../../features/network/constants';
 import {
-    addIpsecSa,
-    addSslVpnProfile,
-    removeIpsecSa,
-    removeSslVpnProfile,
-    setActiveLinkId,
-    updateIpsecSa,
-    updateLink,
-    updateLinkWanQos,
-    updateSslVpnProfile,
+  addIpsecSa,
+  addSslVpnProfile,
+  removeIpsecSa,
+  removeSslVpnProfile,
+  setActiveLinkId,
+  updateIpsecSa,
+  updateLink,
+  updateLinkWanQos,
+  updateSslVpnProfile,
 } from '../../features/network/networkSlice';
 import type { QosClass } from '../../features/network/types/entities';
-import { getDefaultAclService, resolveGateway, resolveRouteType } from '../../features/network/utils';
+import {
+  getDefaultAclService,
+  resolveGateway,
+  resolveRouteType,
+} from '../../features/network/utils';
 
 // ── Metadados visuais por tipo de link ─────────────────────────────────────────
 const KIND_META: Record<string, { label: string; color: string }> = {
@@ -112,6 +116,17 @@ export default function LinkInspectorTooltip({
   const wanPolicy = activeLink.wanQosPolicy;
   const allQosClasses = Object.keys(QOSCLASS_LABEL) as QosClass[];
 
+  // Nó da ponta deste link que não é a WAN (o roteador/FW do site) — pode ser
+  // um nó diferente do que participa do túnel (ex.: FW liga na WAN, roteador
+  // do mesmo site liga no elemento VPN/IPsec) — por isso o casamento abaixo
+  // é por SITE, não só pelo nó exato.
+  const wanEdgeNode =
+    fromNode?.category === 'wan'
+      ? toNode
+      : toNode?.category === 'wan'
+        ? fromNode
+        : null;
+
   const linkedTunnelExists = isWanLink
     ? links.some((link) => {
         if (link.id === activeLink.id) return false;
@@ -120,18 +135,24 @@ export default function LinkInspectorTooltip({
         const tTo = nodes.find((n) => n.id === link.to);
         if (!tFrom || !tTo) return false;
 
-        // WAN↔edge: mark when the edge node itself participates in tunnel links.
-        if (fromNode?.category === 'wan' && toNode?.category !== 'wan') {
-          return link.from === toNode?.id || link.to === toNode?.id;
-        }
-        if (toNode?.category === 'wan' && fromNode?.category !== 'wan') {
-          return link.from === fromNode?.id || link.to === fromNode?.id;
+        if (wanEdgeNode) {
+          // Mesmo nó já participa diretamente do túnel.
+          if (link.from === wanEdgeNode.id || link.to === wanEdgeNode.id) {
+            return true;
+          }
+          // Ou outro nó do MESMO SITE participa (ex.: FW na WAN, roteador no túnel).
+          return Boolean(
+            wanEdgeNode.siteId &&
+            (tFrom.siteId === wanEdgeNode.siteId ||
+              tTo.siteId === wanEdgeNode.siteId),
+          );
         }
 
-        // Generic fallback: if both endpoints have siteIds, match same site pair.
+        // Nenhum dos lados deste link é WAN — casa por par de sites.
         if (fromNode?.siteId && toNode?.siteId) {
           return (
-            (tFrom.siteId === fromNode.siteId && tTo.siteId === toNode.siteId) ||
+            (tFrom.siteId === fromNode.siteId &&
+              tTo.siteId === toNode.siteId) ||
             (tFrom.siteId === toNode.siteId && tTo.siteId === fromNode.siteId)
           );
         }
@@ -170,7 +191,11 @@ export default function LinkInspectorTooltip({
     : toNode;
   const derivedDefaultService = linkedManagedAcl?.service
     ? linkedManagedAcl.service
-    : getDefaultAclService(activeLink.kind, fromNode?.category, toNode?.category);
+    : getDefaultAclService(
+        activeLink.kind,
+        fromNode?.category,
+        toNode?.category,
+      );
 
   return createPortal(
     <div
@@ -379,14 +404,19 @@ export default function LinkInspectorTooltip({
 
             {/* ── Perfil WAN do link ───────────────────────────────────── */}
             {isWanLink && (
-              <details className="rounded border border-cyan-700/40 bg-cyan-950/20" open>
+              <details
+                className="rounded border border-cyan-700/40 bg-cyan-950/20"
+                open
+              >
                 <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-cyan-300">
                   <span>🔷 Perfil WAN do Link</span>
                   <span className="text-slate-500">QoS</span>
                 </summary>
                 <div className="space-y-2 px-2 pb-2 pt-1">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[9px] text-slate-500">Banda total (kbps)</span>
+                    <span className="text-[9px] text-slate-500">
+                      Banda total (kbps)
+                    </span>
                     <input
                       type="number"
                       min={0}
@@ -417,7 +447,9 @@ export default function LinkInspectorTooltip({
                         disabled
                         className="h-3 w-3 accent-cyan-500"
                       />
-                      <span className="text-[10px] text-slate-300">Túnel VPN/IPsec</span>
+                      <span className="text-[10px] text-slate-300">
+                        Túnel VPN/IPsec
+                      </span>
                     </label>
                     <label
                       className={`flex items-center gap-2 ${
@@ -438,13 +470,17 @@ export default function LinkInspectorTooltip({
                         }
                         className="h-3 w-3 accent-cyan-500"
                       />
-                      <span className="text-[10px] text-slate-300">Preservar DSCP no túnel</span>
+                      <span className="text-[10px] text-slate-300">
+                        Preservar DSCP no túnel
+                      </span>
                     </label>
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     <div>
-                      <p className="mb-1 text-[9px] text-slate-500">Classes garantidas</p>
+                      <p className="mb-1 text-[9px] text-slate-500">
+                        Classes garantidas
+                      </p>
                       <div className="flex flex-wrap gap-1">
                         {allQosClasses.map((cls) => {
                           const current = wanPolicy?.guaranteedClasses ?? [];
@@ -477,7 +513,9 @@ export default function LinkInspectorTooltip({
                       </div>
                     </div>
                     <div>
-                      <p className="mb-1 text-[9px] text-slate-500">Classes suprimidas</p>
+                      <p className="mb-1 text-[9px] text-slate-500">
+                        Classes suprimidas
+                      </p>
                       <div className="flex flex-wrap gap-1">
                         {allQosClasses.map((cls) => {
                           const current = wanPolicy?.suppressedClasses ?? [];
@@ -516,7 +554,10 @@ export default function LinkInspectorTooltip({
 
             {/* ── Metadados de rota derivados ──────────────────────────── */}
             {isWanLink && (
-              <details className="rounded border border-sky-700/40 bg-sky-950/15" open>
+              <details
+                className="rounded border border-sky-700/40 bg-sky-950/15"
+                open
+              >
                 <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-sky-300">
                   <span>🧭 Metadados de Rota (Derivados)</span>
                   <span className="text-slate-500">Read-only</span>
@@ -529,7 +570,9 @@ export default function LinkInspectorTooltip({
                   <span className="text-slate-200">{routeType}</span>
 
                   <span className="text-slate-500">Gateway inferido</span>
-                  <span className="font-mono text-slate-200">{inferredGateway}</span>
+                  <span className="font-mono text-slate-200">
+                    {inferredGateway}
+                  </span>
 
                   <span className="text-slate-500">Destino inferido</span>
                   <span className="font-mono text-slate-200">
@@ -543,7 +586,10 @@ export default function LinkInspectorTooltip({
 
             {/* ── Resumo ACL derivado do link ──────────────────────────── */}
             {isWanLink && (
-              <details className="rounded border border-amber-700/40 bg-amber-950/15" open>
+              <details
+                className="rounded border border-amber-700/40 bg-amber-950/15"
+                open
+              >
                 <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-amber-300">
                   <span>🛡 Resumo ACL Derivado</span>
                   <span className="text-slate-500">Topologia</span>
@@ -557,16 +603,22 @@ export default function LinkInspectorTooltip({
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                     <span className="text-slate-500">Origem efetiva</span>
                     <span className="text-slate-200">
-                      {effectiveSrcNode?.label ?? linkedManagedAcl?.sourceNodeId ?? activeLink.from}
+                      {effectiveSrcNode?.label ??
+                        linkedManagedAcl?.sourceNodeId ??
+                        activeLink.from}
                     </span>
 
                     <span className="text-slate-500">Destino efetivo</span>
                     <span className="text-slate-200">
-                      {effectiveDstNode?.label ?? linkedManagedAcl?.destinationNodeId ?? activeLink.to}
+                      {effectiveDstNode?.label ??
+                        linkedManagedAcl?.destinationNodeId ??
+                        activeLink.to}
                     </span>
 
                     <span className="text-slate-500">Serviço padrão</span>
-                    <span className="text-slate-200">{derivedDefaultService}</span>
+                    <span className="text-slate-200">
+                      {derivedDefaultService}
+                    </span>
 
                     <span className="text-slate-500">Gerar ACL</span>
                     <span className="text-slate-200">

@@ -1,42 +1,42 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useLoginMutation } from '../features/auth/queries';
+import { useMigrateLegacyProjectMutation } from '../features/projects/queries';
+import { getAuthErrorMessage, getLoginPageCopy } from '../i18n/utils';
+import type { AppLanguage } from '../types/i18n';
 import BrandMark from '../components/BrandMark';
 import Modal from '../components/Modal';
 import OAuthButtons from '../components/OAuthButtons';
-import { clearAuthError, loginUser } from '../features/auth/authSlice';
-import { migrateLegacyProject } from '../features/projects/projectsSlice';
-import { getAuthErrorMessage, getLoginPageCopy } from '../i18n/utils';
-import type { AppLanguage } from '../types/i18n';
 
 export default function LoginModal() {
   const { lang } = useParams<{ lang: AppLanguage }>();
   const language = lang ?? 'pt';
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { error, status } = useAppSelector((state) => state.auth);
+  const loginMutation = useLoginMutation();
+  const migrateLegacyProject = useMigrateLegacyProjectMutation();
   const copy = getLoginPageCopy(language);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    dispatch(clearAuthError());
-  }, [dispatch]);
-
   const close = () => navigate(`/${language}`);
 
   const goToProjects = async () => {
-    await dispatch(migrateLegacyProject());
+    await migrateLegacyProject.mutateAsync();
     navigate(`/${language}/projects`);
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const result = await dispatch(loginUser({ email, password }));
-    if (loginUser.fulfilled.match(result)) {
+    const result = await loginMutation.mutateAsync({ email, password });
+    if (result.ok) {
       await goToProjects();
     }
   };
+
+  const error =
+    loginMutation.data && !loginMutation.data.ok
+      ? loginMutation.data.error
+      : null;
 
   return (
     <Modal onClose={close}>
@@ -92,10 +92,10 @@ export default function LoginModal() {
 
         <button
           type="submit"
-          disabled={status === 'loading'}
+          disabled={loginMutation.isPending}
           className="mt-1 rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === 'loading' ? copy.submitting : copy.submit}
+          {loginMutation.isPending ? copy.submitting : copy.submit}
         </button>
 
         <OAuthButtons language={language} mode="login" copy={copy} onSuccess={goToProjects} />

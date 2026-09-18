@@ -1,14 +1,14 @@
 import type {
-    LanguageOption,
-    LegendPanelCopy,
-    NetworkDiagramCopy,
-    PdfReportCopy,
-    RouteFirewallCopy,
-    SiteVlanPanelCopy,
-    StudioAppCopy,
-    StudioLanguage,
-    StudioPageCopy,
-    StudioToolbarCopy,
+  LanguageOption,
+  LegendPanelCopy,
+  NetworkDiagramCopy,
+  PdfReportCopy,
+  RouteFirewallCopy,
+  SiteVlanPanelCopy,
+  StudioAppCopy,
+  StudioLanguage,
+  StudioPageCopy,
+  StudioToolbarCopy,
 } from '../types';
 
 export const STUDIO_LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -82,8 +82,8 @@ export const STUDIO_APP_COPY: Record<StudioLanguage, StudioAppCopy> = {
 
 export const STUDIO_PAGE_COPY: Record<StudioLanguage, StudioPageCopy> = {
   pt: {
-    proposalTitle: 'Proposta DEV - Studio',
-    diagramTitle: 'Diagrama lógico interativo',
+    untitledProject: 'Projeto sem nome',
+    renameProjectAriaLabel: 'Renomear projeto',
     infoHint:
       'Clique no botão de informação de cada componente para abrir o tooltip técnico com edição de dados.',
     dashboardTitle: 'Dashboard Interativo',
@@ -109,8 +109,8 @@ export const STUDIO_PAGE_COPY: Record<StudioLanguage, StudioPageCopy> = {
     generatingPdf: 'Gerando PDF...',
   },
   en: {
-    proposalTitle: 'DEV Proposal - Studio',
-    diagramTitle: 'Interactive logical diagram',
+    untitledProject: 'Untitled project',
+    renameProjectAriaLabel: 'Rename project',
     infoHint:
       'Click the info button on each component to open the technical tooltip and edit data.',
     dashboardTitle: 'Interactive Dashboard',
@@ -128,15 +128,14 @@ export const STUDIO_PAGE_COPY: Record<StudioLanguage, StudioPageCopy> = {
     confirmPrint: 'Confirm Print',
     printWarning:
       'The report will be generated as a PDF and opened in a new tab for preview and optional download.',
-    printShowLinkDescriptions:
-      'Show link descriptions on diagram lines',
+    printShowLinkDescriptions: 'Show link descriptions on diagram lines',
     exit: 'Exit',
     print: 'Print',
     generatingPdf: 'Generating PDF...',
   },
   es: {
-    proposalTitle: 'Propuesta DEV - Studio',
-    diagramTitle: 'Diagrama lógico interactivo',
+    untitledProject: 'Proyecto sin nombre',
+    renameProjectAriaLabel: 'Renombrar proyecto',
     infoHint:
       'Haz clic en el botón de información de cada componente para abrir el tooltip técnico con edición de datos.',
     dashboardTitle: 'Panel Interactivo',
@@ -220,6 +219,18 @@ export const PDF_REPORT_COPY: Record<StudioLanguage, PdfReportCopy> = {
     addressingLine2: 'Rota default: 0.0.0.0/0 via gateway WAN do site.',
     addressingLine3:
       'Interfaces dinâmicas: ethX para LAN/WAN e tunX para VPN/IPsec.',
+    equipmentInventoryTitle: 'Inventário de Equipamentos com Preços',
+    equipmentInventoryColId: 'ID',
+    equipmentInventoryColName: 'Nome',
+    equipmentInventoryColBrand: 'Marca',
+    equipmentInventoryColModel: 'Modelo',
+    equipmentInventoryColFunction: 'Função',
+    equipmentInventoryColLan: 'LAN',
+    equipmentInventoryColTier: 'Tier',
+    equipmentInventoryColPrice: 'Preço Aprox.',
+    equipmentInventoryTotal: 'Total',
+    equipmentInventoryDisclaimer:
+      'Os preços apresentados são aproximados, levantados em {date} junto a fontes públicas de mercado, e servem apenas como referência para fins de orçamento. Os valores estão sujeitos a variação cambial, disponibilidade de estoque e condições comerciais de cada fabricante/revendedor. Recomenda-se confirmar os valores atualizados diretamente com o fornecedor antes de qualquer decisão de compra.',
   },
   en: {
     fileName: 'network-studio-report',
@@ -277,6 +288,18 @@ export const PDF_REPORT_COPY: Record<StudioLanguage, PdfReportCopy> = {
     addressingLine2: 'Default route: 0.0.0.0/0 via site WAN gateway.',
     addressingLine3:
       'Dynamic interfaces: ethX for LAN/WAN and tunX for VPN/IPsec.',
+    equipmentInventoryTitle: 'Equipment Inventory with Pricing',
+    equipmentInventoryColId: 'ID',
+    equipmentInventoryColName: 'Name',
+    equipmentInventoryColBrand: 'Brand',
+    equipmentInventoryColModel: 'Model',
+    equipmentInventoryColFunction: 'Function',
+    equipmentInventoryColLan: 'LAN',
+    equipmentInventoryColTier: 'Tier',
+    equipmentInventoryColPrice: 'Approx. Price',
+    equipmentInventoryTotal: 'Total',
+    equipmentInventoryDisclaimer:
+      'The prices shown are approximate, collected on {date} from public market sources, and are provided for budgeting reference only. Values are subject to exchange-rate fluctuation, stock availability and each manufacturer/reseller commercial terms. We recommend confirming updated prices directly with the supplier before any purchase decision.',
   },
   es: {
     fileName: 'reporte-red-studio',
@@ -334,6 +357,18 @@ export const PDF_REPORT_COPY: Record<StudioLanguage, PdfReportCopy> = {
     addressingLine2: 'Ruta por defecto: 0.0.0.0/0 vía gateway WAN del sitio.',
     addressingLine3:
       'Interfaces dinámicas: ethX para LAN/WAN y tunX para VPN/IPsec.',
+    equipmentInventoryTitle: 'Inventario de Equipos con Precios',
+    equipmentInventoryColId: 'ID',
+    equipmentInventoryColName: 'Nombre',
+    equipmentInventoryColBrand: 'Marca',
+    equipmentInventoryColModel: 'Modelo',
+    equipmentInventoryColFunction: 'Función',
+    equipmentInventoryColLan: 'LAN',
+    equipmentInventoryColTier: 'Tier',
+    equipmentInventoryColPrice: 'Precio Aprox.',
+    equipmentInventoryTotal: 'Total',
+    equipmentInventoryDisclaimer:
+      'Los precios presentados son aproximados, relevados el {date} a partir de fuentes públicas de mercado, y sirven únicamente como referencia para fines de presupuesto. Los valores están sujetos a variación cambiaria, disponibilidad de stock y condiciones comerciales de cada fabricante/revendedor. Se recomienda confirmar los valores actualizados directamente con el proveedor antes de cualquier decisión de compra.',
   },
 };
 
@@ -375,6 +410,7 @@ export const LEGEND_PANEL_COPY: Record<StudioLanguage, LegendPanelCopy> = {
     addLan: '+ LAN',
     addLevel: '+ Nível',
     lanLimitReached: 'Máximo de 2 LANs por site atingido.',
+    remoteSuffix: '(remoto)',
   },
   en: {
     title: 'Legend',
@@ -413,6 +449,7 @@ export const LEGEND_PANEL_COPY: Record<StudioLanguage, LegendPanelCopy> = {
     addLan: '+ LAN',
     addLevel: '+ Level',
     lanLimitReached: 'Maximum of 2 LANs per site reached.',
+    remoteSuffix: '(remote)',
   },
   es: {
     title: 'Leyenda',
@@ -451,6 +488,7 @@ export const LEGEND_PANEL_COPY: Record<StudioLanguage, LegendPanelCopy> = {
     addLan: '+ LAN',
     addLevel: '+ Nivel',
     lanLimitReached: 'Máximo de 2 LANs por sitio alcanzado.',
+    remoteSuffix: '(remoto)',
   },
 };
 

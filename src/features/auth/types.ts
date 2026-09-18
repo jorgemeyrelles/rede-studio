@@ -43,12 +43,3 @@ export type OAuthProvider = 'google' | 'microsoft';
 export type AuthDocument = {
   token: string | null;
 };
-
-export type AuthState = {
-  currentUser: PublicUser | null;
-  status: 'idle' | 'loading';
-  /** Código de erro, não texto — a tela traduz via getAuthErrorMessage(). */
-  error: AuthErrorCode | null;
-  /** Já tentamos hidratar a sessão do localStorage nesta carga de app? */
-  initialized: boolean;
-};

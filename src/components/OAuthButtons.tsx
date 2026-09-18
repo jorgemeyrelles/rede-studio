@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAppDispatch } from '../app/hooks';
-import { loginWithOAuthProvider } from '../features/auth/authSlice';
+import { useOAuthLoginMutation } from '../features/auth/queries';
 import { getAuthErrorMessage } from '../i18n/utils';
 import { renderGoogleButton } from '../services/oauth/googleAuth';
 import { signInWithMicrosoft } from '../services/oauth/microsoftAuth';
@@ -25,7 +24,7 @@ type OAuthButtonsProps = {
  * texto do botão do Google muda (signin_with vs signup_with).
  */
 export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthButtonsProps) {
-  const dispatch = useAppDispatch();
+  const oauthLoginMutation = useOAuthLoginMutation();
   const googleContainerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
@@ -40,26 +39,26 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
       text: mode === 'login' ? 'signin_with' : 'signup_with',
       onCredential: async (idToken) => {
         setError(null);
-        const result = await dispatch(loginWithOAuthProvider({ provider: 'google', idToken }));
-        if (loginWithOAuthProvider.fulfilled.match(result)) {
+        const result = await oauthLoginMutation.mutateAsync({ provider: 'google', idToken });
+        if (result.ok) {
           await onSuccess();
         } else {
-          setError(getAuthErrorMessage(result.payload ?? 'OAUTH_FAILED', language));
+          setError(getAuthErrorMessage(result.error, language));
         }
       },
     });
-  }, [language, mode, dispatch, onSuccess]);
+  }, [language, mode, oauthLoginMutation, onSuccess]);
 
   const handleMicrosoft = async () => {
     setError(null);
     setMicrosoftLoading(true);
     try {
       const idToken = await signInWithMicrosoft();
-      const result = await dispatch(loginWithOAuthProvider({ provider: 'microsoft', idToken }));
-      if (loginWithOAuthProvider.fulfilled.match(result)) {
+      const result = await oauthLoginMutation.mutateAsync({ provider: 'microsoft', idToken });
+      if (result.ok) {
         await onSuccess();
       } else {
-        setError(getAuthErrorMessage(result.payload ?? 'OAUTH_FAILED', language));
+        setError(getAuthErrorMessage(result.error, language));
       }
     } catch {
       setError(getAuthErrorMessage('OAUTH_FAILED', language));

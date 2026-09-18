@@ -16,8 +16,8 @@ export type ErrorResponse = {
 
 /**
  * Erro tipado lançado quando a resposta HTTP não é ok. As camadas de rota
- * (auth/projects, ainda mockadas nesta fase) vão mapear `status`/`error`
- * pros `AuthErrorCode`/erros de projeto já existentes.
+ * (auth/projects) mapeiam `status`/`error` pros `AuthErrorCode`/erros de
+ * projeto já existentes.
  */
 export class ApiError extends Error {
   readonly status: number;

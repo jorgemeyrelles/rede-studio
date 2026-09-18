@@ -1,41 +1,52 @@
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
-    addLayer,
-    addNode,
-    addSiteNetwork,
-    removeLayer,
-    removeNode,
-    removeSite,
-    removeSiteNetwork,
+  addLayer,
+  addNode,
+  addSiteNetwork,
+  removeLayer,
+  removeNode,
+  removeSite,
+  removeSiteNetwork,
 } from '../../features/network/networkSlice';
 import {
-    selectLegendTree,
-    selectNetworkReadiness,
+  selectLegendTree,
+  selectNetworkReadiness,
 } from '../../features/network/selectors';
 import type {
-    AddressFamily,
-    LayerTier,
-    NetworkDnsPolicy,
-    NetworkGatewayMode,
-    NetworkPurpose,
-    NetworkStackMode,
-    NetworkTrafficPreference,
-    NodeCategory,
-    SiteNetwork,
+  AddressFamily,
+  LayerTier,
+  NetworkDnsPolicy,
+  NetworkGatewayMode,
+  NetworkPurpose,
+  NetworkStackMode,
+  NetworkTrafficPreference,
+  NodeCategory,
+  SiteNetwork,
 } from '../../features/network/types';
+import { TIER_LABELS } from '../../features/network/constants';
 import {
-    buildNetworkAddress,
-    cidrToHostCount,
+  buildNetworkAddress,
+  cidrToHostCount,
 } from '../../features/network/utils';
 import {
-    getLegendPanelCopy,
-    getNodeIconSrc,
-    getNodeVisual,
-    NODE_OPTION_CATEGORIES,
-    RELATION_OPTION_CATEGORIES,
-    type StudioLanguage,
+  ENDPOINT_CATEGORIES,
+  getLegendPanelCopy,
+  getNodeIconSrc,
+  getNodeVisual,
+  NODE_OPTION_CATEGORIES,
+  RELATION_OPTION_CATEGORIES,
+  type StudioLanguage,
 } from './catalog';
+
+/**
+ * Sprint equipamentos Fase 1 — lista do picker de nó: cada categoria normal
+ * + uma entrada irmã "(remoto)" por categoria de endpoint.
+ */
+const NODE_PICKER_ENTRIES: { category: NodeCategory; isRemote: boolean }[] = [
+  ...NODE_OPTION_CATEGORIES.map((category) => ({ category, isRemote: false })),
+  ...ENDPOINT_CATEGORIES.map((category) => ({ category, isRemote: true })),
+];
 
 type LegendPanelProps = {
   language: StudioLanguage;
@@ -107,16 +118,6 @@ const TIER_PRESETS: {
     badge: 'bg-slate-600 text-slate-300',
   },
 ];
-
-const TIER_DEFAULT_NAMES: Record<LayerTier, string> = {
-  edge: 'Borda / Edge',
-  distribution: 'Distribuição',
-  access: 'Acesso',
-  endpoint: 'Endpoints',
-  dmz: 'DMZ',
-  management: 'Gerência',
-  custom: '',
-};
 
 const NETWORK_PURPOSE_OPTIONS: { value: NetworkPurpose; label: string }[] = [
   { value: 'principal', label: 'Principal' },
@@ -223,7 +224,10 @@ function suggestNextThirdOctet(
   return Math.min(255, maxEnd);
 }
 
-function suggestNetworkIpv6Prefix(siteOctet: number, thirdOctet: number): string {
+function suggestNetworkIpv6Prefix(
+  siteOctet: number,
+  thirdOctet: number,
+): string {
   const safeSite = Math.max(0, Math.min(255, siteOctet));
   const safeThird = Math.max(0, Math.min(255, thirdOctet));
   const siteHex = safeSite.toString(16).padStart(2, '0');
@@ -249,7 +253,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
   ];
 
   const [categoryByLayer, setCategoryByLayer] = useState<
-    Record<string, NodeCategory>
+    Record<string, { category: NodeCategory; isRemote: boolean }>
   >({});
   const [openPickerLayerId, setOpenPickerLayerId] = useState<string | null>(
     null,
@@ -289,7 +293,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
   function selectTierPreset(tier: LayerTier) {
     setPendingTier(tier);
-    const defaultName = TIER_DEFAULT_NAMES[tier];
+    const defaultName = TIER_LABELS[tier];
     setPendingLayerName(defaultName);
   }
 
@@ -348,8 +352,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
     closeNetworkPicker();
   }
 
-  function getCategoryForLayer(layerId: string): NodeCategory {
-    return categoryByLayer[layerId] ?? 'router';
+  function getCategoryForLayer(layerId: string): {
+    category: NodeCategory;
+    isRemote: boolean;
+  } {
+    return categoryByLayer[layerId] ?? { category: 'router', isRemote: false };
   }
 
   function getLayerSearch(layerId: string): string {
@@ -360,9 +367,13 @@ export default function LegendPanel({ language }: LegendPanelProps) {
     siteId: string,
     layerId: string,
     category: NodeCategory,
+    isRemote = false,
   ) {
-    setCategoryByLayer((prev) => ({ ...prev, [layerId]: category }));
-    dispatch(addNode({ siteId, layerId, category }));
+    setCategoryByLayer((prev) => ({
+      ...prev,
+      [layerId]: { category, isRemote },
+    }));
+    dispatch(addNode({ siteId, layerId, category, isRemote }));
     setOpenPickerLayerId(null);
   }
 
@@ -415,8 +426,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   : 'border-[#2c4464] bg-[#0d1a2e] text-slate-100 hover:bg-slate-800'
               }`}
             >
-              [{getNodeVisual(getCategoryForLayer(layer.id)).short}]{' '}
+              [{getNodeVisual(getCategoryForLayer(layer.id).category).short}]{' '}
               {copy.addIcon}
+              {getCategoryForLayer(layer.id).isRemote
+                ? ` ${copy.remoteSuffix}`
+                : ''}
             </button>
             <button
               onClick={(event) => {
@@ -440,7 +454,10 @@ export default function LegendPanel({ language }: LegendPanelProps) {
               <span>{copy.addComponentLayer}</span>
               <span className="text-cyan-300">
                 {copy.last}: [
-                {getNodeVisual(getCategoryForLayer(layer.id)).short}]
+                {getNodeVisual(getCategoryForLayer(layer.id).category).short}]
+                {getCategoryForLayer(layer.id).isRemote
+                  ? ` ${copy.remoteSuffix}`
+                  : ''}
               </span>
             </div>
             <input
@@ -455,22 +472,30 @@ export default function LegendPanel({ language }: LegendPanelProps) {
               className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
             />
             <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
-              {NODE_OPTION_CATEGORIES.filter((category) => {
+              {NODE_PICKER_ENTRIES.filter(({ category, isRemote }) => {
                 const visual = getNodeVisual(category);
                 const query = getLayerSearch(layer.id).trim().toLowerCase();
                 if (!query) return true;
+                const label = isRemote
+                  ? `${visual.label} ${copy.remoteSuffix}`
+                  : visual.label;
                 return (
-                  visual.label.toLowerCase().includes(query) ||
+                  label.toLowerCase().includes(query) ||
                   visual.short.toLowerCase().includes(query) ||
                   category.toLowerCase().includes(query)
                 );
-              }).map((category) => {
+              }).map(({ category, isRemote }) => {
                 const visual = getNodeVisual(category);
-                const isLast = getCategoryForLayer(layer.id) === category;
+                const current = getCategoryForLayer(layer.id);
+                const isLast =
+                  current.category === category &&
+                  current.isRemote === isRemote;
                 return (
                   <button
-                    key={`${layer.id}-${category}`}
-                    onClick={() => handleAddNode(siteId, layer.id, category)}
+                    key={`${layer.id}-${category}-${isRemote ? 'remote' : 'local'}`}
+                    onClick={() =>
+                      handleAddNode(siteId, layer.id, category, isRemote)
+                    }
                     className={`flex items-center justify-between rounded px-2 py-1 text-left text-[11px] transition ${
                       isLast
                         ? 'border border-cyan-500/60 bg-cyan-500/20 text-cyan-100'
@@ -484,7 +509,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                         className="h-4 w-4 object-contain"
                       />
                       <span>
-                        [{visual.short}] {visual.label}
+                        {visual.label}
+                        {isRemote ? ` ${copy.remoteSuffix}` : ''}
                       </span>
                     </span>
                     {isLast && (
@@ -511,8 +537,12 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 className="rounded border border-slate-800 bg-slate-900/50 px-2 py-1"
               >
                 <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
-                  <span>
-                    <span className="mr-1 text-sky-300">[{visual.short}]</span>
+                  <span className="flex items-center gap-1.5">
+                    <img
+                      src={getNodeIconSrc(node.category)}
+                      alt={visual.label}
+                      className="h-4 w-4 object-contain"
+                    />
                     {node.label}
                   </span>
                   <button
@@ -630,12 +660,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           alt={visual.label}
                           className="h-4 w-4 object-contain"
                         />
-                        <span>
-                          <span className="mr-1 text-sky-300">
-                            [{visual.short}]
-                          </span>
-                          {node.label}
-                        </span>
+                        <span>{node.label}</span>
                       </span>
                       <button
                         onClick={() => dispatch(removeNode(node.id))}
@@ -835,8 +860,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                       onChange={(e) =>
                         setNetworkDraft((d) => ({
                           ...d,
-                          trafficPreference:
-                            e.target.value as NetworkTrafficPreference,
+                          trafficPreference: e.target
+                            .value as NetworkTrafficPreference,
                         }))
                       }
                       className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
@@ -928,7 +953,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                             ? suggestNetworkIpv6Prefix(site.ipOctet, nextThird)
                             : d.ipv6Prefix;
                           const shouldAutoUpdatePrefix =
-                            d.ipv6Prefix.trim() === '' || d.ipv6Prefix === prevSuggested;
+                            d.ipv6Prefix.trim() === '' ||
+                            d.ipv6Prefix === prevSuggested;
 
                           return {
                             ...d,
@@ -979,9 +1005,10 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     <div className="mt-1 rounded border border-sky-800/40 bg-sky-950/20 px-2 py-1 font-mono text-[10px] text-sky-300">
                       {addr}/{cidr}
                       <span className="ml-2 font-sans text-[9px] text-slate-400">
-                        [{networkDraft.stackMode} | GW: {networkDraft.gatewayMode}
-                        {' '}| DNS: {networkDraft.dnsPolicy}
-                        {' '}| TRF: {networkDraft.trafficPreference}]
+                        [{networkDraft.stackMode} | GW:{' '}
+                        {networkDraft.gatewayMode} | DNS:{' '}
+                        {networkDraft.dnsPolicy} | TRF:{' '}
+                        {networkDraft.trafficPreference}]
                       </span>
                       <span className="ml-2 font-sans text-[9px] text-slate-400">
                         ({hosts.toLocaleString('pt-BR')} hosts)
@@ -1119,7 +1146,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               <span className="text-slate-500">
                                 {copy.networkTrafficPreferenceLabel}
                               </span>
-                              <span>{network.trafficPreference ?? 'ipv4-preferred'}</span>
+                              <span>
+                                {network.trafficPreference ?? 'ipv4-preferred'}
+                              </span>
                             </div>
                             <div className="flex justify-between gap-2">
                               <span className="text-slate-500">Gateway</span>
@@ -1130,7 +1159,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               <span>{network.dnsPolicy ?? 'a-only'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">IPv6 Prefix</span>
+                              <span className="text-slate-500">
+                                IPv6 Prefix
+                              </span>
                               <span>{network.ipv6Prefix || '—'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
@@ -1168,9 +1199,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               </div>
                               {(readiness?.issues.length ?? 0) > 0 && (
                                 <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[10px] text-amber-200">
-                                  {readiness?.issues.slice(0, 4).map((issue) => (
-                                    <li key={issue}>{issue}</li>
-                                  ))}
+                                  {readiness?.issues
+                                    .slice(0, 4)
+                                    .map((issue) => (
+                                      <li key={issue}>{issue}</li>
+                                    ))}
                                 </ul>
                               )}
                             </div>

@@ -1,6 +1,7 @@
 import { addressingRoutes } from './addressingRoutes';
 import { authRoutes } from './authRoutes';
 import { catalogRoutes } from './catalogRoutes';
+import { equipmentsRoutes } from './equipmentsRoutes';
 import { languageRoutes } from './languageRoutes';
 import { persistenceRoutes } from './persistenceRoutes';
 import { projectsRoutes } from './projectsRoutes';
@@ -24,6 +25,7 @@ export const servicesRoutes = {
   auth: authRoutes,
   projects: projectsRoutes,
   language: languageRoutes,
+  equipments: equipmentsRoutes,
 };
 
 export type ServicesRoutes = typeof servicesRoutes;
