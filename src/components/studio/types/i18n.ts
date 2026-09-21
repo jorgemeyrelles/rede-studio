@@ -330,6 +330,7 @@ export type EquipmentInventoryPanelCopy = {
   emptyState: string;
   brandPlaceholder: string;
   modelPlaceholder: string;
+  noEquipmentForType: string;
   collapseAriaLabel: string;
   expandAriaLabel: string;
 };

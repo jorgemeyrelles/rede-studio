@@ -69,10 +69,10 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-slate-500">
-        <span className="h-px flex-1 bg-slate-800" />
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-chalk-faint">
+        <span className="h-px flex-1 bg-line" />
         {copy.orDivider}
-        <span className="h-px flex-1 bg-slate-800" />
+        <span className="h-px flex-1 bg-line" />
       </div>
 
       {/* Largura fixa em 320px pros dois botões ficarem com o mesmo formato
@@ -92,7 +92,7 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
         </button>
       </div>
 
-      {error && <p className="text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="text-center text-xs text-signal-down">{error}</p>}
     </div>
   );
 }

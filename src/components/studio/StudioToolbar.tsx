@@ -34,7 +34,7 @@ export default function StudioToolbar({
   const copy = getStudioToolbarCopy(language);
 
   return (
-    <section className="rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
+    <section className="rounded-lg border border-line bg-ink-raised p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
         <div className="flex items-center gap-2">
           {/* Âncora do inspector de link — não clicável, apenas ponto de referência visual */}
@@ -46,8 +46,8 @@ export default function StudioToolbar({
             title="Inspector de conexão"
             className={`flex shrink-0 cursor-default items-center justify-center rounded border px-2 py-1.5 transition-colors ${
               activeLinkId && !isLegendOpen
-                ? 'border-cyan-500/60 bg-cyan-900/30 text-cyan-400'
-                : 'border-slate-700/50 bg-slate-800/30 text-slate-600'
+                ? 'border-accent/60 bg-accent/20 text-accent'
+                : 'border-line bg-ink-raised-2 text-chalk-faint'
             }`}
           >
             {/* Ícone: dois nós ligados por uma linha */}
@@ -75,8 +75,8 @@ export default function StudioToolbar({
               title={isLegendOpen ? 'Fechar legenda' : 'Abrir legenda'}
               className={`flex shrink-0 flex-col items-center justify-center gap-[5px] rounded border px-2 py-1.5 transition ${
                 isLegendOpen
-                  ? 'border-cyan-600 bg-cyan-900/40 text-cyan-300'
-                  : 'border-slate-600 bg-slate-800/70 text-slate-300 hover:bg-slate-700'
+                  ? 'border-accent bg-accent/20 text-accent'
+                  : 'border-line bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
               }`}
             >
               <span className="block h-[2px] w-4 rounded-full bg-current" />
@@ -87,11 +87,11 @@ export default function StudioToolbar({
           <button
             onClick={() => dispatch(addSite())}
             disabled={isSiteLimitReached}
-            className="rounded-md bg-cyan-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
+            className="btn-planta-solid rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider"
           >
             {copy.newSite}
           </button>
-          <span className="text-xs text-slate-300">
+          <span className="text-xs text-chalk-dim">
             {copy.total}: {sites.length}
           </span>
         </div>
@@ -126,7 +126,7 @@ export default function StudioToolbar({
           <button
             type="button"
             onClick={() => setOpenFloatingPicker((prev) => !prev)}
-            className="flex items-center gap-2 rounded-md border border-[#2c4464] bg-[#0d1a2e] px-2 py-2 text-sm text-slate-100"
+            className="flex items-center gap-2 rounded-md border border-line bg-ink-raised-2 px-2 py-2 text-sm text-chalk"
           >
             <img
               src={getNodeIconSrc(floatingCategory)}
@@ -137,10 +137,10 @@ export default function StudioToolbar({
           </button>
 
           {openFloatingPicker && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded border border-[#2f4f75] bg-[#081427] p-2 shadow-lg">
-              <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
+            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded border border-line bg-ink-raised-2 p-2 shadow-lg">
+              <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-chalk-faint">
                 <span>{copy.relationsTitle}</span>
-                <span className="text-cyan-300">
+                <span className="text-accent">
                   {copy.active}: [{getNodeVisual(floatingCategory).short}]
                 </span>
               </div>
@@ -148,7 +148,7 @@ export default function StudioToolbar({
                 value={floatingSearch}
                 onChange={(event) => setFloatingSearch(event.target.value)}
                 placeholder={copy.searchPlaceholder}
-                className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
+                className="mb-2 w-full rounded border border-line bg-ink-raised-2 px-2 py-1.5 text-[11px] text-chalk outline-none focus:border-accent"
               />
               <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
                 {RELATION_OPTION_CATEGORIES.filter((category) => {
@@ -173,8 +173,8 @@ export default function StudioToolbar({
                       }}
                       className={`flex items-center justify-between rounded px-2 py-1 text-left text-[11px] transition ${
                         isSelected
-                          ? 'border border-cyan-500/60 bg-cyan-500/20 text-cyan-100'
-                          : 'border border-slate-700 bg-slate-900/60 text-slate-200 hover:bg-slate-800'
+                          ? 'border border-accent/60 bg-accent/20 text-accent'
+                          : 'border border-line bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function StudioToolbar({
             onClick={() =>
               dispatch(addFloatingNode({ category: floatingCategory }))
             }
-            className="rounded-md bg-fuchsia-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-950"
+            className="btn-planta-solid rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider"
           >
             {copy.addRelationSite}
           </button>

@@ -39,7 +39,11 @@ function ProjectCard({
   };
 
   return (
-    <div className="flex flex-col items-start gap-2 rounded-lg border border-slate-800 bg-slate-900 p-5 transition hover:border-cyan-700/60">
+    <div className="relative flex flex-col items-start gap-2 border border-line bg-ink-raised-2 p-5 pl-6 transition hover:border-accent">
+      <span
+        className="absolute left-0 top-0 h-full w-[3px] bg-accent"
+        aria-hidden="true"
+      />
       {isEditing ? (
         <input
           autoFocus
@@ -53,11 +57,15 @@ function ProjectCard({
               setEditing(false);
             }
           }}
-          className="w-full rounded border border-cyan-600 bg-slate-950 px-2 py-1 text-sm text-slate-100 outline-none"
+          className="w-full rounded-sm border border-accent bg-ink px-2 py-1 text-sm text-chalk outline-none"
         />
       ) : (
         <div className="flex w-full items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-slate-100">
+          <span className="flex items-center gap-2 text-sm font-semibold text-chalk">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-signal-up shadow-[0_0_5px_var(--signal-up)]"
+              aria-hidden="true"
+            />
             {project.name}
           </span>
           <button
@@ -65,14 +73,14 @@ function ProjectCard({
             onClick={() => setEditing(true)}
             aria-label={copy.renameAriaLabel}
             title={copy.renameAriaLabel}
-            className="shrink-0 text-slate-500 transition hover:text-cyan-300"
+            className="shrink-0 text-chalk-faint transition hover:text-accent"
           >
             ✎
           </button>
         </div>
       )}
 
-      <span className="text-xs text-slate-500">
+      <span className="font-mono text-xs text-chalk-faint">
         {copy.lastEditedLabel}{' '}
         {new Date(project.updatedAt).toLocaleString(language)}
       </span>
@@ -80,7 +88,7 @@ function ProjectCard({
       <button
         type="button"
         onClick={onOpen}
-        className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-cyan-400 hover:underline"
+        className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline"
       >
         {copy.openProject} →
       </button>
@@ -113,17 +121,17 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 text-slate-100 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-10 text-chalk sm:px-6">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-white">{copy.title}</h1>
-          <p className="text-sm text-slate-400">{copy.subtitle}</p>
+          <h1 className="text-lg font-semibold text-chalk">{copy.title}</h1>
+          <p className="text-sm text-chalk-dim">{copy.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="rounded-md bg-cyan-500 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400"
+            className="btn-planta-solid rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-wider"
           >
             {copy.newProjectButton}
           </button>
@@ -131,11 +139,11 @@ export default function ProjectsPage() {
       </div>
 
       {!isLoading && items.length === 0 && (
-        <div className="rounded-lg border border-dashed border-slate-800 py-16 text-center">
-          <p className="text-sm font-semibold text-slate-300">
+        <div className="rounded-sm border border-dashed border-line py-16 text-center">
+          <p className="text-sm font-semibold text-chalk-dim">
             {copy.emptyStateTitle}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-chalk-faint">
             {copy.emptyStateSubtitle}
           </p>
         </div>

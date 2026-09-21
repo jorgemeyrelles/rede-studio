@@ -1,9 +1,15 @@
+/**
+ * Cor por tipo de rota (badge Fase 4 do redesign Planta — ver
+ * .claude/plans/redesign-planta-e-sessao-jwt.md). Tokens fixos, não
+ * dependem da variante de acento escolhida — são semântica de rede, não
+ * identidade de marca.
+ */
 export const ROUTE_TYPE_CLASS: Record<string, string> = {
-  Direta: 'text-emerald-400',
-  Estática: 'text-amber-300',
-  Default: 'text-orange-400',
-  VPN: 'text-cyan-300',
-  BGP: 'text-violet-400',
+  Direta: 'text-route-direct',
+  Estática: 'text-route-static',
+  Default: 'text-route-default',
+  VPN: 'text-route-vpn',
+  BGP: 'text-route-bgp',
 };
 
 export const SERVICE_CATALOG = [

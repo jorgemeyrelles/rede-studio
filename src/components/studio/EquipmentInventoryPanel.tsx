@@ -2,10 +2,15 @@ import { Fragment, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { useEquipmentsQuery } from '../../features/equipments/queries';
 import {
+  filterCatalogByNodeCategory,
+  withSelectedOption,
+} from '../../features/equipments/utils';
+import {
   updateHostAllocationEquipment,
   updateNode,
 } from '../../features/network/networkSlice';
 import { selectEquipmentInventory } from '../../features/network/selectors';
+import type { EquipmentResponse } from '../../services/routes/equipmentsRoutes';
 import type {
   EquipmentInventoryRow,
   LayerTier,
@@ -34,6 +39,12 @@ function tierFilterValue(tier: LayerTier | undefined): string {
 
 function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+}
+
+function modelsForBrand(catalog: EquipmentResponse[], brand: string): string[] {
+  return uniqueSorted(
+    catalog.filter((item) => item.brand === brand).map((item) => item.model),
+  );
 }
 
 // Sprint equipamentos Fase 12 — mesmo padrão de agrupamento pai/filhos usado
@@ -72,18 +83,7 @@ export default function EquipmentInventoryPanel({
   );
   const equipmentsQuery = useEquipmentsQuery();
   const equipmentCatalog = equipmentsQuery.data ?? [];
-  const equipmentBrands = useMemo(
-    () =>
-      Array.from(new Set(equipmentCatalog.map((item) => item.brand))).sort(
-        (a, b) => a.localeCompare(b),
-      ),
-    [equipmentCatalog],
-  );
-  const equipmentModelsByBrand = (brand: string) =>
-    equipmentCatalog
-      .filter((item) => item.brand === brand)
-      .map((item) => item.model)
-      .sort((a, b) => a.localeCompare(b));
+  const catalogReady = equipmentsQuery.isSuccess;
 
   // Bug fix i18n — 8 cabeçalhos de coluna traduzidos por `copy`; a mesma
   // lista é reaproveitada pela tabela filha do accordion (ID/Nome/Marca/
@@ -179,7 +179,7 @@ export default function EquipmentInventoryPanel({
   }
 
   return (
-    <section className="w-full rounded-lg border border-[#315072] bg-[#0a1324]/80 p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
+    <section className="w-full rounded-lg border border-line bg-ink-raised p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">
         {copy.title}
       </div>
@@ -263,9 +263,28 @@ export default function EquipmentInventoryPanel({
               const node = nodeById.get(row.id);
               const currentBrand = node?.equipmentBrand ?? '';
               const currentModel = node?.equipmentModel ?? '';
-              const availableModels = currentBrand
-                ? equipmentModelsByBrand(currentBrand)
-                : [];
+              // Só marcas/modelos que atendem à categoria deste nó (chave
+              // `function` do catálogo) — antes, todo tipo de nó via o
+              // catálogo inteiro.
+              const categoryCatalog = filterCatalogByNodeCategory(
+                equipmentCatalog,
+                node?.category,
+              );
+              const categoryBrands = uniqueSorted(
+                categoryCatalog.map((item) => item.brand),
+              );
+              const noEquipmentForType =
+                catalogReady && categoryBrands.length === 0;
+              const brandOptions = withSelectedOption(
+                categoryBrands,
+                currentBrand,
+              );
+              const availableModels = withSelectedOption(
+                currentBrand
+                  ? modelsForBrand(categoryCatalog, currentBrand)
+                  : [],
+                currentModel,
+              );
               const isExpandable = children.length > 0;
               const isOpen = expandedIds.has(row.id);
 
@@ -313,6 +332,7 @@ export default function EquipmentInventoryPanel({
                     <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
                       <select
                         value={currentBrand}
+                        disabled={noEquipmentForType && !currentBrand}
                         onChange={(event) =>
                           dispatch(
                             updateNode({
@@ -324,10 +344,14 @@ export default function EquipmentInventoryPanel({
                             }),
                           )
                         }
-                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100"
+                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100 disabled:opacity-50"
                       >
-                        <option value="">{copy.brandPlaceholder}</option>
-                        {equipmentBrands.map((brand) => (
+                        <option value="">
+                          {noEquipmentForType
+                            ? copy.noEquipmentForType
+                            : copy.brandPlaceholder}
+                        </option>
+                        {brandOptions.map((brand) => (
                           <option key={brand} value={brand}>
                             {brand}
                           </option>
@@ -406,9 +430,19 @@ export default function EquipmentInventoryPanel({
                                     allocation?.equipmentBrand ?? '';
                                   const childModel =
                                     allocation?.equipmentModel ?? '';
-                                  const childModels = childBrand
-                                    ? equipmentModelsByBrand(childBrand)
-                                    : [];
+                                  const childBrandOptions = withSelectedOption(
+                                    categoryBrands,
+                                    childBrand,
+                                  );
+                                  const childModels = withSelectedOption(
+                                    childBrand
+                                      ? modelsForBrand(
+                                          categoryCatalog,
+                                          childBrand,
+                                        )
+                                      : [],
+                                    childModel,
+                                  );
 
                                   return (
                                     <tr
@@ -435,12 +469,17 @@ export default function EquipmentInventoryPanel({
                                               }),
                                             )
                                           }
-                                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100"
+                                          disabled={
+                                            noEquipmentForType && !childBrand
+                                          }
+                                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100 disabled:opacity-50"
                                         >
                                           <option value="">
-                                            {copy.brandPlaceholder}
+                                            {noEquipmentForType
+                                              ? copy.noEquipmentForType
+                                              : copy.brandPlaceholder}
                                           </option>
-                                          {equipmentBrands.map((brand) => (
+                                          {childBrandOptions.map((brand) => (
                                             <option key={brand} value={brand}>
                                               {brand}
                                             </option>
