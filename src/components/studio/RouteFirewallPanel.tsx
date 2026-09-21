@@ -42,6 +42,7 @@ import {
     type TooltipPosition,
 } from './catalog';
 import RoutingProtocolTable from './RoutingProtocolTable';
+import type { TableTabDescriptor } from './TableTabs';
 import TreePicker from './TreePicker';
 
 function HeaderInfoTooltip({
@@ -506,9 +507,18 @@ function ServicePicker({
   );
 }
 
-export default function RouteFirewallPanel({
+/**
+ * Hook (não componente) que monta as 6 seções de rotas/firewall como
+ * descritores de aba `{ id, label, content }` — StudioPage.tsx combina o
+ * retorno com os outros paineis do Studio (VLANs por site, inventário,
+ * serviços/certificados) num único `TableTabs` (ver Fase 4 do redesign
+ * Planta, .claude/plans/redesign-planta-e-sessao-jwt.md). Continua um hook
+ * de verdade (chama useAppSelector/useState normalmente) — só a "casca" de
+ * JSX que virou array em vez de <TableTabs>.
+ */
+export function useRouteFirewallTabs({
   language,
-}: RouteFirewallPanelProps) {
+}: RouteFirewallPanelProps): TableTabDescriptor[] {
   const dispatch = useAppDispatch();
   const routes = useAppSelector(selectRouteTable);
   const subnetRoutes = useAppSelector(selectSubnetRouteTable);
@@ -1149,7 +1159,8 @@ export default function RouteFirewallPanel({
             <span className="text-[10px] text-slate-500">{rule.priority}</span>
           </td>
 
-          {/* Ação */}
+          {/* Ação — cor por valor (Fase 4 do redesign Planta): allow em
+              --signal-up, deny em --signal-down, nunca o acento de marca. */}
           <td className="border-b border-slate-800 px-1 py-1">
             <select
               value={rule.acao}
@@ -1161,7 +1172,11 @@ export default function RouteFirewallPanel({
                   }),
                 )
               }
-              className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[11px] text-slate-100"
+              className={`w-full rounded border bg-ink px-1 py-1 text-[11px] font-semibold ${
+                rule.acao === 'ALLOW'
+                  ? 'border-signal-up/50 text-signal-up'
+                  : 'border-signal-down/50 text-signal-down'
+              }`}
             >
               <option value="ALLOW">ALLOW</option>
               <option value="DENY">DENY</option>
@@ -1663,10 +1678,13 @@ export default function RouteFirewallPanel({
     </>
   );
 
-  return (
-    <section className="w-full flex flex-col gap-3">
-      {/* ── Linha 1: Tabela de Rotas (largura total) ─────────────────────── */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+  return [
+    {
+      id: 'rotas',
+      label: copy.routeTableTitle,
+      content: (
+      // ── Linha 1: Tabela de Rotas (largura total) ───────────────────────
+      <div className="rounded-lg border border-line bg-ink-raised p-3">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
           {copy.routeTableTitle}
         </h3>
@@ -1841,8 +1859,13 @@ export default function RouteFirewallPanel({
           </table>
         </div>
       </div>
-
-      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+      ),
+    },
+    {
+      id: 'vlan-subnet',
+      label: copy.vlanSubnetRouteTableTitle,
+      content: (
+      <div className="rounded-lg border border-line bg-ink-raised p-3">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
           {copy.vlanSubnetRouteTableTitle}
         </h3>
@@ -1949,9 +1972,14 @@ export default function RouteFirewallPanel({
           </table>
         </div>
       </div>
-
-      {/* ── Firewall / ACL ───────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+      ),
+    },
+    {
+      id: 'firewall',
+      label: copy.firewallTitle,
+      content: (
+      // ── Firewall / ACL ─────────────────────────────────────────────────
+      <div className="rounded-lg border border-line bg-ink-raised p-3">
         {/* Header */}
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
@@ -2157,13 +2185,13 @@ export default function RouteFirewallPanel({
 
 
               {/* Implicit deny footer */}
-              <tr className="bg-red-950/20">
+              <tr className="bg-signal-down/10">
                 <td
                   colSpan={2}
                   className="border-t border-slate-700 px-1 py-1"
                 />
                 <td className="border-t border-slate-700 px-1 py-1">
-                  <span className="rounded bg-red-900/60 px-1 py-0.5 text-[10px] text-red-400 font-semibold">
+                  <span className="rounded bg-signal-down/15 px-1 py-0.5 text-[10px] text-signal-down font-semibold">
                     DENY
                   </span>
                 </td>
@@ -2185,10 +2213,18 @@ export default function RouteFirewallPanel({
         </div>
         {/* fim card firewall */}
       </div>
-
-      <RoutingProtocolTable language={language} />
-
-      <div className="rounded-lg border border-cyan-700/40 bg-[#0a172b]/80 p-3">
+      ),
+    },
+    {
+      id: 'protocolo',
+      label: 'Roteamento (OSPF/BGP)',
+      content: <RoutingProtocolTable language={language} />,
+    },
+    {
+      id: 'dhcp',
+      label: copy.dhcpContainerTitle,
+      content: (
+      <div className="rounded-lg border border-line bg-ink-raised p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300">
             {copy.dhcpContainerTitle}
@@ -2495,9 +2531,14 @@ export default function RouteFirewallPanel({
           </table>
         </div>
       </div>
-
-      {/* ── P16 — QoS Profile — Filas de Scheduling ─────────────────────────── */}
-      {(() => {
+      ),
+    },
+    {
+      id: 'qos',
+      label: 'QoS',
+      content: (
+      // ── P16 — QoS Profile — Filas de Scheduling ───────────────────────────
+      (() => {
         const qosNodes = nodes.filter(
           (n) => n.category === 'router' || n.category === 'firewall' || n.category === 'switch',
         );
@@ -2509,7 +2550,7 @@ export default function RouteFirewallPanel({
         const hasBestEffort = queues.some((q) => q.priority === 'best-effort');
 
         return (
-          <div className="rounded-lg border border-orange-700/40 bg-[#0b172a]/80 p-3">
+          <div className="rounded-lg border border-line bg-ink-raised p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-300">
                 ◆ QoS Profile — Filas de Scheduling
@@ -2689,9 +2730,8 @@ export default function RouteFirewallPanel({
             )}
           </div>
         );
-      })()}
-
-      {/* fim grid linha 2 */}
-    </section>
-  );
+      })()
+      ),
+    },
+  ];
 }

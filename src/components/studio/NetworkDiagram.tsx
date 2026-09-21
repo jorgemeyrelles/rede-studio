@@ -107,7 +107,7 @@ function CreatableMultiSelectField({
         <select
           value={selectedOption}
           onChange={(event) => setSelectedOption(event.target.value)}
-          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
         >
           <option value="">Selecionar opção...</option>
           {options.map((option) => (
@@ -147,7 +147,7 @@ function CreatableMultiSelectField({
         </button>
       </div>
 
-      <div className="max-h-[88px] overflow-y-auto rounded border border-[#2a4565] bg-[#091527]/75 p-1">
+      <div className="max-h-[88px] overflow-y-auto rounded border border-line bg-ink-raised p-1">
         {values.length === 0 ? (
           <div className="text-[10px] italic text-slate-500">Sem itens.</div>
         ) : (
@@ -2030,7 +2030,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2048,7 +2048,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2064,7 +2064,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                           placeholder="2001:db8::10"
                         />
                       </label>
@@ -2084,7 +2084,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2105,7 +2105,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2130,7 +2130,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                   }),
                                 )
                               }
-                              className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                              className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                             />
                           </label>
 
@@ -2186,7 +2186,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                             }),
                           );
                         }}
-                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                        className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                       >
                         <option value="">— não definido —</option>
                         {sites.map((site) => (
@@ -2210,13 +2210,13 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="h-16 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="h-16 w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
                   {techWarnings.length > 0 && (
-                    <div className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-[11px] text-amber-200">
-                      <div className="mb-1 font-semibold uppercase tracking-wide text-amber-300">
+                    <div className="rounded border border-signal-warn/40 bg-signal-warn/10 px-2 py-2 text-[11px] text-signal-warn">
+                      <div className="mb-1 font-semibold uppercase tracking-wide text-signal-warn">
                         {copy.validations}
                       </div>
                       <div className="space-y-1">
@@ -2306,7 +2306,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                       }),
                                     )
                                   }
-                                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                                  className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                                 >
                                   <option value="true">{copy.yes}</option>
                                   <option value="false">{copy.no}</option>
@@ -2358,7 +2358,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                       }),
                                     )
                                   }
-                                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                                  className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                                 >
                                   {options.map((option) => (
                                     <option key={option} value={option}>
@@ -2402,7 +2402,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                     }),
                                   )
                                 }
-                                className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                                className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                               />
                             </label>
                           );
@@ -2471,7 +2471,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2490,7 +2490,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2509,7 +2509,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2532,7 +2532,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
                     />
                   </label>
 

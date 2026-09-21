@@ -28,22 +28,22 @@ export default function NewProjectModal({
     <Modal onClose={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="relative flex w-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900 p-6"
+        className="relative flex w-full flex-col gap-4 rounded-sm border border-line bg-ink-raised p-6"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label={copy.cancelButton}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-sm text-chalk-faint hover:bg-ink-raised-2 hover:text-chalk"
         >
           ✕
         </button>
 
-        <h2 className="text-sm font-semibold text-white">
+        <h2 className="text-sm font-semibold text-chalk">
           {copy.newProjectModalTitle}
         </h2>
 
-        <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
           {copy.projectNameLabel}
           <input
             type="text"
@@ -51,7 +51,7 @@ export default function NewProjectModal({
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-600"
+            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
           />
         </label>
 
@@ -59,14 +59,14 @@ export default function NewProjectModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-300 hover:bg-slate-800"
+            className="rounded-sm border border-line px-4 py-2 text-xs font-semibold uppercase tracking-wider text-chalk-dim hover:bg-ink-raised-2 hover:text-chalk"
           >
             {copy.cancelButton}
           </button>
           <button
             type="submit"
             disabled={isCreating}
-            className="rounded-md bg-cyan-500 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-planta-solid rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-wider"
           >
             {isCreating ? copy.creating : copy.createButton}
           </button>

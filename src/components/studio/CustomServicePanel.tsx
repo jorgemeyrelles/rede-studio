@@ -96,7 +96,7 @@ export default function CustomServicePanel() {
   const showIcmp = draft.protocol === 'icmp';
 
   return (
-    <div className="relative rounded-xl border border-[#315072] bg-[#0b172a]/80 px-3 py-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
+    <div className="relative rounded-xl border border-line bg-ink-raised px-3 py-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">

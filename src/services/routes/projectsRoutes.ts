@@ -63,14 +63,18 @@ function cacheSummary(response: ProjectSummaryResponse): ProjectSummary {
 /**
  * Lista os projetos do usuário autenticado. Fonte da verdade é a API — o
  * cache local só entra em cena se a API estiver inacessível (rede fora,
- * backend fora do ar), pra não travar a navegação do usuário.
+ * backend fora do ar), pra não travar a navegação do usuário. Um 401
+ * (token expirado/inválido) não é "API fora do ar" — sobe pro chamador pra
+ * disparar o logout global (ver `app/queryClient.ts`), em vez de mascarar
+ * com dado local obsoleto.
  */
 export async function listProjectsByOwner(
   ownerId: string,
 ): Promise<ProjectSummary[]> {
   try {
     return await httpGet<ProjectSummaryResponse[]>('/api/projects');
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.isUnauthorized) throw err;
     const document = loadProjectsDocument();
     return Object.values(document.projects)
       .filter((project) => project.ownerId === ownerId)
@@ -89,6 +93,9 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
     const response = await httpGet<ProjectResponse>(`/api/projects/${id}`);
     return cacheProject(response);
   } catch (err) {
+    if (err instanceof ApiError && err.isUnauthorized) {
+      throw err;
+    }
     if (err instanceof ApiError && err.status === 404) {
       return null;
     }
@@ -128,7 +135,8 @@ export async function renameProject(
       { body: { name: trimmed || undefined } },
     );
     return cacheSummary(response);
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.isUnauthorized) throw err;
     const document = loadProjectsDocument();
     const record = document.projects[id];
     if (!record) return null;
@@ -182,7 +190,8 @@ export async function saveProjectSnapshot(
   try {
     await httpPut(`/api/projects/${id}/snapshot`, { body: { networkState } });
     return { ok: true, warning: null };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.isUnauthorized) throw err;
     return {
       ok: false,
       warning: 'Salvo localmente, mas não foi possível sincronizar com o servidor.',

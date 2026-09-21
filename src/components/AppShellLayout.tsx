@@ -28,16 +28,16 @@ export default function AppShellLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+    <div className="bg-blueprint min-h-screen text-chalk">
+      <header className="sticky top-0 z-20 border-b border-line bg-ink/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
-          <h1 className="flex items-center gap-3 text-sm font-semibold tracking-[0.2em] text-cyan-300">
+          <h1 className="flex items-center gap-3 text-sm font-semibold tracking-[0.2em] text-accent">
             <BrandMark className="h-8 w-8" />
             {appCopy.headerTitle}
           </h1>
           <nav className="flex items-center gap-2">
             <div
-              className="flex items-center gap-1 rounded-md border border-cyan-500/40 bg-cyan-500/10 p-1"
+              className="flex items-center gap-1 rounded-sm border border-line bg-ink-raised p-1"
               aria-label={appCopy.languageAriaLabel}
               title={appCopy.languageAriaLabel}
             >
@@ -50,10 +50,10 @@ export default function AppShellLayout() {
                     onClick={() => handleLanguageChange(option.value)}
                     aria-label={option.label}
                     title={option.label}
-                    className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-bold tracking-wide transition ${
+                    className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-bold tracking-wide transition ${
                       isActive
-                        ? 'bg-cyan-400/90 text-slate-950'
-                        : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700'
+                        ? 'bg-accent text-accent-ink'
+                        : 'bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
                     }`}
                   >
                     <img

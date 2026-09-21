@@ -394,9 +394,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
       <details
         key={layer.id}
         open
-        className="rounded border border-slate-800 bg-slate-950/40"
+        className="rounded border border-line bg-ink-raised-2"
       >
-        <summary className="flex cursor-pointer items-center justify-between px-2 py-2 text-xs text-slate-300">
+        <summary className="flex cursor-pointer items-center justify-between px-2 py-2 text-xs text-chalk-dim">
           <span className="flex min-w-0 items-center gap-1.5">
             {(() => {
               const badge = getTierBadge(layer.tier);
@@ -422,8 +422,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
               }}
               className={`rounded border px-2 py-1 text-[10px] font-bold uppercase transition ${
                 openPickerLayerId === layer.id
-                  ? 'border-cyan-600 bg-cyan-900/40 text-cyan-300'
-                  : 'border-[#2c4464] bg-[#0d1a2e] text-slate-100 hover:bg-slate-800'
+                  ? 'border-accent bg-accent/20 text-accent'
+                  : 'border-line bg-ink-raised-2 text-chalk hover:bg-ink-raised'
               }`}
             >
               [{getNodeVisual(getCategoryForLayer(layer.id).category).short}]{' '}
@@ -438,7 +438,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 event.stopPropagation();
                 dispatch(removeLayer(layer.id));
               }}
-              className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
+              className="rounded bg-signal-down px-2 py-1 text-[10px] font-bold uppercase text-white"
             >
               {copy.delete}
             </button>
@@ -447,12 +447,12 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
         {openPickerLayerId === layer.id && (
           <div
-            className="mx-2 mb-2 rounded border border-[#2f4f75] bg-[#081427] p-2"
+            className="mx-2 mb-2 rounded border border-line bg-ink-raised-2 p-2"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
+            <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-chalk-faint">
               <span>{copy.addComponentLayer}</span>
-              <span className="text-cyan-300">
+              <span className="text-accent">
                 {copy.last}: [
                 {getNodeVisual(getCategoryForLayer(layer.id).category).short}]
                 {getCategoryForLayer(layer.id).isRemote
@@ -469,7 +469,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 }))
               }
               placeholder={copy.searchTypePlaceholder}
-              className="mb-2 w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-[11px] text-slate-100"
+              className="mb-2 w-full rounded border border-line bg-ink-raised-2 px-2 py-1.5 text-[11px] text-chalk outline-none focus:border-accent"
             />
             <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
               {NODE_PICKER_ENTRIES.filter(({ category, isRemote }) => {
@@ -498,8 +498,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     }
                     className={`flex items-center justify-between rounded px-2 py-1 text-left text-[11px] transition ${
                       isLast
-                        ? 'border border-cyan-500/60 bg-cyan-500/20 text-cyan-100'
-                        : 'border border-slate-700 bg-slate-900/60 text-slate-200 hover:bg-slate-800'
+                        ? 'border border-accent/60 bg-accent/20 text-accent'
+                        : 'border border-line bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -527,16 +527,16 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
         <ul className="space-y-1 px-2 pb-2">
           {layer.nodes.length === 0 && (
-            <li className="text-[11px] text-slate-500">{copy.noComponents}</li>
+            <li className="text-[11px] text-chalk-faint">{copy.noComponents}</li>
           )}
           {layer.nodes.map((node) => {
             const visual = getNodeVisual(node.category);
             return (
               <li
                 key={node.id}
-                className="rounded border border-slate-800 bg-slate-900/50 px-2 py-1"
+                className="rounded border border-line bg-ink-raised-2 px-2 py-1"
               >
-                <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                <div className="flex items-center justify-between gap-2 text-[11px] text-chalk-dim">
                   <span className="flex items-center gap-1.5">
                     <img
                       src={getNodeIconSrc(node.category)}
@@ -547,13 +547,13 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   </span>
                   <button
                     onClick={() => dispatch(removeNode(node.id))}
-                    className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
+                    className="rounded bg-signal-down px-2 py-1 text-[10px] font-bold uppercase text-white"
                   >
                     {copy.delete}
                   </button>
                 </div>
                 {node.children.length > 0 && (
-                  <div className="mt-1 space-y-1 text-[10px] text-slate-400">
+                  <div className="mt-1 space-y-1 text-[10px] text-chalk-faint">
                     {node.children.map((child) => (
                       <div key={`${node.id}-${child.linkId}`}>
                         ↳ {child.label}
@@ -577,11 +577,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
     if (!isOpen) return null;
     return (
       <div
-        className="mx-2 mb-2 mt-1 rounded border border-emerald-700/50 bg-emerald-950/20 p-2"
+        className="mx-2 mb-2 mt-1 rounded border border-accent/40 bg-accent/10 p-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
-          Papel da camada <span className="text-slate-500">(opcional)</span>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-accent">
+          Papel da camada <span className="text-chalk-faint">(opcional)</span>
         </p>
         <div className="mb-2 grid grid-cols-2 gap-1">
           {TIER_PRESETS.map((preset) => (
@@ -589,36 +589,36 @@ export default function LegendPanel({ language }: LegendPanelProps) {
               key={preset.tier}
               type="button"
               onClick={() => selectTierPreset(preset.tier)}
-              className={`flex flex-col items-start rounded border px-2 py-1.5 text-left text-[10px] transition ${preset.color} ${pendingTier === preset.tier ? 'ring-1 ring-emerald-400' : ''}`}
+              className={`flex flex-col items-start rounded border px-2 py-1.5 text-left text-[10px] transition ${preset.color} ${pendingTier === preset.tier ? 'ring-1 ring-accent' : ''}`}
             >
               <span className="font-semibold">
                 {preset.emoji} {preset.label}
               </span>
-              <span className="text-slate-400">{preset.sub}</span>
+              <span className="text-chalk-faint">{preset.sub}</span>
             </button>
           ))}
         </div>
         <label className="mb-2 flex flex-col gap-0.5">
-          <span className="text-[10px] text-slate-400">Nome</span>
+          <span className="text-[10px] text-chalk-faint">Nome</span>
           <input
             value={pendingLayerName}
             onChange={(e) => setPendingLayerName(e.target.value)}
             placeholder="Camada..."
-            className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-600"
+            className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk placeholder:text-chalk-faint"
           />
         </label>
         <div className="flex justify-end gap-1">
           <button
             type="button"
             onClick={closeTierPicker}
-            className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+            className="rounded border border-line px-2 py-1 text-[10px] text-chalk-dim hover:bg-ink-raised-2"
           >
             {copy.networkCancel}
           </button>
           <button
             type="button"
             onClick={handleConfirmAddLayer}
-            className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-emerald-500"
+            className="btn-planta-solid rounded px-2 py-1 text-[10px] font-semibold"
           >
             + Adicionar Nível
           </button>
@@ -628,8 +628,8 @@ export default function LegendPanel({ language }: LegendPanelProps) {
   }
 
   return (
-    <aside className="theme-scrollbar h-full min-h-0 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/70 p-3">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-cyan-300">
+    <aside className="theme-scrollbar h-full min-h-0 overflow-y-auto rounded-lg border border-line bg-ink-raised p-3">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent">
         {copy.title}
       </h2>
 
@@ -637,9 +637,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
         {relationNodes.length > 0 && (
           <details
             open
-            className="rounded border border-indigo-700/70 bg-indigo-950/20"
+            className="rounded border border-line bg-ink-raised-2"
           >
-            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-chalk">
               {copy.relationBetweenSites}
             </summary>
             <ul className="space-y-1 px-2 pb-2">
@@ -651,9 +651,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 return (
                   <li
                     key={node.id}
-                    className="rounded border border-indigo-800/60 bg-slate-900/50 px-2 py-1"
+                    className="rounded border border-line bg-ink-raised-2 px-2 py-1"
                   >
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-chalk-dim">
                       <span className="flex items-center gap-2">
                         <img
                           src={getNodeIconSrc(node.category)}
@@ -664,13 +664,13 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                       </span>
                       <button
                         onClick={() => dispatch(removeNode(node.id))}
-                        className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
+                        className="rounded bg-signal-down px-2 py-1 text-[10px] font-bold uppercase text-white"
                       >
                         {copy.delete}
                       </button>
                     </div>
                     {relatedLinks.length > 0 && (
-                      <div className="mt-1 space-y-1 text-[10px] text-slate-400">
+                      <div className="mt-1 space-y-1 text-[10px] text-chalk-faint">
                         {relatedLinks.map((link) => {
                           const otherId =
                             link.from === node.id ? link.to : link.from;
@@ -693,16 +693,16 @@ export default function LegendPanel({ language }: LegendPanelProps) {
         )}
 
         {legendTree.length === 0 && (
-          <p className="text-xs text-slate-400">{copy.emptySites}</p>
+          <p className="text-xs text-chalk-dim">{copy.emptySites}</p>
         )}
 
         {legendTree.map((site) => (
           <details
             key={site.id}
             open
-            className="rounded border border-slate-700"
+            className="rounded border border-line"
           >
-            <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm text-slate-200">
+            <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm text-chalk">
               <span>{site.name}</span>
               <div className="flex gap-1">
                 <button
@@ -724,7 +724,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                       ? copy.lanLimitReached
                       : copy.addLan
                   }
-                  className="rounded bg-sky-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="btn-planta-solid rounded px-2 py-1 text-[10px] font-bold uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {copy.addLan}
                 </button>
@@ -735,7 +735,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   }}
                   disabled
                   title="Adicionar nível manualmente desabilitado — use a barra de ferramentas"
-                  className="rounded bg-emerald-400 px-2 py-1 text-[10px] font-bold uppercase text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="btn-planta-solid rounded px-2 py-1 text-[10px] font-bold uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {copy.addLevel}
                 </button>
@@ -744,7 +744,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     event.preventDefault();
                     dispatch(removeSite(site.id));
                   }}
-                  className="rounded bg-rose-500 px-2 py-1 text-[10px] font-bold uppercase"
+                  className="rounded bg-signal-down px-2 py-1 text-[10px] font-bold uppercase text-white"
                 >
                   {copy.delete}
                 </button>
@@ -754,26 +754,26 @@ export default function LegendPanel({ language }: LegendPanelProps) {
             {/* ── Network picker modal inline ──────────────────────────────── */}
             {networkPickerSiteId === site.id && (
               <div
-                className="mx-2 mb-2 mt-1 rounded border border-sky-700/50 bg-sky-950/20 p-2"
+                className="mx-2 mb-2 mt-1 rounded border border-accent/40 bg-accent/10 p-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-accent">
                   Nova Rede Lógica
                 </p>
                 <div className="grid grid-cols-2 gap-1.5">
                   <label className="col-span-2 flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">Nome</span>
+                    <span className="text-[10px] text-chalk-faint">Nome</span>
                     <input
                       value={networkDraft.name}
                       onChange={(e) =>
                         setNetworkDraft((d) => ({ ...d, name: e.target.value }))
                       }
                       placeholder={copy.networkNamePlaceholder}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-600"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk placeholder:text-chalk-faint"
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkPurposeLabel}
                     </span>
                     <select
@@ -784,7 +784,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           purpose: e.target.value as NetworkPurpose,
                         }))
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_PURPOSE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -794,7 +794,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkFamilyLabel}
                     </span>
                     <select
@@ -812,7 +812,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           thirdOctet: String(suggested),
                         }));
                       }}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_FAMILY_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -822,7 +822,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkStackLabel}
                     </span>
                     <select
@@ -842,7 +842,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           trafficPreference: suggestedPreference,
                         }));
                       }}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_STACK_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -852,7 +852,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkTrafficPreferenceLabel}
                     </span>
                     <select
@@ -864,7 +864,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                             .value as NetworkTrafficPreference,
                         }))
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_TRAFFIC_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -874,7 +874,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkGatewayModeLabel}
                     </span>
                     <select
@@ -885,7 +885,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           gatewayMode: e.target.value as NetworkGatewayMode,
                         }))
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_GATEWAY_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -895,7 +895,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkDnsPolicyLabel}
                     </span>
                     <select
@@ -906,7 +906,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           dnsPolicy: e.target.value as NetworkDnsPolicy,
                         }))
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     >
                       {NETWORK_DNS_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -916,7 +916,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkIpv6PrefixLabel}
                     </span>
                     <input
@@ -929,11 +929,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                         }))
                       }
                       placeholder={copy.networkIpv6PrefixPlaceholder}
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk"
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       {copy.networkOctetLabel}
                     </span>
                     <input
@@ -965,11 +965,11 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           };
                         })
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 [appearance:textfield]"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk [appearance:textfield]"
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-chalk-faint">
                       /{copy.networkCidrLabel}
                     </span>
                     <input
@@ -983,7 +983,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           cidr: e.target.value,
                         }))
                       }
-                      className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 [appearance:textfield]"
+                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk [appearance:textfield]"
                     />
                   </label>
                 </div>
@@ -1002,15 +1002,15 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   );
                   const hosts = cidrToHostCount(cidr);
                   return (
-                    <div className="mt-1 rounded border border-sky-800/40 bg-sky-950/20 px-2 py-1 font-mono text-[10px] text-sky-300">
+                    <div className="mt-1 rounded border border-accent/40 bg-accent/10 px-2 py-1 font-mono text-[10px] text-accent">
                       {addr}/{cidr}
-                      <span className="ml-2 font-sans text-[9px] text-slate-400">
+                      <span className="ml-2 font-sans text-[9px] text-chalk-faint">
                         [{networkDraft.stackMode} | GW:{' '}
                         {networkDraft.gatewayMode} | DNS:{' '}
                         {networkDraft.dnsPolicy} | TRF:{' '}
                         {networkDraft.trafficPreference}]
                       </span>
-                      <span className="ml-2 font-sans text-[9px] text-slate-400">
+                      <span className="ml-2 font-sans text-[9px] text-chalk-faint">
                         ({hosts.toLocaleString('pt-BR')} hosts)
                       </span>
                     </div>
@@ -1020,14 +1020,14 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                   <button
                     type="button"
                     onClick={closeNetworkPicker}
-                    className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-800"
+                    className="rounded border border-line px-2 py-1 text-[10px] text-chalk-dim hover:bg-ink-raised-2"
                   >
                     {copy.networkCancel}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleConfirmAddNetwork(site.id)}
-                    className="rounded bg-sky-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-sky-500"
+                    className="btn-planta-solid rounded px-2 py-1 text-[10px] font-semibold"
                   >
                     {copy.networkConfirm}
                   </button>
@@ -1044,16 +1044,16 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                 <details
                   key={network.id}
                   open
-                  className={`rounded border bg-[#060e1a] ${NETWORK_PURPOSE_BORDER[network.purpose as NetworkPurpose] ?? 'border-slate-600/50'}`}
+                  className={`rounded border bg-ink ${NETWORK_PURPOSE_BORDER[network.purpose as NetworkPurpose] ?? 'border-line'}`}
                 >
-                  <summary className="flex cursor-pointer items-center justify-between px-2 py-1.5 text-[11px] text-slate-200">
+                  <summary className="flex cursor-pointer items-center justify-between px-2 py-1.5 text-[11px] text-chalk-dim">
                     <span className="flex items-center gap-1.5">
                       <span
-                        className={`rounded px-1 py-0.5 text-[9px] font-bold uppercase ${NETWORK_PURPOSE_BADGE[network.purpose as NetworkPurpose] ?? 'bg-slate-700 text-slate-300'}`}
+                        className={`rounded px-1 py-0.5 text-[9px] font-bold uppercase ${NETWORK_PURPOSE_BADGE[network.purpose as NetworkPurpose] ?? 'bg-ink-raised-2 text-chalk-dim'}`}
                       >
                         {network.purpose}
                       </span>
-                      <span className="font-semibold text-sky-200">
+                      <span className="font-semibold text-accent">
                         {network.name}
                       </span>
                     </span>
@@ -1068,7 +1068,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           );
                         }}
                         title="Informações da rede"
-                        className="rounded border border-sky-700/50 bg-sky-950/40 px-1.5 py-0.5 text-[10px] font-bold text-sky-300 hover:bg-sky-900/50"
+                        className="rounded border border-accent/50 bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent hover:bg-accent/20"
                       >
                         i
                       </button>
@@ -1077,7 +1077,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           event.preventDefault();
                           openTierPicker(site.id, network.id);
                         }}
-                        className="rounded bg-emerald-700/70 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-100 hover:bg-emerald-600/70"
+                        className="rounded bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-accent-ink hover:brightness-110"
                       >
                         {copy.addLayer}
                       </button>
@@ -1086,7 +1086,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                           event.preventDefault();
                           dispatch(removeSiteNetwork({ id: network.id }));
                         }}
-                        className="rounded bg-rose-500 px-2 py-0.5 text-[10px] font-bold uppercase"
+                        className="rounded bg-signal-down px-2 py-0.5 text-[10px] font-bold uppercase text-white"
                       >
                         {copy.delete}
                       </button>
@@ -1121,29 +1121,29 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                             : copy.networkReadinessReady;
                       return (
                         <div
-                          className="mx-2 mb-1 mt-0.5 rounded border border-sky-700/40 bg-sky-950/30 p-2 text-[10px]"
+                          className="mx-2 mb-1 mt-0.5 rounded border border-line bg-ink-raised-2 p-2 text-[10px]"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="mb-1 font-semibold text-sky-300">
+                          <div className="mb-1 font-semibold text-accent">
                             Informações da Rede
                           </div>
-                          <div className="space-y-0.5 text-slate-300">
+                          <div className="space-y-0.5 text-chalk-dim">
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Bloco</span>
-                              <span className="font-mono text-sky-200">
+                              <span className="text-chalk-faint">Bloco</span>
+                              <span className="font-mono text-accent">
                                 {baseAddr}/{network.cidr}
                               </span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Família</span>
+                              <span className="text-chalk-faint">Família</span>
                               <span>{network.addressFamily}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Stack</span>
+                              <span className="text-chalk-faint">Stack</span>
                               <span>{network.stackMode ?? 'ipv4'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">
+                              <span className="text-chalk-faint">
                                 {copy.networkTrafficPreferenceLabel}
                               </span>
                               <span>
@@ -1151,54 +1151,54 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               </span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Gateway</span>
+                              <span className="text-chalk-faint">Gateway</span>
                               <span>{network.gatewayMode ?? 'ipv4-only'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">DNS</span>
+                              <span className="text-chalk-faint">DNS</span>
                               <span>{network.dnsPolicy ?? 'a-only'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">
+                              <span className="text-chalk-faint">
                                 IPv6 Prefix
                               </span>
                               <span>{network.ipv6Prefix || '—'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">IPv6 VLAN</span>
+                              <span className="text-chalk-faint">IPv6 VLAN</span>
                               <span>/{network.ipv6VlanPrefixLength ?? 64}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Hosts</span>
+                              <span className="text-chalk-faint">Hosts</span>
                               <span>{hosts.toLocaleString('pt-BR')}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">VLANs</span>
+                              <span className="text-chalk-faint">VLANs</span>
                               <span>{vlanCount}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-slate-500">Camadas</span>
+                              <span className="text-chalk-faint">Camadas</span>
                               <span>{layerCount}</span>
                             </div>
-                            <div className="mt-1 border-t border-slate-700/50 pt-1">
+                            <div className="mt-1 border-t border-line pt-1">
                               <div className="flex justify-between gap-2">
-                                <span className="text-slate-500">
+                                <span className="text-chalk-faint">
                                   {copy.networkReadinessLabel}
                                 </span>
                                 <span
                                   className={`font-semibold ${
                                     readiness?.level === 'critical'
-                                      ? 'text-rose-300'
+                                      ? 'text-signal-down'
                                       : readiness?.level === 'warning'
-                                        ? 'text-amber-300'
-                                        : 'text-emerald-300'
+                                        ? 'text-signal-warn'
+                                        : 'text-signal-up'
                                   }`}
                                 >
                                   {readinessLabel}
                                 </span>
                               </div>
                               {(readiness?.issues.length ?? 0) > 0 && (
-                                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[10px] text-amber-200">
+                                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[10px] text-signal-warn">
                                   {readiness?.issues
                                     .slice(0, 4)
                                     .map((issue) => (
@@ -1217,7 +1217,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
                   <div className="space-y-1.5 px-1.5 pb-1.5 pt-0.5">
                     {network.layers.length === 0 && (
-                      <p className="px-1 text-[11px] text-slate-500">
+                      <p className="px-1 text-[11px] text-chalk-faint">
                         {copy.noComponents}
                       </p>
                     )}
