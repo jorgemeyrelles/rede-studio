@@ -9,7 +9,8 @@ export type EquipmentResponse = {
   id: string;
   brand: string;
   model: string;
-  function: string;
+  /** Funções que o equipamento atende, ex.: `["roteador", "firewall", "gateway"]`. */
+  function: string[];
   price: {
     approxPriceUsd: number | null;
     approxPriceBrl: number | null;

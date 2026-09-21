@@ -59,14 +59,14 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
         onClick={() => setMenuOpen((v) => !v)}
         aria-label={currentUser.name}
         title={currentUser.name}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-500/50 bg-cyan-500/20 text-xs font-bold text-cyan-200 transition hover:bg-cyan-500/30"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-accent/50 bg-accent/20 text-xs font-bold text-accent transition hover:bg-accent/30"
       >
         {initial}
       </button>
 
       {isMenuOpen && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 overflow-hidden rounded-md border border-slate-700 bg-slate-900 py-1 shadow-xl">
-          <div className="border-b border-slate-800 px-3 py-2 text-xs text-slate-400">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 overflow-hidden rounded-sm border border-line bg-ink-raised py-1 shadow-xl">
+          <div className="border-b border-line px-3 py-2 text-xs text-chalk-dim">
             {currentUser.name}
           </div>
           <button
@@ -75,7 +75,7 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
               setMenuOpen(false);
               navigate(`/${language}/projects`);
             }}
-            className="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800"
+            className="block w-full px-3 py-2 text-left text-xs text-chalk-dim hover:bg-ink-raised-2 hover:text-chalk"
           >
             {copy.myProjects}
           </button>
@@ -85,7 +85,7 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
               setMenuOpen(false);
               setNewProjectOpen(true);
             }}
-            className="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800"
+            className="block w-full px-3 py-2 text-left text-xs text-chalk-dim hover:bg-ink-raised-2 hover:text-chalk"
           >
             {copy.newProject}
           </button>
@@ -95,7 +95,7 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
               setMenuOpen(false);
               setSettingsOpen(true);
             }}
-            className="block w-full px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800"
+            className="block w-full px-3 py-2 text-left text-xs text-chalk-dim hover:bg-ink-raised-2 hover:text-chalk"
           >
             {copy.settings}
           </button>
@@ -105,7 +105,7 @@ export default function UserBadgeMenu({ language }: { language: AppLanguage }) {
               setMenuOpen(false);
               logoutMutation.mutate();
             }}
-            className="block w-full border-t border-slate-800 px-3 py-2 text-left text-xs text-rose-300 hover:bg-slate-800"
+            className="block w-full border-t border-line px-3 py-2 text-left text-xs text-signal-down hover:bg-ink-raised-2"
           >
             {copy.logout}
           </button>

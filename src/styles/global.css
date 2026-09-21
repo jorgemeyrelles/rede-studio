@@ -1,3 +1,7 @@
+/* Usado pelo texto renderizado dentro do canvas do GoJS (NetworkDiagram.tsx,
+   fontes literais tipo `font: '700 11px Barlow'`) e pelo deck de slides legado
+   (desativado, ver CLAUDE.md) — não remover, mesmo que --sans/--mono abaixo
+   apontem pra outras fontes no resto do app. */
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap');
 
 :root {
@@ -13,8 +17,91 @@
   --purple: #a855f7;
   --dim: #4a6080;
   --text: #c8d8f0;
-  --mono: 'Share Tech Mono', monospace;
-  --sans: 'Barlow', sans-serif;
+  --mono: 'IBM Plex Mono', 'Share Tech Mono', monospace;
+  --sans: 'Public Sans', 'Barlow', sans-serif;
+  --display: 'Archivo', 'Arial Black', sans-serif;
+
+  /* ── Tokens do redesign "Planta" (variante âmbar/cobre) ──
+     Ver .claude/plans/redesign-planta-e-sessao-jwt.md. Usados via classes
+     Tailwind (tailwind.config.js mapeia bg-ink, text-accent etc. pra estas
+     custom properties) e diretamente em SVG (BrandMark.tsx, favicon.svg). */
+  --ink: #0a1220;
+  --ink-raised: #0f1b2e;
+  --ink-raised-2: #13223a;
+  --line: #24354f;
+  --chalk: #eaf1fb;
+  --chalk-dim: #8fa3c4;
+  --chalk-faint: #5c7196;
+  --accent: #e8a33d;
+  --accent-2: #ff6b4a;
+  --accent-ink: #231404;
+  --accent-print: #b5651d;
+  --signal-up: #3ddc84;
+  --signal-down: #ff5470;
+  --signal-warn: #fbbf24;
+  --route-direct: #3ddc84;
+  --route-static: #fbbf24;
+  --route-default: #fb923c;
+  --route-vpn: #a78bfa;
+  --route-bgp: #60a5fa;
+  --paper: #f4f6fb;
+  --paper-ink: #111b2c;
+  --paper-line: #c9d3e3;
+  --paper-dim: #5b6b85;
+
+  /* Formato "canais RGB" (sem `#`, espaço como separador) só pra estes
+     tokens — os usados com modificador de opacidade do Tailwind (`bg-ink/95`,
+     `border-accent/50`, `bg-signal-up/10` etc.). tailwind.config.js monta
+     `rgb(var(--x-rgb) / <alpha-value>)` a partir daqui; os outros tokens
+     seguem só como cor hex direta (usados também fora do Tailwind, em SVG e
+     em `background`/`color-mix` deste arquivo). */
+  --ink-rgb: 10 18 32;
+  --accent-rgb: 232 163 61;
+  --signal-up-rgb: 61 220 132;
+  --signal-down-rgb: 255 84 112;
+  --signal-warn-rgb: 251 191 36;
+}
+
+/* Archivo como face de título em todo o app logado/deslogado — não precisa
+   de classe Tailwind por componente. Não afeta texto desenhado no canvas do
+   GoJS (que não é DOM, então nenhum seletor CSS o alcança). */
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+}
+
+/* Fundo "prancheta" do redesign Planta: grid 42px + leve glow radial no
+   acento. Aplicar no wrapper de página (`min-h-screen`) de Landing/shell
+   logado/canvas do Studio. */
+.bg-blueprint {
+  background:
+    radial-gradient(
+      ellipse 70% 60% at 30% -10%,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent
+    ),
+    linear-gradient(rgba(36, 53, 79, 0.4) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(90deg, rgba(36, 53, 79, 0.4) 1px, transparent 1px) 0 0 /
+      42px 42px,
+    var(--ink);
+}
+
+/* CTA cheia do redesign Planta — usada em todo botão de ação primária
+   (Criar conta, Salvar, Criar projeto...). Cor + hover + disabled centrais
+   aqui pra não repetir o gradiente arbitrário do Tailwind em cada arquivo;
+   cada uso ainda define seu próprio padding/tamanho via classes Tailwind. */
+.btn-planta-solid {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: var(--accent-ink);
+  transition: filter 0.15s ease;
+}
+.btn-planta-solid:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+.btn-planta-solid:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 * {
   box-sizing: border-box;
@@ -34,7 +121,7 @@ input[type='number'] {
 }
 html,
 body {
-  background: #060810;
+  background: var(--ink);
   font-family: var(--sans);
   color: var(--text);
 }
@@ -1677,10 +1764,12 @@ hr.slide-hr {
   line-height: 1.55;
 }
 
-/* Tooltip Modal GoJS */
+/* Tooltip Modal GoJS — inspetor de nó/link no Studio (ATIVO, não é deck de
+   slides: usado por NetworkDiagram.tsx). Fase 5 do redesign Planta — ver
+   .claude/plans/redesign-planta-e-sessao-jwt.md. */
 .gojs-tooltip-modal {
-  background: #0a1420;
-  border: 1px solid #2a4b76;
+  background: var(--ink-raised);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
@@ -1694,7 +1783,7 @@ hr.slide-hr {
   gap: 8px;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #1d3353;
+  border-bottom: 1px solid var(--line);
 }
 .gojs-tooltip-head-main {
   display: flex;
@@ -1713,13 +1802,13 @@ hr.slide-hr {
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.4px;
-  color: #d6ecff;
+  color: var(--chalk);
   line-height: 1.25;
 }
 .gojs-tooltip-close-btn {
   background: transparent;
   border: none;
-  color: #9ed2ff;
+  color: var(--chalk-dim);
   cursor: pointer;
   font-size: 12px;
   padding: 0;
@@ -1727,20 +1816,16 @@ hr.slide-hr {
   transition: color 0.2s;
 }
 .gojs-tooltip-close-btn:hover {
-  color: #ffffff;
+  color: var(--chalk);
 }
 .gojs-tooltip-body {
-  --gojs-tooltip-scroll-track: rgba(20, 42, 66, 0.75);
+  --gojs-tooltip-scroll-track: var(--ink-raised-2);
   --gojs-tooltip-scroll-thumb: linear-gradient(
     180deg,
-    #5d90c4 0%,
-    #3d6f9f 100%
+    var(--accent) 0%,
+    var(--accent-2) 100%
   );
-  --gojs-tooltip-scroll-thumb-hover: linear-gradient(
-    180deg,
-    #76aae0 0%,
-    #4a82b8 100%
-  );
+  --gojs-tooltip-scroll-thumb-hover: var(--accent-2);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1748,7 +1833,7 @@ hr.slide-hr {
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
-  scrollbar-color: #5d90c4 var(--gojs-tooltip-scroll-track);
+  scrollbar-color: var(--accent) var(--gojs-tooltip-scroll-track);
 }
 .gojs-tooltip-body::-webkit-scrollbar {
   width: 10px;
@@ -1775,11 +1860,11 @@ hr.slide-hr {
 }
 .gojs-tooltip-label {
   font-weight: 700;
-  color: #9dc1e5;
+  color: var(--chalk-dim);
   min-width: 52px;
 }
 .gojs-tooltip-value {
-  color: #b9d6f6;
+  color: var(--chalk);
   word-break: break-word;
   flex: 1;
   font-size: 11px;

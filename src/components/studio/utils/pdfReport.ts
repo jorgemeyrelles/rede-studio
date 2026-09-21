@@ -80,17 +80,19 @@ const CONTENT_TOP = 22;
 const CONTENT_BOTTOM = 199;
 const FOOTER_Y = 205;
 
-const STUDIO_BRAND_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="12" fill="#0f172a"/>
-  <line x1="32" y1="14" x2="12" y2="38" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <line x1="32" y1="14" x2="52" y2="38" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <line x1="12" y1="38" x2="32" y2="52" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <line x1="52" y1="38" x2="32" y2="52" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <line x1="12" y1="38" x2="52" y2="38" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-  <circle cx="32" cy="14" r="6" fill="#0ea5e9" stroke="#7dd3fc" stroke-width="1.5"/>
-  <circle cx="12" cy="38" r="5" fill="#6366f1" stroke="#a5b4fc" stroke-width="1.5"/>
-  <circle cx="52" cy="38" r="5" fill="#6366f1" stroke="#a5b4fc" stroke-width="1.5"/>
-  <circle cx="32" cy="52" r="4" fill="#10b981" stroke="#6ee7b7" stroke-width="1.5"/>
+// Logo "Nó & Malha" do redesign Planta — mesma marca de BrandMark.tsx,
+// duplicada aqui em hex fixo (não var(--...)) porque vira PNG rasterizado
+// pro jsPDF via getStudioBrandIconDataUrl(), fora do DOM/CSS do app.
+const STUDIO_BRAND_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="9" fill="#0a1220"/>
+  <line x1="24" y1="9" x2="24" y2="25" stroke="#e8a33d" stroke-width="2.2"/>
+  <line x1="24" y1="25" x2="10" y2="37" stroke="#e8a33d" stroke-width="2.2"/>
+  <line x1="24" y1="25" x2="38" y2="37" stroke="#e8a33d" stroke-width="2.2"/>
+  <line x1="10" y1="37" x2="38" y2="37" stroke="#24354f" stroke-width="1.5"/>
+  <circle cx="24" cy="9" r="4" fill="#0f1b2e" stroke="#e8a33d" stroke-width="2"/>
+  <circle cx="24" cy="25" r="5" fill="#e8a33d"/>
+  <circle cx="10" cy="37" r="3.4" fill="#0f1b2e" stroke="#ff6b4a" stroke-width="2"/>
+  <circle cx="38" cy="37" r="3.4" fill="#0f1b2e" stroke="#ff6b4a" stroke-width="2"/>
 </svg>`;
 
 let cachedBrandIconDataUrl: string | null | undefined;
@@ -682,7 +684,7 @@ function drawCoverPage(
   const locale = mapLocale(language);
   setSectionTitle(pageSections, doc, copy.executiveCoverTitle);
 
-  doc.setFillColor(15, 23, 42);
+  doc.setFillColor(181, 101, 29); // --accent-print (Planta)
   doc.rect(MARGIN_X, 34, PAGE_WIDTH - MARGIN_X * 2, 34, 'F');
   doc.setTextColor(226, 232, 240);
   doc.setFont('helvetica', 'bold');
@@ -763,7 +765,7 @@ async function drawDashboardPage(
     sourceHeight = dimensions.height;
   } else {
     const canvas = await html2canvas(dashboardElement!, {
-      backgroundColor: '#0b172a',
+      backgroundColor: '#0a1220', // --ink (Planta)
       scale: 1.2,
       useCORS: true,
     });
@@ -872,7 +874,7 @@ function drawRevisionControlSection(
       overflow: 'linebreak',
     },
     headStyles: {
-      fillColor: [30, 41, 59],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
     },
@@ -962,7 +964,7 @@ function drawScopePlanningSection(
       overflow: 'linebreak',
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 9.3,
     },
@@ -998,7 +1000,7 @@ function drawScopePlanningSection(
       overflow: 'linebreak',
     },
     headStyles: {
-      fillColor: [30, 41, 59],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 9.2,
     },
@@ -1188,7 +1190,7 @@ function drawRiskMatrixSection(
       textColor: [15, 23, 42],
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 9.3,
     },
@@ -1348,7 +1350,7 @@ function drawRoutesSection(
       textColor: [15, 23, 42],
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
     },
@@ -1359,8 +1361,8 @@ function drawRoutesSection(
       const currentGroup = rowGroups[data.row.index] ?? 0;
 
       if (kind === 'site-header') {
-        data.cell.styles.fillColor = [30, 58, 88];
-        data.cell.styles.textColor = [224, 242, 254];
+        data.cell.styles.fillColor = [17, 27, 44]; // --paper-ink (Planta)
+        data.cell.styles.textColor = [250, 235, 215];
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fontSize = 10;
         data.cell.styles.halign = 'left';
@@ -1481,7 +1483,7 @@ function drawFirewallSection(
       valign: 'middle',
     },
     headStyles: {
-      fillColor: [30, 41, 59],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 9.2,
       minCellHeight: 8,
@@ -1588,7 +1590,7 @@ function drawVlansSection(
       valign: 'middle',
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
       cellPadding: 1.8,
@@ -1606,16 +1608,16 @@ function drawVlansSection(
         const rowKind = rowKinds[data.row.index];
 
         if (rowKind === 'site-header') {
-          data.cell.styles.fillColor = [30, 58, 88];
-          data.cell.styles.textColor = [224, 242, 254];
+          data.cell.styles.fillColor = [17, 27, 44]; // --paper-ink (Planta)
+          data.cell.styles.textColor = [250, 235, 215];
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fontSize = 10.6;
           return;
         }
 
         if (rowKind === 'vlan-header') {
-          data.cell.styles.fillColor = [15, 23, 42];
-          data.cell.styles.textColor = [125, 211, 252];
+          data.cell.styles.fillColor = [181, 101, 29]; // --accent-print (Planta)
+          data.cell.styles.textColor = [255, 245, 230];
           if (data.column.index === 0) {
             data.cell.styles.fontStyle = 'bold';
           }
@@ -1881,7 +1883,7 @@ function drawLinksInventorySection(
       textColor: [15, 23, 42],
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
       overflow: 'visible',
@@ -1988,7 +1990,7 @@ function drawEquipmentInventorySection(
       textColor: [15, 23, 42],
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
     },
@@ -2084,7 +2086,7 @@ function drawTechnicalAnnexSection(
       textColor: [15, 23, 42],
     },
     headStyles: {
-      fillColor: [30, 41, 59],
+      fillColor: [181, 101, 29], // --accent-print (Planta)
       textColor: [241, 245, 249],
       fontSize: 10,
     },
@@ -2161,20 +2163,21 @@ function drawHeaderAndFooter(
     doc.setPage(page);
     const section = pageSections[page - 1] ?? copy.documentTitle;
 
-    // Header background + accent bars
-    doc.setFillColor(5, 11, 28);
+    // Header background + accent bars (Planta: banda --ink, filetes
+    // --accent/--accent-2 em vez do navy+cyan antigo)
+    doc.setFillColor(10, 18, 32);
     doc.rect(0, 0, PAGE_WIDTH, 21, 'F');
-    doc.setFillColor(14, 165, 233);
+    doc.setFillColor(232, 163, 61);
     doc.rect(0, 0, PAGE_WIDTH, 1.5, 'F');
-    doc.setFillColor(56, 189, 248);
+    doc.setFillColor(255, 107, 74);
     doc.rect(0, 20.2, PAGE_WIDTH, 0.8, 'F');
 
     // Icon badge
     const iconBoxX = MARGIN_X;
     const iconBoxY = 4.2;
     const iconBoxSize = 11.4;
-    doc.setFillColor(15, 23, 42);
-    doc.setDrawColor(125, 211, 252);
+    doc.setFillColor(15, 27, 46);
+    doc.setDrawColor(232, 163, 61);
     doc.roundedRect(
       iconBoxX,
       iconBoxY,
@@ -2198,7 +2201,7 @@ function drawHeaderAndFooter(
     } else {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(125, 211, 252);
+      doc.setTextColor(232, 163, 61);
       doc.text('RS', iconBoxX + iconBoxSize / 2, iconBoxY + 7.5, {
         align: 'center',
       });
@@ -2207,7 +2210,7 @@ function drawHeaderAndFooter(
     // Section pill
     const pillWidth = 83;
     const pillX = PAGE_WIDTH - MARGIN_X - pillWidth;
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(15, 27, 46);
     doc.setDrawColor(71, 85, 105);
     doc.roundedRect(pillX, 4.5, pillWidth, 7.2, 1.6, 1.6, 'FD');
 
@@ -2230,7 +2233,7 @@ function drawHeaderAndFooter(
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(224, 242, 254);
+    doc.setTextColor(255, 224, 178);
     doc.text(section, PAGE_WIDTH - MARGIN_X - 2.5, 9.5, { align: 'right' });
 
     // Footer
@@ -2241,7 +2244,7 @@ function drawHeaderAndFooter(
 
     const pageBadgeWidth = 28;
     const pageBadgeX = PAGE_WIDTH - MARGIN_X - pageBadgeWidth;
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(181, 101, 29); // --accent-print (Planta)
     doc.roundedRect(
       pageBadgeX,
       FOOTER_Y - 4.6,
@@ -2327,7 +2330,7 @@ export async function generateStudioPdfReport(params: GenerateStudioPdfParams) {
     <meta charset="utf-8" />
     <title>${copy.documentTitle}</title>
     <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0f172a; }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0a1220; }
       iframe { border: 0; width: 100%; height: 100%; display: block; }
     </style>
   </head>

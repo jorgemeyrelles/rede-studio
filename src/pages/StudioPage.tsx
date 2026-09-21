@@ -7,14 +7,19 @@ import EquipmentInventoryPanel from '../components/studio/EquipmentInventoryPane
 import LegendPanel from '../components/studio/LegendPanel';
 import type { NetworkDiagramHandle } from '../components/studio/NetworkDiagram';
 import NetworkDiagram from '../components/studio/NetworkDiagram';
-import RouteFirewallPanel from '../components/studio/RouteFirewallPanel';
+import { useRouteFirewallTabs } from '../components/studio/RouteFirewallPanel';
 import SiteVlanPanel from '../components/studio/SiteVlanPanel';
 import StudioToolbar from '../components/studio/StudioToolbar';
+import TableTabs, { type TableTabDescriptor } from '../components/studio/TableTabs';
 import {
   generateStudioPdfReport,
   getStudioPageCopy,
   type StudioPageProps,
 } from '../components/studio/catalog';
+import {
+  getEquipmentInventoryCopy,
+  getSiteVlanCopy,
+} from '../components/studio/utils/i18n';
 import { useEquipmentsQuery } from '../features/equipments/queries';
 import { findEquipmentCatalogMatch } from '../features/equipments/utils';
 import {
@@ -52,6 +57,34 @@ export default function StudioPage({ language }: StudioPageProps) {
   const diagramCaptureRef = useRef<HTMLDivElement | null>(null);
   const networkDiagramRef = useRef<NetworkDiagramHandle | null>(null);
   const copy = getStudioPageCopy(language);
+
+  // Barra única de abas do Studio (Fase 4 do redesign Planta) — combina as 6
+  // seções de rotas/firewall com os demais painéis que hoje eram cards
+  // empilhados à parte.
+  const routeFirewallTabs = useRouteFirewallTabs({ language });
+  const studioTabs: TableTabDescriptor[] = [
+    ...routeFirewallTabs,
+    {
+      id: 'vlans-site',
+      label: getSiteVlanCopy(language).title,
+      content: <SiteVlanPanel language={language} />,
+    },
+    {
+      id: 'inventario',
+      label: getEquipmentInventoryCopy(language).title,
+      content: <EquipmentInventoryPanel language={language} />,
+    },
+    {
+      id: 'servicos-certificados',
+      label: 'Serviços e Certificados',
+      content: (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <CustomServicePanel />
+          <CertificatePanel />
+        </div>
+      ),
+    },
+  ];
 
   function startEditingTitle() {
     setTitleDraft(meta.projectName);
@@ -186,7 +219,7 @@ export default function StudioPage({ language }: StudioPageProps) {
         </div>
 
         <section className="space-y-3">
-          <div className="rounded-lg border border-[#315072] bg-[#0b172a]/75 px-4 py-3">
+          <div className="rounded-lg border border-line bg-ink-raised px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 {isEditingTitle ? (
@@ -202,7 +235,7 @@ export default function StudioPage({ language }: StudioPageProps) {
                           setIsEditingTitle(false);
                         }
                       }}
-                      className="w-full max-w-md rounded border border-cyan-600 bg-slate-950 px-2 py-1 text-lg font-semibold text-slate-100 outline-none"
+                      className="w-full max-w-md rounded-sm border border-accent bg-ink px-2 py-1 text-lg font-semibold text-chalk outline-none"
                     />
                   </form>
                 ) : (
@@ -211,19 +244,23 @@ export default function StudioPage({ language }: StudioPageProps) {
                     onClick={startEditingTitle}
                     aria-label={copy.renameProjectAriaLabel}
                     title={copy.renameProjectAriaLabel}
-                    className="group flex min-w-0 max-w-full items-center gap-2 rounded px-1 py-1 -mx-1 text-left hover:bg-white/5"
+                    className="group flex min-w-0 max-w-full items-center gap-2 rounded-sm px-1 py-1 -mx-1 text-left hover:bg-ink-raised-2"
                   >
-                    <h2 className="truncate text-lg font-semibold text-slate-100">
+                    <h2 className="truncate text-lg font-semibold text-chalk">
                       {meta.projectName || copy.untitledProject}
                     </h2>
-                    <span className="shrink-0 text-sm text-slate-500 opacity-0 transition group-hover:opacity-100">
+                    <span className="shrink-0 text-sm text-chalk-faint opacity-0 transition group-hover:opacity-100">
                       ✎
                     </span>
                   </button>
                 )}
-                <p className="mt-1 text-xs text-slate-300">{copy.infoHint}</p>
+                <p className="mt-1 text-xs text-chalk-dim">{copy.infoHint}</p>
               </div>
 
+              {/* "Medidor de sinal" — mesma lógica de 3 estados de antes
+                  (persistWarning/saving/idle), agora em barras coloridas
+                  pelos tokens de sinal do redesign Planta em vez de
+                  amber/sky/emerald soltos. */}
               <button
                 type="button"
                 onClick={forceSave}
@@ -232,21 +269,26 @@ export default function StudioPage({ language }: StudioPageProps) {
                     ? new Date(meta.lastSavedAt).toLocaleString(language)
                     : copy.notSavedYet
                 }
-                className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition ${
+                className={`flex shrink-0 items-center gap-2 rounded-sm border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition ${
                   meta.persistWarning
-                    ? 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                    ? 'border-line text-signal-warn hover:bg-ink-raised-2'
                     : meta.saveStatus === 'saving'
-                      ? 'border-sky-500/60 bg-sky-500/10 text-sky-300'
-                      : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                      ? 'border-line text-accent'
+                      : 'border-line text-signal-up hover:bg-ink-raised-2'
                 }`}
               >
-                {meta.persistWarning ? (
-                  <span>⚠</span>
-                ) : meta.saveStatus === 'saving' ? (
-                  <span className="animate-spin">⟳</span>
-                ) : (
-                  <span>💾</span>
-                )}
+                <span
+                  className="flex h-[11px] items-end gap-[2px]"
+                  aria-hidden="true"
+                >
+                  {[4, 8, 11, 6].map((height, index) => (
+                    <span
+                      key={index}
+                      className={`w-[2px] ${meta.saveStatus === 'saving' ? 'animate-pulse' : ''}`}
+                      style={{ height, backgroundColor: 'currentColor' }}
+                    />
+                  ))}
+                </span>
                 {meta.persistWarning
                   ? copy.warning
                   : meta.saveStatus === 'saving'
@@ -264,8 +306,8 @@ export default function StudioPage({ language }: StudioPageProps) {
             onToggleLegend={() => setIsLegendOpen((v) => !v)}
           />
 
-          <div className="rounded-lg border border-[#315072] bg-[#091527]/80 p-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
-            <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">
+          <div className="rounded-lg border border-line bg-ink-raised p-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
+            <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.16em] text-chalk-faint">
               <span>{copy.dashboardTitle}</span>
               <span>Zoom: {(ui.zoom * 100).toFixed(0)}%</span>
             </div>
@@ -277,26 +319,17 @@ export default function StudioPage({ language }: StudioPageProps) {
         </section>
       </div>
 
-      <RouteFirewallPanel language={language} />
+      <TableTabs tabs={studioTabs} defaultTabId="rotas" />
 
-      <SiteVlanPanel language={language} />
-
-      <EquipmentInventoryPanel language={language} />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <CustomServicePanel />
-        <CertificatePanel />
-      </div>
-
-      <div className="w-full rounded-lg border border-[#315072] bg-[#0b172a]/75 px-3 py-2 text-xs text-slate-300">
+      <div className="w-full rounded-lg border border-line bg-ink-raised px-3 py-2 text-xs text-chalk-dim">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
             <div>
               {copy.localPersistence}:{' '}
-              <span className="font-semibold text-emerald-300">JSON</span>
+              <span className="font-semibold text-signal-up">JSON</span>
             </div>
             {meta.persistWarning && (
-              <div className="text-amber-300">
+              <div className="text-signal-warn">
                 {copy.warning}: {meta.persistWarning}
               </div>
             )}
@@ -304,13 +337,13 @@ export default function StudioPage({ language }: StudioPageProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenPrintModal}
-              className="rounded-md border border-emerald-400/60 bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-200 transition hover:bg-emerald-500/30"
+              className="rounded-sm border border-signal-up/60 bg-signal-up/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal-up transition hover:bg-signal-up/20"
             >
               {copy.printPdf}
             </button>
             <button
               onClick={handleReset}
-              className="rounded-md border border-rose-400/60 bg-rose-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-rose-200 transition hover:bg-rose-500/30"
+              className="rounded-sm border border-signal-down/60 bg-signal-down/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal-down transition hover:bg-signal-down/20"
             >
               {copy.resetData}
             </button>
@@ -319,23 +352,23 @@ export default function StudioPage({ language }: StudioPageProps) {
       </div>
 
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4">
-          <div className="w-full max-w-md rounded-xl border border-[#315072] bg-[#0b172a] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-sky-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 px-4">
+          <div className="w-full max-w-md rounded-xl border border-line bg-ink-raised p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
               {copy.confirmReset}
             </h3>
-            <p className="mt-2 text-sm text-slate-200">{copy.resetQuestion}</p>
+            <p className="mt-2 text-sm text-chalk-dim">{copy.resetQuestion}</p>
 
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
                 onClick={() => setIsResetModalOpen(false)}
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-200 transition hover:bg-slate-700"
+                className="rounded-sm border border-line bg-ink-raised-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised"
               >
                 {copy.cancel}
               </button>
               <button
                 onClick={confirmReset}
-                className="rounded-md border border-rose-400/60 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-rose-200 transition hover:bg-rose-500/30"
+                className="rounded-sm border border-signal-down/60 bg-signal-down/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-signal-down transition hover:bg-signal-down/20"
               >
                 {copy.confirm}
               </button>
@@ -345,14 +378,14 @@ export default function StudioPage({ language }: StudioPageProps) {
       )}
 
       {isPrintModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4">
-          <div className="w-full max-w-md rounded-xl border border-[#315072] bg-[#0b172a] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 px-4">
+          <div className="w-full max-w-md rounded-xl border border-line bg-ink-raised p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-signal-up">
               {copy.confirmPrint}
             </h3>
-            <p className="mt-2 text-sm text-slate-200">{copy.printWarning}</p>
+            <p className="mt-2 text-sm text-chalk-dim">{copy.printWarning}</p>
 
-            <label className="mt-3 flex items-start gap-2 text-sm text-slate-200">
+            <label className="mt-3 flex items-start gap-2 text-sm text-chalk-dim">
               <input
                 type="checkbox"
                 checked={printShowLinkDescriptions}
@@ -360,7 +393,7 @@ export default function StudioPage({ language }: StudioPageProps) {
                   setPrintShowLinkDescriptions(event.target.checked)
                 }
                 disabled={isGeneratingPdf}
-                className="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-900 text-emerald-400 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-0.5 h-4 w-4 rounded border-line bg-ink-raised-2 text-accent focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
               />
               <span>{copy.printShowLinkDescriptions}</span>
             </label>
@@ -369,14 +402,14 @@ export default function StudioPage({ language }: StudioPageProps) {
               <button
                 onClick={() => setIsPrintModalOpen(false)}
                 disabled={isGeneratingPdf}
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-sm border border-line bg-ink-raised-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {copy.exit}
               </button>
               <button
                 onClick={confirmPrint}
                 disabled={isGeneratingPdf}
-                className="rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-sm border border-signal-up/60 bg-signal-up/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-signal-up transition hover:bg-signal-up/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isGeneratingPdf ? copy.generatingPdf : copy.print}
               </button>
