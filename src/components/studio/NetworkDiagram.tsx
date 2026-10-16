@@ -16,6 +16,7 @@ import {
   removeLayerRow,
   removeLink,
   removeNode,
+  reorderLayer,
   setActiveLinkId,
   setNodeOriginSite,
   setZoom,
@@ -41,6 +42,8 @@ import {
   getAvailableVlanCapacityForNode,
   getNodeReservedRange,
   getSiteReserveRange,
+  isFixedFirstTier,
+  isFixedLastTier,
 } from '../../features/network/utils';
 import {
   BASE_Y,
@@ -58,6 +61,7 @@ import {
   parseVlans,
   pixelToCell,
   RELATION_OPTION_CATEGORIES,
+  resolveLayerDrop,
   resolveLinkDescription,
   resolveLinkVisual,
   serializeCsvItems,
@@ -416,6 +420,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             rows: layer.rows,
             canRemoveRow,
             canRemoveColumn,
+            // Sprint tiers Fase 4 — só pra `movable` saber se é âncora fixa.
+            tier: layer.tier,
           });
         });
       }
@@ -862,7 +868,11 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           go.Group,
           'Spot',
           {
-            movable: false,
+            // Sprint tiers Fase 4 — arrastável (exceto edge/endpoint, ver
+            // binding abaixo); o reposicionamento real (row/slot) só é
+            // decidido no drop, pelo listener `SelectionMoved` mais abaixo
+            // (`resolveLayerDrop`), nunca durante o arrasto em si.
+            movable: true,
             selectable: true,
             locationSpot: go.Spot.TopLeft,
             // O `loc` (abaixo) precisa mapear exatamente pro topo-esquerda do
@@ -874,6 +884,11 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             locationObjectName: 'LAYER_BG',
           },
           new go.Binding('location', 'loc', go.Point.parse),
+          new go.Binding(
+            'movable',
+            'tier',
+            (tier) => !isFixedFirstTier(tier) && !isFixedLastTier(tier),
+          ),
           $(
             go.Panel,
             'Auto',
@@ -1528,6 +1543,61 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
       diagram.addDiagramListener('SelectionMoved', (event) => {
         event.subject.each((part: go.Part) => {
+          // Sprint tiers Fase 4 — reposicionamento de tier via arrasto no
+          // quadro. `go.Group` é subtipo de `go.Node` no GoJS, então esse
+          // branch precisa vir antes do `data.nodeId` abaixo (camadas não
+          // têm `nodeId`, só `layerId`).
+          if (part instanceof go.Group) {
+            const groupData = part.data as
+              | { layerId?: string; category?: string }
+              | undefined;
+            if (groupData?.category !== 'layer' || !groupData.layerId) return;
+            const layerId = groupData.layerId;
+            const layer = layersRef.current.find((l) => l.id === layerId);
+            if (!layer) return;
+
+            const snapBackToCanonicalPosition = () => {
+              const rect = layerRectByIdRef.current.get(layerId);
+              if (rect) part.location = new go.Point(rect.x, rect.y);
+            };
+
+            if (isFixedFirstTier(layer.tier) || isFixedLastTier(layer.tier)) {
+              snapBackToCanonicalPosition(); // edge/endpoint nunca movem
+              return;
+            }
+
+            const layersInLan = layersRef.current.filter(
+              (l) =>
+                l.siteId === layer.siteId &&
+                (l.networkId ?? null) === (layer.networkId ?? null),
+            );
+
+            const result = resolveLayerDrop({
+              movedLayerId: layerId,
+              dropPoint: { x: part.location.x, y: part.location.y },
+              layersInLan,
+              getRect: (id) => layerRectByIdRef.current.get(id),
+              canShrinkColumn: (id) => {
+                const target = layersRef.current.find((l) => l.id === id);
+                if (!target || target.columns <= MIN_LAYER_COLUMNS) {
+                  return false;
+                }
+                const lastColumn = target.columns - 1;
+                return !Array.from(nodesByIdRef.current.values()).some(
+                  (n) => n.layerId === id && n.col === lastColumn,
+                );
+              },
+            });
+
+            if (!result) {
+              snapBackToCanonicalPosition(); // sem espaço pra encolher — bloqueia
+              return;
+            }
+
+            dispatch(reorderLayer(result));
+            return;
+          }
+
           if (!(part instanceof go.Node)) return;
           const data = part.data as { nodeId?: string };
           if (!data?.nodeId) return;

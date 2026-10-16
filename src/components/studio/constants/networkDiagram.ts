@@ -11,3 +11,5 @@ export const LAYER_VERTICAL_GAP = 22;
 export const SITE_BOTTOM_PADDING = 24;
 export const CENTER_CHANNEL_WIDTH = 140;
 export const EMPTY_SITE_HEIGHT = 190;
+/** Sprint tiers — espaçamento horizontal entre duas tiers que dividem a mesma linha. */
+export const TIER_ROW_GAP = 20;

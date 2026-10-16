@@ -1,12 +1,12 @@
 import type { AppLanguage } from '../types/i18n';
 import type {
-    AuthErrorCopy,
-    LandingPageCopy,
-    LoginPageCopy,
-    ProjectsPageCopy,
-    RegisterPageCopy,
-    SettingsModalCopy,
-    UserMenuCopy,
+  AuthErrorCopy,
+  LandingPageCopy,
+  LoginPageCopy,
+  ProjectsPageCopy,
+  RegisterPageCopy,
+  SettingsModalCopy,
+  UserMenuCopy,
 } from './types';
 
 export const LANDING_PAGE_COPY: Record<AppLanguage, LandingPageCopy> = {
@@ -108,7 +108,8 @@ export const LANDING_PAGE_COPY: Record<AppLanguage, LandingPageCopy> = {
           'Export the diagram, tables and annexes into a document ready to hand to your client.',
       },
     ],
-    footerNote: 'Project saved per account — pick up right where you left off, anywhere.',
+    footerNote:
+      'Project saved per account — pick up right where you left off, anywhere.',
   },
   es: {
     brand: 'RED · STUDIO',
@@ -261,11 +262,19 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     subtitle: 'Continue um projeto salvo ou comece um novo.',
     newProjectButton: '+ Novo projeto',
     emptyStateTitle: 'Nenhum projeto ainda',
-    emptyStateSubtitle: 'Crie o primeiro projeto pra começar a modelar sua rede.',
+    emptyStateSubtitle:
+      'Crie o primeiro projeto pra começar a modelar sua rede.',
     lastEditedLabel: 'Editado em',
     openProject: 'Abrir',
     newProjectModalTitle: 'Novo projeto',
     projectNameLabel: 'Nome do projeto',
+    networkTypeLabel: 'Tipo de rede',
+    networkTypeOptions: {
+      ON_PREMISE: 'On-premise',
+      CLOUD: 'Cloud',
+      MULTI_CLOUD: 'Multi-cloud',
+      HYBRID: 'Mista',
+    },
     createButton: 'Criar projeto',
     creating: 'Criando...',
     cancelButton: 'Cancelar',
@@ -277,11 +286,19 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     subtitle: 'Continue a saved project or start a new one.',
     newProjectButton: '+ New project',
     emptyStateTitle: 'No projects yet',
-    emptyStateSubtitle: 'Create your first project to start modeling your network.',
+    emptyStateSubtitle:
+      'Create your first project to start modeling your network.',
     lastEditedLabel: 'Last edited',
     openProject: 'Open',
     newProjectModalTitle: 'New project',
     projectNameLabel: 'Project name',
+    networkTypeLabel: 'Network type',
+    networkTypeOptions: {
+      ON_PREMISE: 'On-premise',
+      CLOUD: 'Cloud',
+      MULTI_CLOUD: 'Multi-cloud',
+      HYBRID: 'Hybrid',
+    },
     createButton: 'Create project',
     creating: 'Creating...',
     cancelButton: 'Cancel',
@@ -293,11 +310,19 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     subtitle: 'Continúa un proyecto guardado o empieza uno nuevo.',
     newProjectButton: '+ Nuevo proyecto',
     emptyStateTitle: 'Aún no hay proyectos',
-    emptyStateSubtitle: 'Crea tu primer proyecto para empezar a modelar tu red.',
+    emptyStateSubtitle:
+      'Crea tu primer proyecto para empezar a modelar tu red.',
     lastEditedLabel: 'Editado el',
     openProject: 'Abrir',
     newProjectModalTitle: 'Nuevo proyecto',
     projectNameLabel: 'Nombre del proyecto',
+    networkTypeLabel: 'Tipo de red',
+    networkTypeOptions: {
+      ON_PREMISE: 'On-premise',
+      CLOUD: 'Cloud',
+      MULTI_CLOUD: 'Multi-cloud',
+      HYBRID: 'Mixta',
+    },
     createButton: 'Crear proyecto',
     creating: 'Creando...',
     cancelButton: 'Cancelar',
@@ -352,7 +377,8 @@ export const SETTINGS_MODAL_COPY: Record<AppLanguage, SettingsModalCopy> = {
     title: 'Configuración',
     nameLabel: 'Nombre',
     languageLabel: 'Idioma',
-    passwordNote: 'La contraseña se puede cambiar desde la pantalla de inicio de sesión.',
+    passwordNote:
+      'La contraseña se puede cambiar desde la pantalla de inicio de sesión.',
     saveButton: 'Guardar',
     saving: 'Guardando...',
     cancelButton: 'Cancelar',
@@ -367,7 +393,8 @@ export const AUTH_ERROR_COPY: Record<AppLanguage, AuthErrorCopy> = {
     USER_NOT_FOUND: 'Usuário não encontrado.',
     NOT_AUTHENTICATED: 'Você precisa estar logado.',
     VALIDATION_ERROR: 'Dados inválidos. Confira os campos e tente novamente.',
-    OAUTH_FAILED: 'Não foi possível continuar com esse provedor. Tente novamente.',
+    OAUTH_FAILED:
+      'Não foi possível continuar com esse provedor. Tente novamente.',
     GENERIC: 'Algo deu errado. Tente novamente.',
   },
   en: {

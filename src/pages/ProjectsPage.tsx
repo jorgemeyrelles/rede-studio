@@ -3,11 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import NewProjectModal from '../components/NewProjectModal';
 import { useSessionQuery } from '../features/auth/queries';
 import {
-    useCreateProjectMutation,
-    useProjectsQuery,
-    useRenameProjectMutation,
+  useCreateProjectMutation,
+  useProjectsQuery,
+  useRenameProjectMutation,
 } from '../features/projects/queries';
-import type { ProjectSummary } from '../features/projects/types';
+import type {
+  ProjectNetworkType,
+  ProjectSummary,
+} from '../features/projects/types';
 import type { ProjectsPageCopy } from '../i18n/types';
 import { getProjectsPageCopy } from '../i18n/utils';
 import type { AppLanguage } from '../types/i18n';
@@ -44,6 +47,10 @@ function ProjectCard({
         className="absolute left-0 top-0 h-full w-[3px] bg-accent"
         aria-hidden="true"
       />
+      <span className="rounded-sm bg-ink-raised px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-chalk-faint">
+        {copy.networkTypeOptions[project.networkType]}
+      </span>
+
       {isEditing ? (
         <input
           autoFocus
@@ -109,11 +116,17 @@ export default function ProjectsPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isCreating, setCreating] = useState(false);
 
-  const handleCreate = async (name: string) => {
+  const handleCreate = async (
+    name: string,
+    networkType: ProjectNetworkType,
+  ) => {
     if (!currentUser) return;
     setCreating(true);
     try {
-      const record = await createProjectMutation.mutateAsync({ name });
+      const record = await createProjectMutation.mutateAsync({
+        name,
+        networkType,
+      });
       navigate(`/${language}/studio/${record.id}`);
     } finally {
       setCreating(false);

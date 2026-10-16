@@ -86,6 +86,14 @@ const TIER_PRESETS: {
     badge: 'bg-green-800 text-green-100',
   },
   {
+    tier: 'server',
+    emoji: '🟣',
+    label: 'Servidores',
+    sub: 'App / DB / Storage',
+    color: 'border-fuchsia-600/70 bg-fuchsia-950/30 hover:bg-fuchsia-900/40',
+    badge: 'bg-fuchsia-700 text-fuchsia-100',
+  },
+  {
     tier: 'endpoint',
     emoji: '⚫',
     label: 'Endpoints',
@@ -527,7 +535,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
         <ul className="space-y-1 px-2 pb-2">
           {layer.nodes.length === 0 && (
-            <li className="text-[11px] text-chalk-faint">{copy.noComponents}</li>
+            <li className="text-[11px] text-chalk-faint">
+              {copy.noComponents}
+            </li>
           )}
           {layer.nodes.map((node) => {
             const visual = getNodeVisual(node.category);
@@ -635,10 +645,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
 
       <div className="space-y-2">
         {relationNodes.length > 0 && (
-          <details
-            open
-            className="rounded border border-line bg-ink-raised-2"
-          >
+          <details open className="rounded border border-line bg-ink-raised-2">
             <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-chalk">
               {copy.relationBetweenSites}
             </summary>
@@ -697,11 +704,7 @@ export default function LegendPanel({ language }: LegendPanelProps) {
         )}
 
         {legendTree.map((site) => (
-          <details
-            key={site.id}
-            open
-            className="rounded border border-line"
-          >
+          <details key={site.id} open className="rounded border border-line">
             <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm text-chalk">
               <span>{site.name}</span>
               <div className="flex gap-1">
@@ -1165,7 +1168,9 @@ export default function LegendPanel({ language }: LegendPanelProps) {
                               <span>{network.ipv6Prefix || '—'}</span>
                             </div>
                             <div className="flex justify-between gap-2">
-                              <span className="text-chalk-faint">IPv6 VLAN</span>
+                              <span className="text-chalk-faint">
+                                IPv6 VLAN
+                              </span>
                               <span>/{network.ipv6VlanPrefixLength ?? 64}</span>
                             </div>
                             <div className="flex justify-between gap-2">

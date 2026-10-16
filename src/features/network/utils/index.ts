@@ -6,3 +6,4 @@ export * from './acl';
 export * from './route';
 export * from './tech-profiles';
 export * from './persistence';
+export * from './tierRules';

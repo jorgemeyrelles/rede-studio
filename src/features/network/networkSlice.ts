@@ -47,6 +47,7 @@ import type {
   RemoveSslVpnProfilePayload,
   RemoveSubnetPayload,
   ReorderCustomAclRulePayload,
+  ReorderLayerPayload,
   SetAclChildOverridePayload,
   SetNodeOriginSitePayload,
   SetVlanAssignmentPayload,
@@ -98,6 +99,8 @@ import {
   numberToIp,
   parseTrailingNumber,
   reconcileAclRules,
+  resolveNewLayerPosition,
+  isRowSharedTier,
   siteOwnsVlan,
   siteRangeBounds,
   suggestAclRuleQoS,
@@ -118,6 +121,7 @@ const REMOTE_TIER_LABELS: Record<import('./types/entities').LayerTier, string> =
     edge: 'Borda / Edge',
     distribution: 'Distribuição',
     access: 'Acesso',
+    server: 'Servidores',
     endpoint: 'Endpoints',
     dmz: 'DMZ',
     management: 'Gerência',
@@ -237,6 +241,32 @@ export const networkInitialState: NetworkState = {
 
 function getLayerOrder(layers: Layer[], siteId: string) {
   return layers.filter((layer) => layer.siteId === siteId).length + 1;
+}
+
+/**
+ * Sprint tiers — mesmo guard de `removeLayerColumn`: só dá pra encolher se
+ * estiver acima de `MIN_LAYER_COLUMNS` e nenhum nó ocupar a última coluna.
+ */
+function canShrinkLayerColumn(state: NetworkState, layerId: string): boolean {
+  const layer = state.layers.find((item) => item.id === layerId);
+  if (!layer || layer.columns <= MIN_LAYER_COLUMNS) return false;
+  const lastColumn = layer.columns - 1;
+  return !state.nodes.some(
+    (node) => node.layerId === layer.id && node.col === lastColumn,
+  );
+}
+
+/**
+ * Sprint tiers — encolhe `layer.columns` em 1, se possível. Usado ao
+ * formar um par de tiers na mesma linha, pra as duas caberem lado a lado.
+ */
+function shrinkLayerColumnIfPossible(state: NetworkState, layerId: string) {
+  if (!canShrinkLayerColumn(state, layerId)) return;
+  const layer = state.layers.find((item) => item.id === layerId)!;
+  layer.columns -= 1;
+  const { width, height } = computeLayerGridSize(layer.columns, layer.rows);
+  layer.width = width;
+  layer.height = height;
 }
 
 function shouldNodeBeGateway(
@@ -645,6 +675,13 @@ function normalizeState(input: NetworkState): NetworkState {
       rows,
       width: hasGrid ? layer.width : gridSize.width,
       height: hasGrid ? layer.height : gridSize.height,
+      // Sprint tiers Fase 6 — projeto salvo antes desta sprint não tem
+      // row/slot; cai pra `layerIndex` (mesma chave que `order` já usava
+      // como posição, antes de `row` existir), preservando o empilhamento
+      // em coluna única de sempre. Nunca deriva de `order` em si (que pode
+      // estar ausente em dados bem antigos) — `layerIndex` já trata isso.
+      row: layer.row ?? layerIndex,
+      slot: layer.slot ?? 0,
     };
   });
 
@@ -1845,6 +1882,31 @@ export const networkSlice = createSlice({
         layer.name = action.payload.name;
       }
     },
+    // Sprint tiers Fase 4 — reposicionamento via arrasto no quadro; nunca
+    // escreve em `order` (ver nota em `types/entities.ts`), só em `row`/`slot`.
+    reorderLayer: (state, action: PayloadAction<ReorderLayerPayload>) => {
+      const { kind, updates, mergedPairIds } = action.payload;
+
+      if (kind === 'merge' && mergedPairIds) {
+        const [a, b] = mergedPairIds;
+        const canShrinkA = canShrinkLayerColumn(state, a);
+        const canShrinkB = canShrinkLayerColumn(state, b);
+        if (!canShrinkA && !canShrinkB) return;
+      }
+
+      for (const update of updates) {
+        const layer = state.layers.find((l) => l.id === update.id);
+        if (!layer) continue;
+        layer.row = update.row;
+        layer.slot = update.slot;
+      }
+
+      if (kind === 'merge' && mergedPairIds) {
+        const [a, b] = mergedPairIds;
+        shrinkLayerColumnIfPossible(state, a);
+        shrinkLayerColumnIfPossible(state, b);
+      }
+    },
     updateNodeZone: (state, action: PayloadAction<UpdateNodeZonePayload>) => {
       const node = state.nodes.find((n) => n.id === action.payload.id);
       if (!node) return;
@@ -1868,6 +1930,7 @@ export const networkSlice = createSlice({
         edge: 'Borda / Edge',
         distribution: 'Distribuição',
         access: 'Acesso',
+        server: 'Servidores',
         endpoint: 'Endpoints',
         dmz: 'DMZ',
         management: 'Gerência',
@@ -1879,9 +1942,31 @@ export const networkSlice = createSlice({
           ? (tierDefaultNames[tier] ?? `Camada ${order}`)
           : `Camada ${order}`);
 
-      const columns = 4;
+      let columns = 4;
       const rows = 2;
-      const { width, height } = computeLayerGridSize(columns, rows);
+      let { width, height } = computeLayerGridSize(columns, rows);
+
+      // Sprint tiers — posição visual (row/slot), calculada a partir das
+      // demais camadas da mesma LAN (mesmo site + mesma rede lógica, ou
+      // mesmo site sem rede). Nunca deriva de `order`, que segue intocado.
+      const layersInLan = state.layers.filter(
+        (l) =>
+          l.siteId === siteId && (l.networkId ?? null) === (networkId ?? null),
+      );
+      const { row, slot } = resolveNewLayerPosition(tier, layersInLan);
+
+      // Ao formar o par distribution/access na mesma linha, cada uma perde
+      // 1 coluna de grid (se puder) pra caberem lado a lado — a camada nova
+      // ainda não tem nós, então encolher ela é sempre seguro.
+      if (isRowSharedTier(tier)) {
+        const pairTier = tier === 'distribution' ? 'access' : 'distribution';
+        const pairLayer = layersInLan.find((l) => l.tier === pairTier);
+        if (pairLayer) {
+          shrinkLayerColumnIfPossible(state, pairLayer.id);
+          columns = Math.max(MIN_LAYER_COLUMNS, columns - 1);
+          ({ width, height } = computeLayerGridSize(columns, rows));
+        }
+      }
 
       state.layers.push({
         id: layerId,
@@ -1899,6 +1984,8 @@ export const networkSlice = createSlice({
         rows,
         tier,
         networkId,
+        row,
+        slot,
       });
       state.counters.layer += 1;
     },
@@ -3240,6 +3327,7 @@ export const {
   addLayer,
   removeLayer,
   updateLayerTier,
+  reorderLayer,
   addLayerRow,
   addLayerColumn,
   removeLayerRow,

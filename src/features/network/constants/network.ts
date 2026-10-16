@@ -156,6 +156,7 @@ export const TIER_LABELS: Record<LayerTier, string> = {
   edge: 'Borda / Edge',
   distribution: 'Distribuição',
   access: 'Acesso',
+  server: 'Servidores',
   endpoint: 'Endpoints',
   dmz: 'DMZ',
   management: 'Gerência',
