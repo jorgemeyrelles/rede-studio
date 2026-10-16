@@ -12,6 +12,7 @@ import type {
   SubnetRouteRow,
 } from './types';
 import {
+  compareLayerForLegend,
   getNodeReservedRange,
   getSiteReserveRange,
   resolveGateway,
@@ -52,9 +53,12 @@ export const selectLegendTree = createSelector(
       const siteLayers = layers.filter((layer) => layer.siteId === site.id);
       const siteNets = (siteNetworks ?? []).filter((n) => n.siteId === site.id);
 
-      // Camadas sem networkId (legado ou n\u00e3o agrupadas)
+      // Camadas sem networkId (legado ou n\u00e3o agrupadas) \u2014 ordenadas pelo
+      // rank de rede (Sprint tiers Fase 5), n\u00e3o pela posi\u00e7\u00e3o lado a lado
+      // (slot) do quadro.
       const ungroupedLayers = siteLayers
         .filter((layer) => !layer.networkId)
+        .sort(compareLayerForLegend)
         .map(buildLayerEntry);
 
       // Redes com suas camadas aninhadas
@@ -62,6 +66,7 @@ export const selectLegendTree = createSelector(
         ...net,
         layers: siteLayers
           .filter((layer) => layer.networkId === net.id)
+          .sort(compareLayerForLegend)
           .map(buildLayerEntry),
       }));
 

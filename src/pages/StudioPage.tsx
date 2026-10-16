@@ -10,7 +10,9 @@ import NetworkDiagram from '../components/studio/NetworkDiagram';
 import { useRouteFirewallTabs } from '../components/studio/RouteFirewallPanel';
 import SiteVlanPanel from '../components/studio/SiteVlanPanel';
 import StudioToolbar from '../components/studio/StudioToolbar';
-import TableTabs, { type TableTabDescriptor } from '../components/studio/TableTabs';
+import TableTabs, {
+  type TableTabDescriptor,
+} from '../components/studio/TableTabs';
 import {
   generateStudioPdfReport,
   getStudioPageCopy,
@@ -20,6 +22,7 @@ import {
   getEquipmentInventoryCopy,
   getSiteVlanCopy,
 } from '../components/studio/utils/i18n';
+import { useSessionQuery } from '../features/auth/queries';
 import { useEquipmentsQuery } from '../features/equipments/queries';
 import { findEquipmentCatalogMatch } from '../features/equipments/utils';
 import {
@@ -32,7 +35,11 @@ import {
   selectRouteTable,
 } from '../features/network/selectors';
 import { useAutosave } from '../features/network/useAutosave';
-import { useRenameProjectMutation } from '../features/projects/queries';
+import {
+  useProjectsQuery,
+  useRenameProjectMutation,
+} from '../features/projects/queries';
+import { getProjectsPageCopy } from '../i18n/utils';
 
 export default function StudioPage({ language }: StudioPageProps) {
   const dispatch = useAppDispatch();
@@ -46,6 +53,12 @@ export default function StudioPage({ language }: StudioPageProps) {
   const equipmentCatalogQuery = useEquipmentsQuery();
   const { forceSave } = useAutosave();
   const renameProjectMutation = useRenameProjectMutation();
+  // Sprint tiers Fase 7 — networkType vive em ProjectSummary, não no slice
+  // `network` (é metadado do projeto, não estado de domínio da topologia).
+  const { data: currentUser } = useSessionQuery();
+  const { data: projects = [] } = useProjectsQuery(currentUser?.id);
+  const activeProject = projects.find((project) => project.id === projectId);
+  const projectsCopy = getProjectsPageCopy(language);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -253,6 +266,11 @@ export default function StudioPage({ language }: StudioPageProps) {
                       ✎
                     </span>
                   </button>
+                )}
+                {activeProject && (
+                  <span className="mt-1 inline-block rounded-sm bg-ink-raised-2 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-chalk-faint">
+                    {projectsCopy.networkTypeOptions[activeProject.networkType]}
+                  </span>
                 )}
                 <p className="mt-1 text-xs text-chalk-dim">{copy.infoHint}</p>
               </div>

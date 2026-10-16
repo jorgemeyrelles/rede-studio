@@ -53,6 +53,13 @@ export type RegisterPageCopy = {
   continueWithMicrosoft: string;
 };
 
+export type ProjectNetworkTypeCopy = {
+  ON_PREMISE: string;
+  CLOUD: string;
+  MULTI_CLOUD: string;
+  HYBRID: string;
+};
+
 export type ProjectsPageCopy = {
   title: string;
   subtitle: string;
@@ -63,6 +70,8 @@ export type ProjectsPageCopy = {
   openProject: string;
   newProjectModalTitle: string;
   projectNameLabel: string;
+  networkTypeLabel: string;
+  networkTypeOptions: ProjectNetworkTypeCopy;
   createButton: string;
   creating: string;
   cancelButton: string;

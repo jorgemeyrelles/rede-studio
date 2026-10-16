@@ -81,6 +81,20 @@ export type UpdateLayerTierPayload = {
   name?: string;
 };
 
+/**
+ * Sprint tiers Fase 4 — payload do reposicionamento via arrasto no quadro.
+ * `updates` já vem resolvido por `resolveLayerDrop` (função pura em
+ * `components/studio/utils/networkDiagram.ts`); o reducer só aplica
+ * `(row, slot)` e, se for `kind: 'merge'`, tenta encolher 1 coluna de
+ * grid de cada camada do par (ou rejeita a ação inteira se nenhuma
+ * puder encolher).
+ */
+export type ReorderLayerPayload = {
+  kind: 'merge' | 'reindex';
+  updates: Array<{ id: string; row: number; slot: 0 | 1 }>;
+  mergedPairIds?: [string, string];
+};
+
 export type UpdateNodeZonePayload = {
   id: string;
   zone: string | undefined;
