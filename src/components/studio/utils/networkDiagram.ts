@@ -1,16 +1,24 @@
 import type { NodeItem, Site } from '../../../features/network/types';
 import {
-    BASE_Y,
-    CENTER_CHANNEL_WIDTH,
-    DIAGRAM_SIDE_PADDING,
-    EMPTY_SITE_HEIGHT,
-    GRID_COLUMN_GAP,
-    GRID_ROW_GAP,
-    INTER_NETWORK_GAP,
-    LAYER_TOP_OFFSET,
-    LAYER_VERTICAL_GAP,
-    SITE_BOTTOM_PADDING,
-    WAN_Y,
+  groupLayersByRow,
+  isFixedFirstTier,
+  isFixedLastTier,
+  MAX_TIERS_PER_ROW,
+  type PositionableLayer,
+} from '../../../features/network/utils/tierRules';
+import {
+  BASE_Y,
+  CENTER_CHANNEL_WIDTH,
+  DIAGRAM_SIDE_PADDING,
+  EMPTY_SITE_HEIGHT,
+  GRID_COLUMN_GAP,
+  GRID_ROW_GAP,
+  INTER_NETWORK_GAP,
+  LAYER_TOP_OFFSET,
+  LAYER_VERTICAL_GAP,
+  SITE_BOTTOM_PADDING,
+  TIER_ROW_GAP,
+  WAN_Y,
 } from '../constants';
 export {
   cellToPixel,
@@ -20,6 +28,138 @@ export {
   pixelToCell,
 } from '../../../features/network/utils/grid';
 import type { GridLayoutResult, TooltipPlacement } from '../types';
+
+type GridLayoutLayer = PositionableLayer & {
+  siteId: string;
+  width: number;
+  height: number;
+  networkId?: string;
+};
+
+function computeRowWidth(row: GridLayoutLayer[]): number {
+  if (row.length === 0) return 0;
+  return (
+    row.reduce((sum, layer) => sum + layer.width, 0) +
+    TIER_ROW_GAP * (row.length - 1)
+  );
+}
+
+function computeRowHeight(row: GridLayoutLayer[]): number {
+  return row.reduce((max, layer) => Math.max(max, layer.height), 0);
+}
+
+export type LayerReorderUpdate = { id: string; row: number; slot: 0 | 1 };
+
+export type LayerDropResult =
+  | {
+      kind: 'merge';
+      updates: LayerReorderUpdate[];
+      mergedPairIds: [string, string];
+    }
+  | { kind: 'reindex'; updates: LayerReorderUpdate[] };
+
+/**
+ * Sprint tiers Fase 4 — resolve o alvo de um arrasto de tier no quadro:
+ * decide se a camada arrastada funde numa linha já existente (formando um
+ * par lado a lado) ou se abre uma linha nova entre as demais, e devolve a
+ * lista de `(row, slot)` a aplicar. `null` quando o arrasto deve ser
+ * rejeitado (âncora fixa, ou formaria um par mas nenhuma das duas camadas
+ * tem como encolher 1 coluna de grid pra caber ao lado da outra).
+ *
+ * Função pura — não lê nem escreve Redux; quem chama decide o que fazer
+ * com o resultado (inclusive desfazer visualmente uma rejeição).
+ */
+export function resolveLayerDrop({
+  movedLayerId,
+  dropPoint,
+  layersInLan,
+  getRect,
+  canShrinkColumn,
+}: {
+  movedLayerId: string;
+  dropPoint: { x: number; y: number };
+  /** Todas as camadas da mesma LAN (mesmo site + mesma rede lógica), incluindo a arrastada. */
+  layersInLan: GridLayoutLayer[];
+  /** Posição canônica atual (pré-arrasto) de uma camada, pelo id. */
+  getRect: (layerId: string) => { x: number; y: number } | undefined;
+  /** Se a camada ainda pode perder 1 coluna de grid sem cortar um nó. */
+  canShrinkColumn: (layerId: string) => boolean;
+}): LayerDropResult | null {
+  const moved = layersInLan.find((l) => l.id === movedLayerId);
+  if (!moved) return null;
+  if (isFixedFirstTier(moved.tier) || isFixedLastTier(moved.tier)) return null;
+
+  const middleOthers = layersInLan.filter(
+    (l) =>
+      l.id !== movedLayerId &&
+      !isFixedFirstTier(l.tier) &&
+      !isFixedLastTier(l.tier),
+  );
+  const existingRows = groupLayersByRow(middleOthers);
+
+  if (existingRows.length === 0) {
+    return { kind: 'reindex', updates: [{ id: moved.id, row: 10, slot: 0 }] };
+  }
+
+  // Linha existente mais próxima do ponto solto, por distância vertical.
+  let nearestIndex = 0;
+  let nearestDist = Infinity;
+  existingRows.forEach((row, index) => {
+    const pos = getRect(row[0].id);
+    if (!pos) return;
+    const dist = Math.abs(pos.y - dropPoint.y);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestIndex = index;
+    }
+  });
+
+  const targetRow = existingRows[nearestIndex];
+  const targetPos = getRect(targetRow[0].id);
+  const targetRowValue = targetRow[0].row ?? targetRow[0].order;
+
+  const MERGE_THRESHOLD_PX = 40;
+  const canMerge = targetRow.length < MAX_TIERS_PER_ROW;
+  const shouldMerge =
+    canMerge && targetPos !== undefined && nearestDist <= MERGE_THRESHOLD_PX;
+
+  if (shouldMerge && targetPos) {
+    const existing = targetRow[0];
+    const canShrinkMoved = canShrinkColumn(moved.id);
+    const canShrinkExisting = canShrinkColumn(existing.id);
+    if (!canShrinkMoved && !canShrinkExisting) {
+      // Nenhuma das duas tem como encolher — bloqueia o reposicionamento.
+      return null;
+    }
+    const slotForMoved: 0 | 1 = dropPoint.x < targetPos.x ? 0 : 1;
+    const slotForExisting: 0 | 1 = slotForMoved === 0 ? 1 : 0;
+    return {
+      kind: 'merge',
+      mergedPairIds: [moved.id, existing.id],
+      updates: [
+        { id: moved.id, row: targetRowValue, slot: slotForMoved },
+        { id: existing.id, row: targetRowValue, slot: slotForExisting },
+      ],
+    };
+  }
+
+  // Insere como linha nova — reindexa todas as linhas do meio na ordem
+  // resultante (acima ou abaixo da linha mais próxima, conforme o y
+  // solto), preservando a composição de cada linha existente.
+  const insertBeforeTarget = targetPos ? dropPoint.y < targetPos.y : true;
+  const insertAt = insertBeforeTarget ? nearestIndex : nearestIndex + 1;
+  const newRowsOrder = existingRows.slice();
+  newRowsOrder.splice(insertAt, 0, [moved]);
+
+  const updates: LayerReorderUpdate[] = [];
+  newRowsOrder.forEach((row, index) => {
+    const rowValue = (index + 1) * 10;
+    row.forEach((layer, slot) => {
+      updates.push({ id: layer.id, row: rowValue, slot: slot as 0 | 1 });
+    });
+  });
+  return { kind: 'reindex', updates };
+}
 
 export function parseCsvItems(raw: string): string[] {
   return Array.from(
@@ -103,14 +243,7 @@ export function buildGridLayout({
   diagramWidth,
 }: {
   sites: Site[];
-  layers: Array<{
-    id: string;
-    siteId: string;
-    order: number;
-    width: number;
-    height: number;
-    networkId?: string;
-  }>;
+  layers: GridLayoutLayer[];
   diagramWidth: number;
 }): GridLayoutResult {
   const limitedSites = sites.slice(0, 4);
@@ -119,6 +252,13 @@ export function buildGridLayout({
   const siteMaxLayerWidths = new Map<string, number>();
   const layerPositions = new Map<string, { x: number; y: number }>();
   const sitePositions = new Map<string, { x: number; y: number }>();
+  // Linhas (já resolvidas por `groupLayersByRow`) de cada site, indexadas
+  // por grupo de rede (`null` = camadas soltas) — computadas no 1º passe e
+  // reaproveitadas no 2º, pra não duplicar o agrupamento.
+  const siteRowGroups = new Map<
+    string,
+    Map<string | null, GridLayoutLayer[][]>
+  >();
 
   // Default site width adapts to how many sites exist:
   //  • 1 site  → fills ~80% of the canvas (maximum breathing room)
@@ -138,18 +278,10 @@ export function buildGridLayout({
   const SITE_H_PADDING = 32; // padding horizontal interno do site (16 cada lado)
 
   for (const site of limitedSites) {
-    const siteLayers = layers
-      .filter((layer) => layer.siteId === site.id)
-      .sort((a, b) => a.order - b.order);
-
-    const maxLayerWidth = siteLayers.reduce(
-      (acc, layer) => Math.max(acc, layer.width),
-      0,
-    );
-    siteMaxLayerWidths.set(site.id, maxLayerWidth);
+    const siteLayers = layers.filter((layer) => layer.siteId === site.id);
 
     // Agrupar camadas por rede para determinar layout
-    const netGroups = new Map<string | null, typeof siteLayers>();
+    const netGroups = new Map<string | null, GridLayoutLayer[]>();
     siteLayers.forEach((layer) => {
       const key = layer.networkId ?? null;
       if (!netGroups.has(key)) netGroups.set(key, []);
@@ -157,6 +289,20 @@ export function buildGridLayout({
     });
     // Remover grupo vazio de camadas sem rede
     if ((netGroups.get(null) ?? []).length === 0) netGroups.delete(null);
+
+    // Linhas de cada rede — camadas ancoradas (edge/endpoint) isoladas,
+    // distribution+access (e tiers livres) já resolvidas lado a lado.
+    const rowsByGroup = new Map<string | null, GridLayoutLayer[][]>();
+    let maxLayerWidth = 0;
+    for (const [key, groupLayers] of netGroups) {
+      const rows = groupLayersByRow(groupLayers);
+      rowsByGroup.set(key, rows);
+      for (const row of rows) {
+        maxLayerWidth = Math.max(maxLayerWidth, computeRowWidth(row));
+      }
+    }
+    siteMaxLayerWidths.set(site.id, maxLayerWidth);
+    siteRowGroups.set(site.id, rowsByGroup);
 
     const isMultiNetwork =
       netGroups.size > 1 || (netGroups.size === 1 && !netGroups.has(null));
@@ -173,11 +319,12 @@ export function buildGridLayout({
         SITE_H_PADDING;
       // Altura = coluna mais alta
       let maxNetHeight = 0;
-      for (const [, netLayers] of netGroups) {
+      for (const [, rows] of rowsByGroup) {
         let netH = 0;
-        netLayers.forEach((layer, i) => {
+        rows.forEach((row, i) => {
           netH +=
-            layer.height + (i < netLayers.length - 1 ? LAYER_VERTICAL_GAP : 0);
+            computeRowHeight(row) +
+            (i < rows.length - 1 ? LAYER_VERTICAL_GAP : 0);
         });
         maxNetHeight = Math.max(maxNetHeight, netH);
       }
@@ -186,12 +333,14 @@ export function buildGridLayout({
         LAYER_TOP_OFFSET + maxNetHeight + SITE_BOTTOM_PADDING,
       );
     } else {
-      // Coluna única — comportamento legado
+      // Coluna única — comportamento legado, agora com linhas (que podem
+      // ter 1 ou 2 camadas lado a lado) em vez de camadas isoladas.
       width = maxLayerWidth > 0 ? maxLayerWidth + 64 : dynamicDefaultWidth;
+      const rows = rowsByGroup.get(null) ?? [];
       let stackedHeight = LAYER_TOP_OFFSET;
-      siteLayers.forEach((layer, index) => {
-        stackedHeight += layer.height;
-        if (index < siteLayers.length - 1) stackedHeight += LAYER_VERTICAL_GAP;
+      rows.forEach((row, index) => {
+        stackedHeight += computeRowHeight(row);
+        if (index < rows.length - 1) stackedHeight += LAYER_VERTICAL_GAP;
       });
       stackedHeight += SITE_BOTTOM_PADDING;
       computedHeight = Math.max(EMPTY_SITE_HEIGHT, stackedHeight);
@@ -320,39 +469,46 @@ export function buildGridLayout({
   for (const site of limitedSites) {
     const sitePos = sitePositions.get(site.id);
     if (!sitePos) continue;
-    const siteLayers = layers
-      .filter((layer) => layer.siteId === site.id)
-      .sort((a, b) => a.order - b.order);
     const siteWidth = getSiteWidth(site.id);
     const uniformLayerWidth = siteMaxLayerWidths.get(site.id) ?? 0;
+    const rowsByGroup = siteRowGroups.get(site.id) ?? new Map();
 
-    // Reagrupar por rede para o posicionamento
-    const netGroupsPos = new Map<string | null, typeof siteLayers>();
-    siteLayers.forEach((layer) => {
-      const key = layer.networkId ?? null;
-      if (!netGroupsPos.has(key)) netGroupsPos.set(key, []);
-      netGroupsPos.get(key)!.push(layer);
-    });
-    if ((netGroupsPos.get(null) ?? []).length === 0) netGroupsPos.delete(null);
-
+    const netGroupKeys = Array.from(rowsByGroup.keys());
     const isMultiNetworkPos =
-      netGroupsPos.size > 1 ||
-      (netGroupsPos.size === 1 && !netGroupsPos.has(null));
+      netGroupKeys.length > 1 ||
+      (netGroupKeys.length === 1 && netGroupKeys[0] !== null);
+
+    // Posiciona uma linha (1 ou 2 camadas lado a lado) centralizada dentro
+    // de `columnWidth`, a partir de `originX` (nunca com offset menor que
+    // `minOffset`); devolve a altura usada.
+    const placeRow = (
+      row: GridLayoutLayer[],
+      originX: number,
+      columnWidth: number,
+      y: number,
+      minOffset = 0,
+    ) => {
+      const rowWidth = computeRowWidth(row);
+      const rowXOffset = Math.max(minOffset, (columnWidth - rowWidth) / 2);
+      let cursorX = originX + rowXOffset;
+      for (const layer of row) {
+        layerPositions.set(layer.id, { x: cursorX, y });
+        cursorX += layer.width + TIER_ROW_GAP;
+      }
+      return computeRowHeight(row);
+    };
 
     if (!isMultiNetworkPos) {
       // Coluna única — comportamento legado (centralizado)
+      const rows = rowsByGroup.get(null) ?? [];
       let cursorY = sitePos.y + LAYER_TOP_OFFSET;
-      siteLayers.forEach((layer) => {
-        const layerXOffset = Math.max(24, (siteWidth - uniformLayerWidth) / 2);
-        layerPositions.set(layer.id, {
-          x: sitePos.x + layerXOffset,
-          y: cursorY,
-        });
-        cursorY += layer.height + LAYER_VERTICAL_GAP;
-      });
+      for (const row of rows) {
+        const rowHeight = placeRow(row, sitePos.x, siteWidth, cursorY, 24);
+        cursorY += rowHeight + LAYER_VERTICAL_GAP;
+      }
     } else {
       // Redes lado a lado — cada rede ocupa uma coluna
-      const netColumnCount = netGroupsPos.size;
+      const netColumnCount = netGroupKeys.length;
       const occupiedWidth =
         netColumnCount * uniformLayerWidth +
         (netColumnCount - 1) * INTER_NETWORK_GAP;
@@ -371,16 +527,13 @@ export function buildGridLayout({
       let colX = shouldRightAlignInsideSite
         ? rightAlignedStart
         : leftAlignedStart;
-      for (const [, netLayers] of netGroupsPos) {
-        if (netLayers.length === 0) continue;
+      for (const [, rows] of rowsByGroup) {
+        if (rows.length === 0) continue;
         let cursorY = sitePos.y + LAYER_TOP_OFFSET;
-        netLayers
-          .slice()
-          .sort((a, b) => a.order - b.order)
-          .forEach((layer) => {
-            layerPositions.set(layer.id, { x: colX, y: cursorY });
-            cursorY += layer.height + LAYER_VERTICAL_GAP;
-          });
+        for (const row of rows) {
+          const rowHeight = placeRow(row, colX, uniformLayerWidth, cursorY);
+          cursorY += rowHeight + LAYER_VERTICAL_GAP;
+        }
         colX += uniformLayerWidth + INTER_NETWORK_GAP;
       }
     }
@@ -521,4 +674,3 @@ export function resolveLinkDescription(
   }
   return `${fromLabel} ${arrow} ${toLabel}`;
 }
-

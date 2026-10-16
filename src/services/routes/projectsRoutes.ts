@@ -2,23 +2,24 @@ import { MAX_BYTES } from '../../features/network/constants';
 import { networkInitialState } from '../../features/network/networkSlice';
 import type { NetworkState } from '../../features/network/types';
 import type {
-    CreateProjectInput,
-    ProjectRecord,
-    ProjectSummary,
+  CreateProjectInput,
+  ProjectNetworkType,
+  ProjectRecord,
+  ProjectSummary,
 } from '../../features/projects/types';
 import type { StatePersistenceResult } from '../_core';
 import {
-    loadProjectsDocument,
-    saveProjectsDocument,
+  loadProjectsDocument,
+  saveProjectsDocument,
 } from '../_core/projectsPersistence';
 import { loadStateDocument } from '../_core/statePersistence';
 import {
-    ApiError,
-    httpDelete,
-    httpGet,
-    httpPatch,
-    httpPost,
-    httpPut,
+  ApiError,
+  httpDelete,
+  httpGet,
+  httpPatch,
+  httpPost,
+  httpPut,
 } from '../_core/httpClient';
 
 /** Corpo comum retornado pela rede-studio-api em POST/GET/PATCH/PUT de projeto. */
@@ -26,6 +27,7 @@ type ProjectSummaryResponse = {
   id: string;
   name: string;
   ownerId: string;
+  networkType: ProjectNetworkType;
   createdAt: string;
   updatedAt: string;
 };
@@ -114,7 +116,11 @@ export async function createProject(
     JSON.stringify(networkInitialState),
   );
   const response = await httpPost<ProjectResponse>('/api/projects', {
-    body: { name: input.name.trim() || 'Novo Projeto', networkState },
+    body: {
+      name: input.name.trim() || 'Novo Projeto',
+      networkType: input.networkType,
+      networkState,
+    },
   });
   return cacheProject(response);
 }
@@ -194,7 +200,8 @@ export async function saveProjectSnapshot(
     if (err instanceof ApiError && err.isUnauthorized) throw err;
     return {
       ok: false,
-      warning: 'Salvo localmente, mas não foi possível sincronizar com o servidor.',
+      warning:
+        'Salvo localmente, mas não foi possível sincronizar com o servidor.',
     };
   }
 }
@@ -223,7 +230,12 @@ export async function migrateLegacyProjectIfNeeded(): Promise<ProjectSummary | n
 
   try {
     const response = await httpPost<ProjectResponse>('/api/projects', {
-      body: { name: 'Projeto migrado', networkState: legacyState },
+      // Projeto pré-contas só existia local, no navegador — sempre on-premise.
+      body: {
+        name: 'Projeto migrado',
+        networkType: 'ON_PREMISE' satisfies ProjectNetworkType,
+        networkState: legacyState,
+      },
     });
     const record = cacheProject(response);
     const latestDocument = loadProjectsDocument();

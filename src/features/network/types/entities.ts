@@ -6,6 +6,7 @@ export type LayerTier =
   | 'edge'
   | 'distribution'
   | 'access'
+  | 'server'
   | 'endpoint'
   | 'dmz'
   | 'management'
@@ -140,6 +141,14 @@ export type Layer = {
   id: string;
   siteId: string;
   name: string;
+  /**
+   * Sprint tiers — chave de criação/endereçamento, atribuída uma única vez
+   * em `addLayer` (nunca reescrita depois). É consumida por
+   * `buildNodeLabel`/`buildNodeIp`/`buildNodeIpv6`/`shouldNodeBeGateway`/
+   * `getTechProfileWarnings` — deliberadamente independente da posição
+   * visual da camada. Reposicionamento (`row`/`slot` abaixo) nunca deve
+   * escrever neste campo.
+   */
   order: number;
   width: number;
   height: number;
@@ -154,6 +163,16 @@ export type Layer = {
   tier?: LayerTier;
   /** Fase 2 — rede lógica à qual esta camada pertence */
   networkId?: string;
+  /**
+   * Sprint tiers — posição visual dentro da LAN (site ou rede lógica),
+   * independente de `order`. Camadas com o mesmo `row` dividem a mesma
+   * linha no quadro (até `MAX_TIERS_PER_ROW`, ver `utils/tierRules.ts`).
+   * Ausente em camadas legadas até a migração de compatibilidade as
+   * normalizar (`row = order`, `slot = 0`).
+   */
+  row?: number;
+  /** Posição dentro da linha quando duas camadas dividem `row`: 0 = esquerda, 1 = direita. */
+  slot?: 0 | 1;
 };
 
 export type SiteVlan = {
