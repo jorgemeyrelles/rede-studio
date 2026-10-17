@@ -5,6 +5,7 @@ import { useSessionQuery } from '../features/auth/queries';
 import { hydrateNetworkState } from '../features/network/networkSlice';
 import { servicesRoutes } from '../services';
 import type { AppLanguage } from '../types/i18n';
+import { getStudioPageCopy } from '../components/studio/catalog';
 import StudioPage from './StudioPage';
 
 /**
@@ -59,8 +60,15 @@ export default function StudioProjectLoader() {
 
   if (loadedProjectId !== projectId) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-        ...
+      <div
+        role="status"
+        className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-sm text-chalk-dim"
+      >
+        <span
+          className="h-5 w-5 animate-spin rounded-full border-2 border-line border-t-accent"
+          aria-hidden="true"
+        />
+        {getStudioPageCopy(language).loadingProject}
       </div>
     );
   }

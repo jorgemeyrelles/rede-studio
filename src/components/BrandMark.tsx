@@ -19,14 +19,63 @@ export default function BrandMark({
       aria-hidden="true"
     >
       <rect width="48" height="48" rx="9" fill="var(--ink)" />
-      <line x1="24" y1="9" x2="24" y2="25" stroke="var(--accent)" strokeWidth="2.2" />
-      <line x1="24" y1="25" x2="10" y2="37" stroke="var(--accent)" strokeWidth="2.2" />
-      <line x1="24" y1="25" x2="38" y2="37" stroke="var(--accent)" strokeWidth="2.2" />
-      <line x1="10" y1="37" x2="38" y2="37" stroke="var(--line)" strokeWidth="1.5" />
-      <circle cx="24" cy="9" r="4" fill="var(--ink-raised)" stroke="var(--accent)" strokeWidth="2" />
+      <line
+        x1="24"
+        y1="9"
+        x2="24"
+        y2="25"
+        stroke="var(--accent)"
+        strokeWidth="2.2"
+      />
+      <line
+        x1="24"
+        y1="25"
+        x2="10"
+        y2="37"
+        stroke="var(--accent)"
+        strokeWidth="2.2"
+      />
+      <line
+        x1="24"
+        y1="25"
+        x2="38"
+        y2="37"
+        stroke="var(--accent)"
+        strokeWidth="2.2"
+      />
+      <line
+        x1="10"
+        y1="37"
+        x2="38"
+        y2="37"
+        stroke="var(--line)"
+        strokeWidth="1.5"
+      />
+      <circle
+        cx="24"
+        cy="9"
+        r="4"
+        fill="var(--ink-raised)"
+        stroke="var(--accent)"
+        strokeWidth="2"
+      />
       <circle cx="24" cy="25" r="5" fill="var(--accent)" />
-      <circle cx="10" cy="37" r="3.4" fill="var(--ink-raised)" stroke="var(--accent-2)" strokeWidth="2" />
-      <circle cx="38" cy="37" r="3.4" fill="var(--ink-raised)" stroke="var(--accent-2)" strokeWidth="2" />
+      <circle
+        cx="10"
+        cy="37"
+        r="3.4"
+        fill="var(--ink-raised)"
+        stroke="var(--accent-2)"
+        strokeWidth="2"
+      />
+      <circle
+        cx="38"
+        cy="37"
+        r="3.4"
+        fill="var(--ink-raised)"
+        stroke="var(--accent-2)"
+        strokeWidth="2"
+      />
     </svg>
   );
 }

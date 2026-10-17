@@ -4,6 +4,7 @@ import {
   NETWORK_DIAGRAM_COPY,
   PDF_REPORT_COPY,
   ROUTE_FIREWALL_COPY,
+  SERVICES_CERTIFICATES_COPY,
   SITE_VLAN_COPY,
   STUDIO_APP_COPY,
   STUDIO_PAGE_COPY,
@@ -71,4 +72,8 @@ export function getNextStudioLanguage(
   if (language === 'pt') return 'en';
   if (language === 'en') return 'es';
   return 'pt';
+}
+
+export function getServicesCertificatesCopy(language: StudioLanguage) {
+  return SERVICES_CERTIFICATES_COPY[language];
 }

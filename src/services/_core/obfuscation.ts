@@ -23,7 +23,15 @@ export function encodeForStorage(value: unknown): string {
   const json = JSON.stringify(value);
   const bytes = new TextEncoder().encode(json);
   const obfuscated = xorBytes(bytes);
-  return btoa(String.fromCharCode(...obfuscated));
+  // Em blocos: `String.fromCharCode(...array)` com o array inteiro estoura a
+  // pilha ("Maximum call stack size exceeded") em projetos de algumas
+  // centenas de KB — e aí o cache falhava e o Studio não abria o projeto.
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < obfuscated.length; i += CHUNK) {
+    binary += String.fromCharCode(...obfuscated.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 /**

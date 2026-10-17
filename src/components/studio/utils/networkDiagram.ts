@@ -28,6 +28,7 @@ export {
   pixelToCell,
 } from '../../../features/network/utils/grid';
 import type { GridLayoutResult, TooltipPlacement } from '../types';
+import { getDiagramTheme } from './diagramTheme';
 
 type GridLayoutLayer = PositionableLayer & {
   siteId: string;
@@ -251,6 +252,7 @@ export function buildGridLayout({
   const siteHeights = new Map<string, number>();
   const siteMaxLayerWidths = new Map<string, number>();
   const layerPositions = new Map<string, { x: number; y: number }>();
+  const layerRenderWidths = new Map<string, number>();
   const sitePositions = new Map<string, { x: number; y: number }>();
   // Linhas (já resolvidas por `groupLayersByRow`) de cada site, indexadas
   // por grupo de rede (`null` = camadas soltas) — computadas no 1º passe e
@@ -481,6 +483,11 @@ export function buildGridLayout({
     // Posiciona uma linha (1 ou 2 camadas lado a lado) centralizada dentro
     // de `columnWidth`, a partir de `originX` (nunca com offset menor que
     // `minOffset`); devolve a altura usada.
+    //
+    // Toda linha é desenhada com a mesma largura total (`uniformLayerWidth`),
+    // pra bordas alinharem entre linhas. Com 2 tiers, a folga é dividida
+    // igualmente entre elas — cada caixa tem a SUA largura, e a próxima
+    // começa depois dela + `TIER_ROW_GAP`, então nunca se sobrepõem.
     const placeRow = (
       row: GridLayoutLayer[],
       originX: number,
@@ -489,11 +496,15 @@ export function buildGridLayout({
       minOffset = 0,
     ) => {
       const rowWidth = computeRowWidth(row);
-      const rowXOffset = Math.max(minOffset, (columnWidth - rowWidth) / 2);
+      const targetWidth = Math.max(uniformLayerWidth, rowWidth);
+      const extraPerLayer = (targetWidth - rowWidth) / row.length;
+      const rowXOffset = Math.max(minOffset, (columnWidth - targetWidth) / 2);
       let cursorX = originX + rowXOffset;
       for (const layer of row) {
+        const renderWidth = layer.width + extraPerLayer;
         layerPositions.set(layer.id, { x: cursorX, y });
-        cursorX += layer.width + TIER_ROW_GAP;
+        layerRenderWidths.set(layer.id, renderWidth);
+        cursorX += renderWidth + TIER_ROW_GAP;
       }
       return computeRowHeight(row);
     };
@@ -551,6 +562,7 @@ export function buildGridLayout({
     siteHeights,
     siteWidths,
     siteMaxLayerWidths,
+    layerRenderWidths,
     wanPosition,
   };
 }
@@ -583,37 +595,59 @@ export function figureByCategory(category: string) {
   return 'Triangle';
 }
 
+const PERIMETER_CATEGORIES = new Set([
+  'router',
+  'firewall',
+  'modem',
+  'wan',
+  'ids',
+  'ips',
+  'proxy',
+]);
+const SWITCHING_CATEGORIES = new Set([
+  'switch',
+  'load-balancer',
+  'access-point',
+]);
+const SERVICE_CATEGORIES = new Set(['server', 'nas', 'dns', 'dhcp']);
+const TUNNEL_CATEGORIES = new Set([
+  'vpn',
+  'ipsec',
+  'wireguard',
+  'mpls',
+  'gre',
+  'sdwan',
+]);
+
+export type DeviceRoleFamily =
+  | 'perimeter'
+  | 'switching'
+  | 'services'
+  | 'tunnels'
+  | 'endpoints';
+
+/** Família por papel do equipamento — a mesma que dá a cor no diagrama. */
+export function roleFamilyOf(category: string): DeviceRoleFamily {
+  if (PERIMETER_CATEGORIES.has(category)) return 'perimeter';
+  if (SWITCHING_CATEGORIES.has(category)) return 'switching';
+  if (SERVICE_CATEGORIES.has(category)) return 'services';
+  if (TUNNEL_CATEGORIES.has(category)) return 'tunnels';
+  return 'endpoints';
+}
+
+/**
+ * Cor da borda do nó por PAPEL do equipamento (5 famílias), não por tipo —
+ * o tipo já é identificado pelo ícone. Tokens Planta via `diagramTheme`:
+ * perímetro → tier-edge, comutação → tier-distribution, serviços →
+ * tier-server, túneis → route-vpn, endpoints (resto) → tier-endpoint.
+ */
 export function colorByCategory(category: string) {
-  if (category === 'load-balancer') return '#f59e0b';
-  if (category === 'access-point') return '#06b6d4';
-  if (category === 'ids') return '#f97316';
-  if (category === 'ips') return '#ef4444';
-  if (category === 'proxy') return '#14b8a6';
-  if (category === 'modem') return '#eab308';
-  if (category === 'dns') return '#10b981';
-  if (category === 'dhcp') return '#84cc16';
-  if (category === 'nas') return '#6366f1';
-  if (category === 'printer') return '#94a3b8';
-  if (category === 'printer-3d') return '#f0abfc';
-  if (category === 'voip') return '#fb7185';
-  if (category === 'firewall') return '#fb7185';
-  if (category === 'router') return '#22d3ee';
-  if (category === 'switch') return '#60a5fa';
-  if (category === 'pc') return '#facc15';
-  if (category === 'smartphone') return '#34d399';
-  if (category === 'server') return '#a78bfa';
-  if (category === 'wan') return '#4ade80';
-  if (
-    category === 'vpn' ||
-    category === 'ipsec' ||
-    category === 'wireguard' ||
-    category === 'mpls' ||
-    category === 'gre' ||
-    category === 'sdwan'
-  ) {
-    return '#f472b6';
-  }
-  return '#94a3b8';
+  const { tier, route } = getDiagramTheme();
+  if (PERIMETER_CATEGORIES.has(category)) return tier.edge;
+  if (SWITCHING_CATEGORIES.has(category)) return tier.distribution;
+  if (SERVICE_CATEGORIES.has(category)) return tier.server;
+  if (TUNNEL_CATEGORIES.has(category)) return route.vpn;
+  return tier.endpoint;
 }
 
 export function resolveLinkVisual(
@@ -622,11 +656,12 @@ export function resolveLinkVisual(
   toCategory?: string,
   opts?: { stateful?: boolean; passthrough?: boolean },
 ) {
+  const { route, signal, chalkFaint, chalkDim } = getDiagramTheme();
   const stateful = opts?.stateful ?? true;
   const passthrough = opts?.passthrough ?? false;
 
   if (passthrough) {
-    return { stroke: '#64748b', dash: undefined, width: 1.2 };
+    return { stroke: chalkFaint, dash: undefined, width: 1.2 };
   }
 
   const edge = [fromCategory, toCategory].filter(Boolean);
@@ -638,20 +673,20 @@ export function resolveLinkVisual(
   );
 
   if (kind === 'vpn' || kind === 'ipsec' || hasVpnEdge) {
-    return { stroke: '#22d3ee', dash: [9, 5], width: 2.2 };
+    return { stroke: route.vpn, dash: [9, 5], width: 2.2 };
   }
   if (kind === 'wan' || fromCategory === 'wan' || toCategory === 'wan') {
-    if (!stateful) return { stroke: '#f59e0b', dash: [4, 3], width: 2.0 };
-    return { stroke: '#fb923c', dash: undefined, width: 2.6 };
+    if (!stateful) return { stroke: signal.warn, dash: [4, 3], width: 2.0 };
+    return { stroke: route.default, dash: undefined, width: 2.6 };
   }
   if (hasSecurity) {
-    if (!stateful) return { stroke: '#f59e0b', dash: [4, 3], width: 2.0 };
-    return { stroke: '#f97316', dash: [2, 4], width: 2.1 };
+    if (!stateful) return { stroke: signal.warn, dash: [4, 3], width: 2.0 };
+    return { stroke: route.default, dash: [2, 4], width: 2.1 };
   }
   if (kind === 'lan') {
-    return { stroke: '#60a5fa', dash: undefined, width: 1.8 };
+    return { stroke: route.bgp, dash: undefined, width: 1.8 };
   }
-  return { stroke: '#fbbf24', dash: [10, 6], width: 1.8 };
+  return { stroke: chalkDim, dash: [10, 6], width: 1.8 };
 }
 
 export function resolveLinkDescription(

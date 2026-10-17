@@ -13,6 +13,19 @@ const DEBOUNCE_MS = 350;
 const MIN_SAVING_VISIBLE_MS = 400;
 
 /**
+ * Flush registrado pelo `useAutosave` montado (só existe um Studio aberto
+ * por vez). Permite que quem está FORA do Studio — o logout no
+ * `UserBadgeMenu` — grave o save pendente e espere ele terminar ANTES de
+ * derrubar a sessão. Sem isso, o flush do desmonte rodaria depois do token
+ * já ter sido apagado e o save falharia com 401.
+ */
+let registeredFlush: (() => Promise<void>) | null = null;
+
+export function flushPendingSave(): Promise<void> {
+  return registeredFlush ? registeredFlush() : Promise.resolve();
+}
+
+/**
  * Autosave do projeto aberto no Studio — substitui o antigo `autosaveMiddleware`
  * (Redux). `projectId` vem da própria URL (`useParams`, mesma rota de
  * `StudioProjectLoader.tsx`), não de um espelho em Redux: esse valor nunca teve
@@ -42,19 +55,24 @@ export function useAutosave() {
   const savingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRunRef = useRef(true);
 
+  const inFlightRef = useRef<Promise<unknown> | null>(null);
+
   function runSaveNow(targetProjectId: string, state: NetworkState) {
-    saveMutation.mutate(
-      { id: targetProjectId, networkState: state },
-      {
-        onSuccess: (result) => {
-          if (result.ok) {
-            dispatch(markSaved(new Date().toISOString()));
-          } else {
-            dispatch(setPersistWarning(result.warning));
-          }
-        },
-      },
-    );
+    const promise = saveMutation
+      .mutateAsync({ id: targetProjectId, networkState: state })
+      .then((result) => {
+        if (result.ok) {
+          dispatch(markSaved(new Date().toISOString()));
+        } else {
+          dispatch(setPersistWarning(result.warning));
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (inFlightRef.current === promise) inFlightRef.current = null;
+      });
+    inFlightRef.current = promise;
+    return promise;
   }
 
   function scheduleSave(targetProjectId: string) {
@@ -75,6 +93,29 @@ export function useAutosave() {
     }
     scheduleSave(projectId);
   }
+
+  // Registra o flush externo (ver `flushPendingSave`): grava já o que estiver
+  // agendado e espera qualquer save em voo terminar.
+  useEffect(() => {
+    const flush = async () => {
+      const hadPendingSave =
+        debounceRef.current !== null || savingTimerRef.current !== null;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (savingTimerRef.current) clearTimeout(savingTimerRef.current);
+      debounceRef.current = null;
+      savingTimerRef.current = null;
+      if (hadPendingSave && projectId) {
+        await runSaveNow(projectId, networkStateRef.current);
+      } else if (inFlightRef.current) {
+        await inFlightRef.current;
+      }
+    };
+    registeredFlush = flush;
+    return () => {
+      if (registeredFlush === flush) registeredFlush = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const topologyForTrigger = useAppSelector((state) => {
     const { meta: _meta, ...rest } = state.network;

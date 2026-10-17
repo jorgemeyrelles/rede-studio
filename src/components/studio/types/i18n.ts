@@ -18,6 +18,11 @@ export type StudioToolbarCopy = {
   active: string;
   searchPlaceholder: string;
   addRelationSite: string;
+  openLegend: string;
+  closeLegend: string;
+  sitesCount: string;
+  undo: string;
+  redo: string;
 };
 
 export type StudioAppCopy = {
@@ -32,23 +37,31 @@ export type StudioPageCopy = {
   renameProjectAriaLabel: string;
   infoHint: string;
   dashboardTitle: string;
-  localPersistence: string;
   notSavedYet: string;
   saving: string;
   saved: string;
   warning: string;
-  resetData: string;
-  confirmReset: string;
-  resetQuestion: string;
+  eraseContent: string;
+  eraseTitle: string;
+  eraseQuestion: string;
+  eraseConfirm: string;
   cancel: string;
-  confirm: string;
   printPdf: string;
   confirmPrint: string;
   printWarning: string;
   printShowLinkDescriptions: string;
-  exit: string;
   print: string;
   generatingPdf: string;
+  pdfError: string;
+  loadingProject: string;
+  servicesAndCertificatesTab: string;
+  moreActions: string;
+  groupRouting: string;
+  groupSecurity: string;
+  groupAddressing: string;
+  contentErased: string;
+  undo: string;
+  dismiss: string;
 };
 
 export type PdfReportCopy = {
@@ -68,6 +81,12 @@ export type PdfReportCopy = {
   totalVlans: string;
   totalAclRules: string;
   dashboardTitle: string;
+  connectionNotesTitle: string;
+  connectionNotesHint: string;
+  connectionMarker: string;
+  connectionFrom: string;
+  connectionTo: string;
+  connectionDescription: string;
   routesTitle: string;
   firewallTitle: string;
   vlansTitle: string;
@@ -333,4 +352,43 @@ export type EquipmentInventoryPanelCopy = {
   noEquipmentForType: string;
   collapseAriaLabel: string;
   expandAriaLabel: string;
+};
+
+export type ServicesCertificatesCopy = {
+  edit: string;
+  remove: string;
+  cancel: string;
+  save: string;
+  create: string;
+  optional: string;
+  description: string;
+  name: string;
+  // Serviços customizados
+  servicesTitle: string;
+  newService: string;
+  editService: string;
+  noServices: string;
+  protocol: string;
+  protocolOther: string;
+  dstPort: string;
+  srcPort: string;
+  dstPortRange: string;
+  srcPortRange: string;
+  icmpType: string;
+  dstPortPlaceholder: string;
+  icmpPlaceholder: string;
+  // Certificados
+  certificatesTitle: string;
+  newCertificate: string;
+  editCertificate: string;
+  noCertificates: string;
+  type: string;
+  typeRemote: string;
+  commonName: string;
+  issuer: string;
+  expiresAt: string;
+  expirationDate: string;
+  fingerprint: string;
+  expired: string;
+  expiringSoon: string;
 };

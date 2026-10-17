@@ -5,6 +5,7 @@ import SlideArrows from '../components/SlideArrows';
 import SlidesIndex from '../slides';
 import { SLIDE_ORDER } from '../slides/pagination';
 import type { SlideId } from '../types/slide';
+import '../slides/slides.css';
 
 function getSlideIdFromSearch(search: string): SlideId {
   const params = new URLSearchParams(search);
@@ -40,10 +41,10 @@ export default function SlidesPage() {
   }, [location.search, navigate]);
 
   return (
-    <>
+    <div className="slides-root">
       <NavBar />
       <SlideArrows />
       <SlidesIndex />
-    </>
+    </div>
   );
 }

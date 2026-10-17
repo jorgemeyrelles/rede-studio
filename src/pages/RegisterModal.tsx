@@ -37,7 +37,11 @@ export default function RegisterModal() {
     }
     setMismatch(false);
 
-    const result = await registerMutation.mutateAsync({ name, email, password });
+    const result = await registerMutation.mutateAsync({
+      name,
+      email,
+      password,
+    });
     if (result.ok) {
       await goToProjects();
     }
@@ -49,27 +53,19 @@ export default function RegisterModal() {
       : null;
 
   return (
-    <Modal onClose={close}>
-      <form
-        onSubmit={handleSubmit}
-        className="relative flex w-full flex-col gap-3 rounded-sm border border-line bg-ink-raised p-6"
-      >
-        <button
-          type="button"
-          onClick={close}
-          aria-label={copy.backToHome}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-sm text-chalk-faint hover:bg-ink-raised-2 hover:text-chalk"
-        >
-          ✕
-        </button>
+    <Modal
+      onClose={close}
+      title={copy.title}
+      closeLabel={copy.backToHome}
+      leading={<BrandMark className="h-9 w-9" />}
+      centered
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <p className="-mt-3 text-center text-sm text-chalk-dim">
+          {copy.subtitle}
+        </p>
 
-        <div className="mb-1 flex flex-col items-center gap-1.5 text-center">
-          <BrandMark className="h-8 w-8" />
-          <h1 className="text-base font-semibold text-chalk">{copy.title}</h1>
-          <p className="text-xs text-chalk-dim">{copy.subtitle}</p>
-        </div>
-
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.nameLabel}
           <input
             type="text"
@@ -80,11 +76,11 @@ export default function RegisterModal() {
             maxLength={50}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.emailLabel}
           <input
             type="email"
@@ -92,11 +88,11 @@ export default function RegisterModal() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.passwordLabel}
           <input
             type="password"
@@ -105,11 +101,11 @@ export default function RegisterModal() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.confirmPasswordLabel}
           <input
             type="password"
@@ -117,15 +113,17 @@ export default function RegisterModal() {
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
         {mismatch && (
-          <p className="text-xs text-signal-down">{copy.passwordMismatch}</p>
+          <p role="alert" className="text-xs text-signal-down">
+            {copy.passwordMismatch}
+          </p>
         )}
         {error && (
-          <p className="text-xs text-signal-down">
+          <p role="alert" className="text-xs text-signal-down">
             {getAuthErrorMessage(error, language)}
           </p>
         )}
@@ -133,7 +131,7 @@ export default function RegisterModal() {
         <button
           type="submit"
           disabled={registerMutation.isPending}
-          className="btn-planta-solid mt-1 rounded-sm px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+          className="btn btn-primary btn-md mt-1 h-10 w-full"
         >
           {registerMutation.isPending ? copy.submitting : copy.submit}
         </button>
@@ -145,12 +143,12 @@ export default function RegisterModal() {
           onSuccess={goToProjects}
         />
 
-        <p className="text-center text-xs text-chalk-faint">
+        <p className="text-center text-xs text-chalk-dim">
           {copy.hasAccountText}{' '}
           <button
             type="button"
             onClick={() => navigate(`/${language}/login`)}
-            className="font-semibold text-accent hover:underline"
+            className="font-semibold text-accent underline-offset-2 hover:underline"
           >
             {copy.loginLinkText}
           </button>

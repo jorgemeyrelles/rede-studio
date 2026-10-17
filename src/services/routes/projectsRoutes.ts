@@ -5,6 +5,7 @@ import type {
   CreateProjectInput,
   ProjectNetworkType,
   ProjectRecord,
+  ProjectsDocument,
   ProjectSummary,
 } from '../../features/projects/types';
 import type { StatePersistenceResult } from '../_core';
@@ -36,29 +37,70 @@ type ProjectResponse = ProjectSummaryResponse & {
   networkState: NetworkState;
 };
 
+const NETWORK_TYPES: readonly ProjectNetworkType[] = [
+  'ON_PREMISE',
+  'CLOUD',
+  'MULTI_CLOUD',
+  'HYBRID',
+];
+
+/**
+ * Projetos criados antes do campo existir chegam com `networkType` nulo — a
+ * API só faz o backfill (`ON_PREMISE`) quando o projeto é alterado (ver
+ * `ProjectMutationConsumer.backfillNetworkTypeIfMissing` no rede-studio-api).
+ * Normaliza aqui, na fronteira, com o mesmo default, pra UI nunca receber um
+ * tipo fora da união.
+ */
+function normalizeNetworkType(value: unknown): ProjectNetworkType {
+  return NETWORK_TYPES.includes(value as ProjectNetworkType)
+    ? (value as ProjectNetworkType)
+    : 'ON_PREMISE';
+}
+
+function withNetworkType<T extends { networkType: unknown }>(item: T): T {
+  return { ...item, networkType: normalizeNetworkType(item.networkType) };
+}
+
 function toSummary(record: ProjectRecord): ProjectSummary {
   const { networkState: _networkState, ...summary } = record;
   void _networkState;
-  return summary;
+  return withNetworkType(summary);
+}
+
+/**
+ * Grava no cache local sem nunca derrubar o dado que veio da API: o cache é
+ * best-effort (cota cheia, storage bloqueado etc.). Antes, uma falha aqui
+ * caía no `catch` do chamador, que tratava como "API fora" e devolvia o
+ * cache vazio — o Studio não abria o projeto.
+ */
+function writeCacheSafely(mutate: (document: ProjectsDocument) => void) {
+  try {
+    const document = loadProjectsDocument();
+    mutate(document);
+    saveProjectsDocument(document);
+  } catch (error) {
+    console.warn('Cache local de projetos indisponível', error);
+  }
 }
 
 /** Espelha um `ProjectResponse` da API no cache local (localStorage). */
 function cacheProject(response: ProjectResponse): ProjectRecord {
-  const document = loadProjectsDocument();
-  const record: ProjectRecord = { ...response };
-  document.projects[record.id] = record;
-  saveProjectsDocument(document);
+  const record: ProjectRecord = withNetworkType({ ...response });
+  writeCacheSafely((document) => {
+    document.projects[record.id] = record;
+  });
   return record;
 }
 
 /** Espelha um `ProjectSummaryResponse` da API no cache local, preservando o `networkState` já salvo. */
-function cacheSummary(response: ProjectSummaryResponse): ProjectSummary {
-  const document = loadProjectsDocument();
-  const existing = document.projects[response.id];
-  document.projects[response.id] = existing
-    ? { ...existing, ...response }
-    : { ...response, networkState: networkInitialState };
-  saveProjectsDocument(document);
+function cacheSummary(raw: ProjectSummaryResponse): ProjectSummary {
+  const response = withNetworkType(raw);
+  writeCacheSafely((document) => {
+    const existing = document.projects[response.id];
+    document.projects[response.id] = existing
+      ? { ...existing, ...response }
+      : { ...response, networkState: networkInitialState };
+  });
   return response;
 }
 
@@ -74,7 +116,8 @@ export async function listProjectsByOwner(
   ownerId: string,
 ): Promise<ProjectSummary[]> {
   try {
-    return await httpGet<ProjectSummaryResponse[]>('/api/projects');
+    const projects = await httpGet<ProjectSummaryResponse[]>('/api/projects');
+    return projects.map(withNetworkType);
   } catch (err) {
     if (err instanceof ApiError && err.isUnauthorized) throw err;
     const document = loadProjectsDocument();
@@ -106,7 +149,8 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
 }
 getProject.local = function getProjectLocal(id: string): ProjectRecord | null {
   const document = loadProjectsDocument();
-  return document.projects[id] ?? null;
+  const record = document.projects[id];
+  return record ? withNetworkType(record) : null;
 };
 
 export async function createProject(
@@ -153,17 +197,23 @@ export async function renameProject(
   }
 }
 
-/** Deleta um projeto. Remove do cache local mesmo se a chamada à API falhar. */
+/**
+ * Deleta um projeto. O servidor é quem decide: o cache local só é limpo
+ * quando a API confirma a exclusão (2xx) ou responde 404 (já não existe —
+ * o resultado final é o mesmo). Qualquer outra falha, inclusive sem
+ * conexão, é repassada pra UI mostrar o erro e o projeto continua na lista
+ * — sem fila de sincronização, apagar só localmente faria o projeto
+ * "voltar" no próximo `listProjects`.
+ */
 export async function deleteProject(id: string): Promise<void> {
   try {
     await httpDelete(`/api/projects/${id}`);
-  } catch {
-    // offline-first: segue removendo local mesmo se a API não confirmou
-  } finally {
-    const document = loadProjectsDocument();
-    delete document.projects[id];
-    saveProjectsDocument(document);
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
   }
+  const document = loadProjectsDocument();
+  delete document.projects[id];
+  saveProjectsDocument(document);
 }
 
 /**

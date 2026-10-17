@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T21:00:00Z",
+  "title": "Design System: Rede Studio",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Âmbar de Prancheta",
+        "canonical": "oklch(76.5% 0.140 72.9)",
+        "tonalRamp": [
+          "#130900",
+          "#341f00",
+          "#5c3a02",
+          "#86580a",
+          "#b47815",
+          "#e09b33",
+          "#fec171",
+          "#feebd4"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Tinta sob Âmbar",
+        "canonical": "oklch(20.7% 0.037 67.2)",
+        "tonalRamp": [
+          "#140800",
+          "#30200f",
+          "#503f2d",
+          "#725f4d",
+          "#96826f",
+          "#bba792",
+          "#dfcab4",
+          "#ffebd7"
+        ]
+      },
+      "accent-2": {
+        "role": "secondary",
+        "displayName": "Cobre do Logotipo",
+        "canonical": "oklch(70.7% 0.187 34.1)",
+        "tonalRamp": [
+          "#1d0200",
+          "#460b01",
+          "#791c05",
+          "#b22902",
+          "#e04e2d",
+          "#fc8368",
+          "#ffbbaa",
+          "#fee9e4"
+        ]
+      },
+      "accent-print": {
+        "role": "tertiary",
+        "displayName": "Cobre de Impressão",
+        "canonical": "oklch(58.7% 0.130 56.8)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1a00",
+          "#653302",
+          "#944e09",
+          "#c06f2a",
+          "#e89452",
+          "#febe90",
+          "#ffeadc"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(18.2% 0.031 261.1)",
+        "tonalRamp": [
+          "#050b18",
+          "#1b2433",
+          "#394353",
+          "#596476",
+          "#7c879a",
+          "#a0abbf",
+          "#c2cee3",
+          "#e6efff"
+        ]
+      },
+      "ink-raised": {
+        "role": "neutral",
+        "displayName": "Tinta Elevada",
+        "canonical": "oklch(22.2% 0.041 259.3)",
+        "tonalRamp": [
+          "#030b1c",
+          "#182438",
+          "#354358",
+          "#55647b",
+          "#78879f",
+          "#9cacc5",
+          "#becfe9",
+          "#e5efff"
+        ]
+      },
+      "ink-raised-2": {
+        "role": "neutral",
+        "displayName": "Tinta Elevada 2",
+        "canonical": "oklch(25.2% 0.050 259.4)",
+        "tonalRamp": [
+          "#010a20",
+          "#15243c",
+          "#32435d",
+          "#526480",
+          "#7487a5",
+          "#98accb",
+          "#bbcfef",
+          "#e5efff"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Traço",
+        "canonical": "oklch(32.7% 0.052 258.7)",
+        "tonalRamp": [
+          "#010a20",
+          "#14243d",
+          "#31435e",
+          "#516481",
+          "#7387a6",
+          "#97accc",
+          "#bacff0",
+          "#e5effe"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Traço Forte",
+        "canonical": "oklch(43.0% 0.077 259.0)",
+        "tonalRamp": [
+          "#000924",
+          "#0a2349",
+          "#28426b",
+          "#48648f",
+          "#6a87b5",
+          "#8dacdc",
+          "#b1d0fe",
+          "#e5efff"
+        ]
+      },
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Giz",
+        "canonical": "oklch(95.6% 0.015 257.2)",
+        "tonalRamp": [
+          "#070b12",
+          "#1f242c",
+          "#3d434b",
+          "#5e646c",
+          "#808790",
+          "#a5abb5",
+          "#c8ced8",
+          "#e8eff9"
+        ]
+      },
+      "chalk-dim": {
+        "role": "neutral",
+        "displayName": "Giz Apagado",
+        "canonical": "oklch(71.2% 0.053 260.4)",
+        "tonalRamp": [
+          "#010a21",
+          "#14243e",
+          "#32435f",
+          "#526482",
+          "#7487a7",
+          "#98accd",
+          "#bacff1",
+          "#e6efff"
+        ]
+      },
+      "chalk-faint": {
+        "role": "neutral",
+        "displayName": "Giz Discreto",
+        "canonical": "oklch(64.7% 0.059 261.1)",
+        "tonalRamp": [
+          "#010924",
+          "#132340",
+          "#304262",
+          "#506485",
+          "#7287ab",
+          "#96acd1",
+          "#b8cff5",
+          "#e6efff"
+        ]
+      },
+      "signal-up": {
+        "role": "semantic",
+        "displayName": "Sinal OK",
+        "canonical": "oklch(79.3% 0.180 154.0)",
+        "tonalRamp": [
+          "#001004",
+          "#012d15",
+          "#06502a",
+          "#017740",
+          "#09a059",
+          "#1eca74",
+          "#56ef96",
+          "#c6ffd7"
+        ]
+      },
+      "signal-down": {
+        "role": "semantic",
+        "displayName": "Sinal Erro",
+        "canonical": "oklch(68.6% 0.206 15.0)",
+        "tonalRamp": [
+          "#1e0004",
+          "#490214",
+          "#7f0127",
+          "#b80a3d",
+          "#e73c5d",
+          "#ff7c8a",
+          "#ffb8bd",
+          "#fee8e9"
+        ]
+      },
+      "signal-warn": {
+        "role": "semantic",
+        "displayName": "Sinal Atenção",
+        "canonical": "oklch(83.7% 0.164 84.4)",
+        "tonalRamp": [
+          "#110a00",
+          "#302100",
+          "#553e03",
+          "#7d5e0c",
+          "#aa7e00",
+          "#d6a113",
+          "#fdc43d",
+          "#ffedc9"
+        ]
+      },
+      "route-direct": {
+        "role": "semantic",
+        "displayName": "Rota Direta",
+        "canonical": "oklch(79.3% 0.180 154.0)",
+        "tonalRamp": [
+          "#001004",
+          "#012d15",
+          "#06502a",
+          "#017740",
+          "#09a059",
+          "#1eca74",
+          "#56ef96",
+          "#c6ffd7"
+        ]
+      },
+      "route-static": {
+        "role": "semantic",
+        "displayName": "Rota Estática",
+        "canonical": "oklch(83.7% 0.164 84.4)",
+        "tonalRamp": [
+          "#110a00",
+          "#302100",
+          "#553e03",
+          "#7d5e0c",
+          "#aa7e00",
+          "#d6a113",
+          "#fdc43d",
+          "#ffedc9"
+        ]
+      },
+      "route-default": {
+        "role": "semantic",
+        "displayName": "Rota Default",
+        "canonical": "oklch(75.8% 0.159 55.9)",
+        "tonalRamp": [
+          "#170600",
+          "#3a1a00",
+          "#663304",
+          "#944e0d",
+          "#c86903",
+          "#f58c35",
+          "#febe91",
+          "#ffeadc"
+        ]
+      },
+      "route-vpn": {
+        "role": "semantic",
+        "displayName": "Rota VPN",
+        "canonical": "oklch(70.9% 0.159 293.5)",
+        "tonalRamp": [
+          "#0f0029",
+          "#2c0061",
+          "#4a268d",
+          "#6a4bb4",
+          "#8c6fdc",
+          "#b098fc",
+          "#d0c4ff",
+          "#efecfe"
+        ]
+      },
+      "route-bgp": {
+        "role": "semantic",
+        "displayName": "Rota BGP",
+        "canonical": "oklch(71.4% 0.143 254.6)",
+        "tonalRamp": [
+          "#000b1f",
+          "#02234a",
+          "#014181",
+          "#1c63b2",
+          "#4387da",
+          "#6caeff",
+          "#add1fe",
+          "#e4f0ff"
+        ]
+      },
+      "tier-edge": {
+        "role": "categorical",
+        "displayName": "Camada Borda",
+        "canonical": "oklch(71.4% 0.143 254.6)",
+        "tonalRamp": [
+          "#000b1f",
+          "#02234a",
+          "#014181",
+          "#1c63b2",
+          "#4387da",
+          "#6caeff",
+          "#add1fe",
+          "#e4f0ff"
+        ]
+      },
+      "tier-distribution": {
+        "role": "categorical",
+        "displayName": "Camada Distribuição",
+        "canonical": "oklch(83.7% 0.164 84.4)",
+        "tonalRamp": [
+          "#110a00",
+          "#302100",
+          "#553e03",
+          "#7d5e0c",
+          "#aa7e00",
+          "#d6a113",
+          "#fdc43d",
+          "#ffedc9"
+        ]
+      },
+      "tier-access": {
+        "role": "categorical",
+        "displayName": "Camada Acesso",
+        "canonical": "oklch(79.3% 0.180 154.0)",
+        "tonalRamp": [
+          "#001004",
+          "#012d15",
+          "#06502a",
+          "#017740",
+          "#09a059",
+          "#1eca74",
+          "#56ef96",
+          "#c6ffd7"
+        ]
+      },
+      "tier-server": {
+        "role": "categorical",
+        "displayName": "Camada Servidores",
+        "canonical": "oklch(74.8% 0.207 322.2)",
+        "tonalRamp": [
+          "#18001c",
+          "#3d0046",
+          "#6a0378",
+          "#9625a6",
+          "#bd4fce",
+          "#e576f6",
+          "#f4b2fe",
+          "#fce6ff"
+        ]
+      },
+      "tier-endpoint": {
+        "role": "categorical",
+        "displayName": "Camada Endpoints",
+        "canonical": "oklch(71.2% 0.053 260.4)",
+        "tonalRamp": [
+          "#010a21",
+          "#14243e",
+          "#32435f",
+          "#526482",
+          "#7487a7",
+          "#98accd",
+          "#bacff1",
+          "#e6efff"
+        ]
+      },
+      "tier-dmz": {
+        "role": "categorical",
+        "displayName": "Camada DMZ",
+        "canonical": "oklch(75.8% 0.159 55.9)",
+        "tonalRamp": [
+          "#170600",
+          "#3a1a00",
+          "#663304",
+          "#944e0d",
+          "#c86903",
+          "#f58c35",
+          "#febe91",
+          "#ffeadc"
+        ]
+      },
+      "tier-management": {
+        "role": "categorical",
+        "displayName": "Camada Gerência",
+        "canonical": "oklch(70.9% 0.159 293.5)",
+        "tonalRamp": [
+          "#0f0029",
+          "#2c0061",
+          "#4a268d",
+          "#6a4bb4",
+          "#8c6fdc",
+          "#b098fc",
+          "#d0c4ff",
+          "#efecfe"
+        ]
+      },
+      "tier-custom": {
+        "role": "categorical",
+        "displayName": "Camada Personalizada",
+        "canonical": "oklch(64.7% 0.059 261.1)",
+        "tonalRamp": [
+          "#010924",
+          "#132340",
+          "#304262",
+          "#506485",
+          "#7287ab",
+          "#96acd1",
+          "#b8cff5",
+          "#e6efff"
+        ]
+      },
+      "paper": {
+        "role": "print",
+        "displayName": "Papel",
+        "canonical": "oklch(97.3% 0.007 268.5)",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232428",
+          "#414246",
+          "#616367",
+          "#84868a",
+          "#a9abaf",
+          "#ccced2",
+          "#eceef3"
+        ]
+      },
+      "paper-ink": {
+        "role": "print",
+        "displayName": "Tinta do Papel",
+        "canonical": "oklch(22.2% 0.037 260.6)",
+        "tonalRamp": [
+          "#040b1a",
+          "#1a2436",
+          "#374356",
+          "#576479",
+          "#7a879d",
+          "#9eacc3",
+          "#c0cfe6",
+          "#e6effe"
+        ]
+      },
+      "paper-line": {
+        "role": "print",
+        "displayName": "Traço do Papel",
+        "canonical": "oklch(86.4% 0.025 259.8)",
+        "tonalRamp": [
+          "#060b16",
+          "#1d2430",
+          "#3b4350",
+          "#5b6472",
+          "#7e8795",
+          "#a2abbb",
+          "#c4cede",
+          "#e5efff"
+        ]
+      },
+      "paper-dim": {
+        "role": "print",
+        "displayName": "Papel Apagado",
+        "canonical": "oklch(52.5% 0.046 260.0)",
+        "tonalRamp": [
+          "#020a1e",
+          "#17243a",
+          "#34435b",
+          "#54647e",
+          "#7687a2",
+          "#9aacc8",
+          "#bdcfec",
+          "#e6efff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Só o hero da Landing."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h1 de página, título de modal, título de seção da Landing."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Título de painel, card de projeto, feature."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "Nome 'Rede Studio' ao lado do BrandMark; caixa-alta âmbar."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Corpo de Landing, auth e dashboard."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Corpo do Studio, células, rótulos de campo."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Piso de 11px: badges e anotações densas."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Rótulo mono em caixa-alta que carrega dado; cabeçalho de tabela (0.06em)."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Valores técnicos (portas, endereços) com algarismos tabulares."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 12px 28px rgba(0, 0, 0, 0.45)",
+        "purpose": "Menus, tooltips e inspetores flutuantes."
+      },
+      {
+        "name": "overlay",
+        "value": "0 24px 48px rgba(0, 0, 0, 0.55)",
+        "purpose": "Modais e gaveta da legenda."
+      }
+    ],
+    "motion": [
+      {
+        "name": "color-fast",
+        "value": "150ms ease (transition-colors)",
+        "purpose": "Hover/foco de botões, abas, campos."
+      },
+      {
+        "name": "drawer",
+        "value": "200ms transform",
+        "purpose": "Gaveta da legenda do Studio entrando pela esquerda."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms em prefers-reduced-motion: reduce",
+        "purpose": "Desliga animação e transição globalmente."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Salto mobile → desktop fora do Studio."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Studio abre de uma coluna para grade."
+      }
+    ],
+    "focus": {
+      "value": "outline: 2px solid var(--accent); outline-offset: 2px",
+      "purpose": "Foco visível global; campos também trocam a borda para âmbar."
+    },
+    "surfaces": {
+      "blueprint": "linear-gradient(rgba(36,53,79,.4) 1px, transparent 1px) 0 0/42px 42px, linear-gradient(90deg, rgba(36,53,79,.4) 1px, transparent 1px) 0 0/42px 42px, var(--ink)",
+      "modalScrim": "rgb(10 18 32 / .8) + backdrop-blur 4px"
+    }
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A única ação principal do contexto (Criar conta, Entrar, Criar projeto, Gerar PDF).",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Criar projeto</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-btn-primary{height:36px;padding:0 16px;font-size:14px;line-height:20px;background:#e8a33d;color:#231404;}.ds-btn-primary:hover{background:rgb(232 163 61 / .9);}"
+    },
+    {
+      "name": "Botão secundário",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ações de apoio e Cancelar.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-btn-secondary{height:36px;padding:0 16px;font-size:14px;line-height:20px;background:transparent;color:#eaf1fb;border-color:#24354f;}.ds-btn-secondary:hover{border-color:#7a8fb3;background:#13223a;}"
+    },
+    {
+      "name": "Botão ghost (Studio)",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ações de baixa ênfase em cards, listas e barras; tamanho sm do Studio.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Editar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-btn-ghost{height:28px;padding:0 10px;font-size:12px;line-height:16px;background:transparent;color:#8fa3c4;}.ds-btn-ghost:hover{background:#13223a;color:#eaf1fb;}"
+    },
+    {
+      "name": "Botão de perigo",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Só a confirmação final de uma ação destrutiva.",
+      "html": "<button class=\"ds-btn ds-btn-danger\">Excluir projeto</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-btn-danger{height:36px;padding:0 16px;font-size:14px;line-height:20px;background:#ff5470;color:#0a1220;}.ds-btn-danger:hover{background:rgb(255 84 112 / .9);}"
+    },
+    {
+      "name": "Botão só-ícone",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Quadrado de 28px, sempre com aria-label e title.",
+      "html": "<button class=\"ds-btn ds-btn-icon\" aria-label=\"Fechar\" title=\"Fechar\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/></svg></button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-btn-icon{height:28px;width:28px;padding:0;background:transparent;color:#8fa3c4;}.ds-btn-icon:hover{background:#13223a;color:#eaf1fb;}"
+    },
+    {
+      "name": "Campo de formulário",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo padrão de modais, settings e dashboard; fundo ink como um vão no painel.",
+      "html": "<label class=\"ds-label\">Nome do projeto<input class=\"ds-field\" placeholder=\"Matriz SP\" /></label>",
+      "css": ".ds-label{display:flex;flex-direction:column;gap:6px;font-family:'Public Sans',sans-serif;font-size:12px;font-weight:500;color:#8fa3c4;}.ds-field{height:36px;width:100%;border-radius:2px;border:1px solid #24354f;background:#0a1220;padding:0 12px;font-size:14px;color:#eaf1fb;outline:none;caret-color:#e8a33d;transition:border-color .15s;}.ds-field::placeholder{color:#7a8fb3;}.ds-field:focus{border-color:#e8a33d;}"
+    },
+    {
+      "name": "Chip neutro",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Etiqueta de dado neutro (protocolo, tipo, VLAN). Cor só quando há significado.",
+      "html": "<span class=\"ds-chip\">TCP</span> <span class=\"ds-chip ds-chip-vpn\">VPN</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:2px;background:#13223a;padding:2px 6px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:16px;font-weight:500;color:#8fa3c4;}.ds-chip-vpn{background:rgb(167 139 250 / .15);color:#a78bfa;}"
+    },
+    {
+      "name": "Painel do Studio",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Contêiner denso do Studio: borda de 1px, cabeçalho com título Heading e divisor.",
+      "html": "<section class=\"ds-panel\"><header class=\"ds-panel-header\"><h3 class=\"ds-panel-title\">Serviços</h3><button class=\"ds-btn ds-btn-sec-sm\">Adicionar</button></header><p class=\"ds-panel-body\">Nenhum serviço cadastrado.</p></section>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:2px;font-family:'Public Sans',sans-serif;font-weight:600;border:1px solid transparent;cursor:pointer;transition:color .15s,background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-btn:disabled{opacity:.5;cursor:not-allowed;}.ds-panel{border-radius:6px;border:1px solid #24354f;background:#0f1b2e;color:#eaf1fb;}.ds-panel-header{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #24354f;padding:8px 12px;}.ds-panel-title{font-family:Archivo,'Arial Black',sans-serif;font-size:15px;line-height:1.4;font-weight:600;margin:0;}.ds-panel-body{padding:16px 12px;font-family:'Public Sans',sans-serif;font-size:12px;color:#7a8fb3;margin:0;}.ds-btn-sec-sm{height:28px;padding:0 10px;font-size:12px;line-height:16px;background:transparent;color:#eaf1fb;border-color:#24354f;}.ds-btn-sec-sm:hover{border-color:#7a8fb3;background:#13223a;}"
+    },
+    {
+      "name": "Tabela técnica",
+      "kind": "custom",
+      "refersTo": "data-table",
+      "description": "Tabela densa do Studio: cabeçalho no papel label, números tabulares, hover discreto.",
+      "html": "<div class=\"ds-scroll\"><table class=\"ds-table\"><thead><tr><th>Serviço</th><th>Protocolo</th><th>Porta</th></tr></thead><tbody><tr><td class=\"ds-strong\">HTTPS</td><td><span class=\"ds-chip\">TCP</span></td><td class=\"ds-mono\">443</td></tr><tr><td class=\"ds-strong\">DNS</td><td><span class=\"ds-chip\">UDP</span></td><td class=\"ds-mono\">53</td></tr></tbody></table></div>",
+      "css": ".ds-scroll{overflow-x:auto;}.ds-table{width:100%;border-collapse:collapse;font-family:'Public Sans',sans-serif;font-size:12px;color:#8fa3c4;font-variant-numeric:tabular-nums;}.ds-table th{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#7a8fb3;text-align:left;white-space:nowrap;border-bottom:1px solid #24354f;padding:6px 8px;}.ds-table td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb,#24354f 55%,transparent);}.ds-table tbody tr:hover td{background:color-mix(in srgb,#13223a 60%,transparent);}.ds-table tbody tr:last-child td{border-bottom:none;}.ds-strong{font-weight:600;color:#eaf1fb;}.ds-mono{font-family:'IBM Plex Mono',monospace;}.ds-chip{display:inline-flex;border-radius:2px;background:#13223a;padding:2px 6px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#8fa3c4;}"
+    },
+    {
+      "name": "Abas",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Abas WAI-ARIA com sublinhado de 2px; ativa em âmbar.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab ds-tab-active\" role=\"tab\" aria-selected=\"true\">Rotas</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Firewall</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Protocolos</button></div>",
+      "css": ".ds-tabs{display:flex;gap:4px;border-bottom:1px solid #24354f;}.ds-tab{margin-bottom:-1px;white-space:nowrap;border:0;border-bottom:2px solid transparent;background:transparent;padding:8px 12px;font-family:'Public Sans',sans-serif;font-size:14px;font-weight:500;color:#8fa3c4;cursor:pointer;transition:color .15s,border-color .15s;}.ds-tab:hover{border-bottom-color:#35507a;color:#eaf1fb;}.ds-tab:focus-visible{outline:2px solid #e8a33d;outline-offset:2px;}.ds-tab-active,.ds-tab-active:hover{border-bottom-color:#e8a33d;color:#eaf1fb;}"
+    },
+    {
+      "name": "Seletor de idioma",
+      "kind": "nav",
+      "refersTo": "language-switch",
+      "description": "Controle segmentado PT/EN/ES do header.",
+      "html": "<div class=\"ds-lang\" role=\"radiogroup\" aria-label=\"Idioma\"><button class=\"ds-lang-opt ds-lang-on\" role=\"radio\" aria-checked=\"true\">PT</button><button class=\"ds-lang-opt\" role=\"radio\" aria-checked=\"false\">EN</button><button class=\"ds-lang-opt\" role=\"radio\" aria-checked=\"false\">ES</button></div>",
+      "css": ".ds-lang{display:inline-flex;height:32px;align-items:center;border-radius:2px;border:1px solid #24354f;background:#0a1220;padding:2px;}.ds-lang-opt{height:100%;border:0;border-radius:1px;background:transparent;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#8fa3c4;cursor:pointer;transition:background-color .15s,color .15s;}.ds-lang-opt:hover{background:#13223a;color:#eaf1fb;}.ds-lang-opt:focus-visible{outline:2px solid #e8a33d;outline-offset:2px;}.ds-lang-on,.ds-lang-on:hover{background:#e8a33d;color:#231404;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Prancheta do Engenheiro de Redes",
+    "overview": "Planta é a mesa de desenho de quem projeta infraestrutura: fundo azul-tinta riscado por uma grade técnica de 42px, traço fino, papel elevado e uma única cor de caneta, o âmbar. Escuro por natureza, denso, com números tabulares e rótulos em mono; cor só para o que carrega significado.\n\nLanding, auth e dashboard respiram; o Studio é instrumento, com corpo de 12px, meta de 11px e tabelas que rolam dentro de si. Profundidade por camadas tonais de tinta; sombra só no que flutua.\n\nIdentidade ancorada no logotipo Nó & Malha e na grade de prancheta. Sem gradiente, brilho ou desfoque decorativo.",
+    "keyCharacteristics": [
+      "Escuro sempre, três degraus de tinta",
+      "Um acento âmbar; cobre só no logotipo",
+      "Cor semântica por papel: signal, route, tier",
+      "Archivo / Public Sans / IBM Plex Mono",
+      "Cantos de 2px em controles, 6px em contêineres",
+      "Desktop-first no Studio; Landing e auth em 390px"
+    ],
+    "rules": [
+      {
+        "name": "The One Pen Rule",
+        "body": "O âmbar é a única cor de ação. Um botão primário por contexto.",
+        "section": "colors"
+      },
+      {
+        "name": "The Meaning-or-Neutral Rule",
+        "body": "Cor só quando carrega significado (estado, rota, camada); dado neutro vai em chip neutro.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token-Only Rule",
+        "body": "Nenhuma paleta utilitária genérica nem hex arbitrário em componente.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Caps Rule",
+        "body": "Caixa-alta só no label mono, no th e no wordmark. Nunca em botão ou título.",
+        "section": "typography"
+      },
+      {
+        "name": "The 11px Floor Rule",
+        "body": "11px é o menor tamanho de texto do app.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Desk Rule",
+        "body": "Painéis e cards em repouso não têm sombra; hover ganha borda line-strong.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Blur Rule",
+        "body": "Desfoque só no scrim do Modal compartilhado.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do combinar botão + variante + tamanho; ícone-só com aria-label e title.",
+      "Do usar o Modal compartilhado e o botão compartilhado de remover.",
+      "Do guardar cor para significado: signal estado, route rota, tier camada.",
+      "Do envolver tabela técnica em contêiner com rolagem horizontal própria.",
+      "Do manter texto em chalk-faint ou mais claro.",
+      "Do seguir uma coluna → grade em lg no Studio e sm fora dele.",
+      "Do respeitar prefers-reduced-motion e o contorno de foco âmbar."
+    ],
+    "donts": [
+      "Don't usar caixa-alta em botão ou título.",
+      "Don't usar texto menor que 11px.",
+      "Don't reintroduzir paletas utilitárias genéricas, hex arbitrário ou branco puro.",
+      "Don't pôr sombra em card/painel em repouso nem gradiente, glow ou blur fora do scrim do Modal.",
+      "Don't usar emoji ou glifo Unicode como ícone.",
+      "Don't criar tema claro pontualmente; paper-* é só do PDF.",
+      "Don't criar overlay de diálogo inline."
+    ]
+  }
+}

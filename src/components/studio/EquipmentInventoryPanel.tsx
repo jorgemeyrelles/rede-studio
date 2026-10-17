@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Fragment, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { useEquipmentsQuery } from '../../features/equipments/queries';
@@ -179,8 +180,8 @@ export default function EquipmentInventoryPanel({
   }
 
   return (
-    <section className="w-full rounded-lg border border-line bg-ink-raised p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300">
+    <section className="w-full rounded-md border border-line bg-ink-raised p-3 shadow-panel">
+      <div className="mb-2 font-display text-heading font-semibold text-chalk">
         {copy.title}
       </div>
 
@@ -188,7 +189,7 @@ export default function EquipmentInventoryPanel({
         <select
           value={siteFilter}
           onChange={(event) => setSiteFilter(event.target.value)}
-          className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+          className="rounded-sm border border-line bg-ink px-2 py-1 text-2xs text-chalk"
         >
           <option value="">{copy.filterAllSites}</option>
           {siteOptions.map((site) => (
@@ -200,7 +201,7 @@ export default function EquipmentInventoryPanel({
         <select
           value={lanFilter}
           onChange={(event) => setLanFilter(event.target.value)}
-          className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+          className="rounded-sm border border-line bg-ink px-2 py-1 text-2xs text-chalk"
         >
           <option value="">{copy.filterAllLans}</option>
           {lanOptions.map((lan) => (
@@ -212,7 +213,7 @@ export default function EquipmentInventoryPanel({
         <select
           value={tierFilter}
           onChange={(event) => setTierFilter(event.target.value)}
-          className="rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 text-[11px] text-slate-100"
+          className="rounded-sm border border-line bg-ink px-2 py-1 text-2xs text-chalk"
         >
           <option value="">{copy.filterAllTiers}</option>
           {tierOptions.map((tier) => (
@@ -221,27 +222,39 @@ export default function EquipmentInventoryPanel({
             </option>
           ))}
         </select>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-2xs text-chalk-faint">
           {visibleGroups.length}{' '}
           {visibleGroups.length !== 1 ? copy.countPlural : copy.countSingular}
         </span>
       </div>
 
       <div className="theme-scrollbar max-h-[420px] overflow-y-auto overflow-x-auto">
-        <table className="w-full border-collapse text-[11px]">
+        <table className="w-full border-collapse text-2xs">
           <thead>
-            <tr className="text-left text-slate-400">
-              <th className="border-b border-[#35567f] px-1 py-1" />
+            <tr className="text-left text-chalk-dim">
+              <th className="border-b border-line px-1 py-1" />
               {COLUMNS.map((column) => (
                 <th
                   key={column.key}
-                  className="cursor-pointer select-none border-b border-[#35567f] px-2 py-1 hover:text-slate-200"
+                  className="cursor-pointer select-none border-b border-line px-2 py-1 hover:text-chalk"
                   onClick={() => handleSort(column.key)}
                 >
                   {column.label}
                   {sortKey === column.key && (
-                    <span className="ml-1 text-cyan-300">
-                      {sortDir === 'asc' ? '▲' : '▼'}
+                    <span className="ml-1 text-chalk">
+                      {sortDir === 'asc' ? (
+                        <ChevronUp
+                          size={12}
+                          className="inline-block"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ChevronDown
+                          size={12}
+                          className="inline-block"
+                          aria-hidden="true"
+                        />
+                      )}
                     </span>
                   )}
                 </th>
@@ -253,7 +266,7 @@ export default function EquipmentInventoryPanel({
               <tr>
                 <td
                   colSpan={TOTAL_COLUMN_COUNT}
-                  className="border-b border-slate-800 px-2 py-3 text-center text-slate-500"
+                  className="border-b border-line px-2 py-3 text-center text-chalk-faint"
                 >
                   {copy.emptyState}
                 </td>
@@ -290,8 +303,8 @@ export default function EquipmentInventoryPanel({
 
               return (
                 <Fragment key={row.id}>
-                  <tr className="hover:bg-slate-800/30">
-                    <td className="border-b border-slate-800 px-1 py-1">
+                  <tr className="hover:bg-ink-raised-2">
+                    <td className="border-b border-line px-1 py-1">
                       <button
                         type="button"
                         aria-label={
@@ -299,10 +312,10 @@ export default function EquipmentInventoryPanel({
                         }
                         onClick={() => isExpandable && toggleExpand(row.id)}
                         disabled={!isExpandable}
-                        className={`flex h-5 w-5 items-center justify-center rounded transition-all duration-150 ${
+                        className={`flex h-5 w-5 items-center justify-center rounded-sm transition-all duration-150 ${
                           isExpandable
-                            ? 'cursor-pointer text-amber-400 hover:bg-slate-700 hover:text-amber-300'
-                            : 'cursor-not-allowed text-slate-600 opacity-40'
+                            ? 'cursor-pointer text-signal-warn hover:bg-ink-raised-2 hover:text-signal-warn'
+                            : 'cursor-not-allowed text-chalk-faint opacity-40'
                         }`}
                       >
                         <svg
@@ -318,18 +331,18 @@ export default function EquipmentInventoryPanel({
                         </svg>
                       </button>
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 font-mono text-[10px] text-slate-400">
+                    <td className="border-b border-line px-2 py-1 font-mono text-2xs text-chalk-dim">
                       {row.id}
                       {isExpandable && (
-                        <span className="ml-1 text-slate-600">
+                        <span className="ml-1 text-chalk-faint">
                           (×{children.length + 1})
                         </span>
                       )}
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-200">
+                    <td className="border-b border-line px-2 py-1 text-chalk">
                       {row.nome}
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       <select
                         value={currentBrand}
                         disabled={noEquipmentForType && !currentBrand}
@@ -344,7 +357,7 @@ export default function EquipmentInventoryPanel({
                             }),
                           )
                         }
-                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100 disabled:opacity-50"
+                        className="w-full rounded-sm border border-line bg-ink px-1.5 py-1 text-2xs text-chalk disabled:opacity-50"
                       >
                         <option value="">
                           {noEquipmentForType
@@ -358,7 +371,7 @@ export default function EquipmentInventoryPanel({
                         ))}
                       </select>
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       <select
                         value={currentModel}
                         disabled={!currentBrand}
@@ -370,7 +383,7 @@ export default function EquipmentInventoryPanel({
                             }),
                           )
                         }
-                        className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-1 text-[11px] text-slate-100 disabled:opacity-50"
+                        className="w-full rounded-sm border border-line bg-ink px-1.5 py-1 text-2xs text-chalk disabled:opacity-50"
                       >
                         <option value="">{copy.modelPlaceholder}</option>
                         {availableModels.map((model) => (
@@ -380,16 +393,16 @@ export default function EquipmentInventoryPanel({
                         ))}
                       </select>
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       {row.funcao}
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       {row.site}
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       {row.lan}
                     </td>
-                    <td className="border-b border-slate-800 px-2 py-1 text-slate-300">
+                    <td className="border-b border-line px-2 py-1 text-chalk-dim">
                       {getTierLabel(row.tier, language, row.lan)}
                     </td>
                   </tr>
@@ -400,10 +413,10 @@ export default function EquipmentInventoryPanel({
                         <div
                           className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[600px]' : 'max-h-0'}`}
                         >
-                          <div className="ml-7 border-l-2 border-amber-500/40 bg-slate-800/50">
+                          <div className="ml-7 rounded-sm border border-line bg-ink-raised-2">
                             <table className="w-full border-collapse">
                               <thead>
-                                <tr className="text-left text-[10px] text-slate-500">
+                                <tr className="text-left text-2xs text-chalk-faint">
                                   <th className="px-2 py-0.5">{copy.colId}</th>
                                   <th className="px-2 py-0.5">
                                     {copy.colName}
@@ -447,12 +460,12 @@ export default function EquipmentInventoryPanel({
                                   return (
                                     <tr
                                       key={child.id}
-                                      className="hover:bg-slate-700/30"
+                                      className="hover:bg-ink-raised-2"
                                     >
-                                      <td className="px-2 py-0.5 font-mono text-[10px] text-slate-400">
+                                      <td className="px-2 py-0.5 font-mono text-2xs text-chalk-dim">
                                         {child.id}
                                       </td>
-                                      <td className="px-2 py-0.5 text-slate-300">
+                                      <td className="px-2 py-0.5 text-chalk-dim">
                                         {child.nome}
                                       </td>
                                       <td className="px-2 py-0.5">
@@ -472,7 +485,7 @@ export default function EquipmentInventoryPanel({
                                           disabled={
                                             noEquipmentForType && !childBrand
                                           }
-                                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100 disabled:opacity-50"
+                                          className="w-full rounded-sm border border-line bg-ink px-1.5 py-0.5 text-2xs text-chalk disabled:opacity-50"
                                         >
                                           <option value="">
                                             {noEquipmentForType
@@ -500,7 +513,7 @@ export default function EquipmentInventoryPanel({
                                               }),
                                             )
                                           }
-                                          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-1.5 py-0.5 text-[11px] text-slate-100 disabled:opacity-50"
+                                          className="w-full rounded-sm border border-line bg-ink px-1.5 py-0.5 text-2xs text-chalk disabled:opacity-50"
                                         >
                                           <option value="">
                                             {copy.modelPlaceholder}

@@ -21,7 +21,10 @@ declare global {
             client_id: string;
             callback: (response: GoogleIdCredentialResponse) => void;
           }) => void;
-          renderButton: (parent: HTMLElement, options: GoogleButtonOptions) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: GoogleButtonOptions,
+          ) => void;
         };
       };
     };
@@ -41,7 +44,8 @@ function loadGoogleScript(): Promise<void> {
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Google Identity Services script'));
+      script.onerror = () =>
+        reject(new Error('Failed to load Google Identity Services script'));
       document.head.appendChild(script);
     });
   }
@@ -67,6 +71,9 @@ type RenderGoogleButtonOptions = {
  *
  * No-op silencioso se `VITE_GOOGLE_CLIENT_ID` não estiver configurado.
  */
+let gisInitialized = false;
+let currentCredentialHandler: ((idToken: string) => void) | null = null;
+
 export async function renderGoogleButton({
   container,
   locale,
@@ -78,18 +85,30 @@ export async function renderGoogleButton({
 
   await loadGoogleScript();
 
-  window.google!.accounts.id.initialize({
-    client_id: clientId,
-    callback: (response) => onCredential(response.credential),
-  });
+  // O GIS só aceita UM initialize por página (chamar de novo gera o aviso
+  // "[GSI_LOGGER] initialize() is called multiple times"). Inicializa uma vez
+  // e despacha o credential pro handler do botão renderizado por último.
+  currentCredentialHandler = onCredential;
+  if (!gisInitialized) {
+    window.google!.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => currentCredentialHandler?.(response.credential),
+    });
+    gisInitialized = true;
+  }
 
   container.innerHTML = '';
   window.google!.accounts.id.renderButton(container, {
     type: 'standard',
     theme: 'filled_black',
     size: 'large',
-    shape: 'pill',
-    width: 320,
+    shape: 'rectangular',
+    // Mesma largura da coluna do formulário (o GIS aceita 200–400px), pra
+    // alinhar com os inputs e o botão da Microsoft.
+    width: Math.max(
+      200,
+      Math.min(400, Math.round(container.clientWidth || 320)),
+    ),
     text,
     locale,
   });

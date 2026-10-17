@@ -1,4 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
+import {
+  historyMiddleware,
+  historyReducer,
+} from '../features/network/history';
 import networkReducer from '../features/network/networkSlice';
 
 // Autosave (antes um middleware aqui) agora é `features/network/useAutosave.ts`,
@@ -10,7 +14,10 @@ import networkReducer from '../features/network/networkSlice';
 export const store = configureStore({
   reducer: {
     network: networkReducer,
+    // Só os flags canUndo/canRedo — as pilhas vivem no middleware.
+    history: historyReducer,
   },
+  middleware: (getDefault) => getDefault().concat(historyMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

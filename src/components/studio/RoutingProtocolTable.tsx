@@ -1,3 +1,4 @@
+import { AlertTriangle, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { updateNodeTechField } from '../../features/network/networkSlice';
@@ -5,13 +6,14 @@ import { selectRoutingProtocolRows } from '../../features/network/selectors';
 import type { RoutingProtocolRow } from '../../features/network/types';
 import { buildNetworkAddress } from '../../features/network/utils';
 import {
-    MODE_CLASS,
-    MODE_LABEL,
-    parseNeighborDraft,
-    serializeNeighborDraft,
-    type NeighborDraftEntry,
-    type RoutingProtocolTableProps,
+  MODE_CLASS,
+  MODE_LABEL,
+  parseNeighborDraft,
+  serializeNeighborDraft,
+  type NeighborDraftEntry,
+  type RoutingProtocolTableProps,
 } from './catalog';
+import { ui as studioUi } from './utils/studioUi';
 
 // ── Inline editable cell ──────────────────────────────────────────────────────
 function EditableCell({
@@ -59,7 +61,7 @@ function EditableCell({
           }
         }}
         placeholder={placeholder}
-        className="w-full rounded border border-blue-500/50 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-blue-400"
+        className="w-full rounded-sm border border-line-strong bg-ink px-1 py-0.5 font-mono text-2xs text-chalk outline-none focus:border-accent"
         style={{ minWidth: 60 }}
       />
     );
@@ -80,8 +82,8 @@ function EditableCell({
           setEditing(true);
         }
       }}
-      className={`inline-block cursor-pointer rounded px-1 py-0.5 font-mono text-[10px] hover:bg-slate-700/60 ${
-        String(value) ? 'text-slate-200' : 'text-slate-600 italic'
+      className={`inline-block cursor-pointer rounded-sm px-1 py-0.5 font-mono text-2xs hover:bg-ink-raised-2 ${
+        String(value) ? 'text-chalk' : 'text-chalk-faint italic'
       }`}
     >
       {String(value) || placeholder || '—'}
@@ -113,10 +115,10 @@ function BooleanCell({
           updateNodeTechField({ id: nodeId, key: fieldKey, value: !value }),
         )
       }
-      className={`rounded px-1.5 py-0.5 text-[9px] font-semibold transition ${
+      className={`rounded-sm px-1.5 py-0.5 text-2xs font-semibold transition ${
         value
-          ? 'bg-emerald-900/60 text-emerald-300 hover:bg-red-900/40 hover:text-red-300'
-          : 'bg-slate-700/60 text-slate-500 hover:bg-emerald-900/40 hover:text-emerald-300'
+          ? 'bg-signal-up/15 text-signal-up hover:bg-signal-down/15 hover:text-signal-down'
+          : 'bg-ink-raised-2 text-chalk-faint hover:bg-signal-up/15 hover:text-signal-up'
       }`}
     >
       {value ? 'ON' : 'OFF'}
@@ -194,14 +196,17 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
                 setDraftRemoteAsn(selected?.remoteAsn ?? '');
               }
             }}
-            className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+            className="rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
           >
             {candidates.map((candidate) => (
-              <option key={`${row.nodeId}-${candidate.nodeId}`} value={candidate.ip}>
+              <option
+                key={`${row.nodeId}-${candidate.nodeId}`}
+                value={candidate.ip}
+              >
                 {candidate.ip} - {candidate.nodeLabel}
               </option>
             ))}
-            <option value="__custom__">Outro IP...</option>
+            <option value="__custom__">{studioUi().otherIp}</option>
           </select>
           <input
             type="text"
@@ -211,12 +216,12 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
               if (e.key === 'Enter') addNeighbor();
             }}
             placeholder="ASN"
-            className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-violet-400"
+            className="rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk outline-none focus:border-route-vpn/60"
           />
           <button
             type="button"
             onClick={addNeighbor}
-            className="rounded border border-violet-600/60 bg-violet-900/40 px-1 py-0.5 text-[9px] font-semibold text-violet-200 hover:bg-violet-800/50"
+            className="rounded-sm border border-route-vpn/60 bg-route-vpn/15 px-1 py-0.5 text-2xs font-semibold text-route-vpn hover:bg-route-vpn/15"
           >
             + Peer
           </button>
@@ -232,31 +237,31 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
               if (e.key === 'Enter') addNeighbor();
             }}
             placeholder="IP do neighbor"
-            className="w-full rounded border border-blue-500/50 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 outline-none focus:border-blue-400"
+            className="w-full rounded-sm border border-line-strong bg-ink px-1 py-0.5 font-mono text-2xs text-chalk outline-none focus:border-accent"
           />
         )}
 
-        <div className="max-h-20 space-y-0.5 overflow-y-auto rounded border border-slate-800/70 bg-slate-950/40 p-1">
+        <div className="max-h-20 space-y-0.5 overflow-y-auto rounded-sm border border-line bg-ink/40 p-1">
           {draftNeighbors.length === 0 ? (
-            <div className="text-[9px] italic text-slate-600">
-              Sem peers adicionados.
+            <div className="text-2xs italic text-chalk-faint">
+              {studioUi().noPeers}
             </div>
           ) : (
             draftNeighbors.map((entry, index) => (
               <div
                 key={`${entry.ip}-${index}`}
-                className="flex items-center justify-between gap-1 text-[10px]"
+                className="flex items-center justify-between gap-1 text-2xs"
               >
-                <span className="min-w-0 truncate font-mono text-slate-300">
+                <span className="min-w-0 truncate font-mono text-chalk-dim">
                   {entry.ip}
-                  <span className="text-violet-300">
+                  <span className="text-route-vpn">
                     {entry.remoteAsn ? ` / ${entry.remoteAsn}` : ''}
                   </span>
                 </span>
                 <button
                   type="button"
                   onClick={() => removeNeighbor(index)}
-                  className="rounded px-1 text-[9px] text-rose-300 hover:bg-rose-900/40"
+                  className="rounded-sm px-1 text-2xs text-signal-down hover:bg-signal-down/15"
                 >
                   x
                 </button>
@@ -272,14 +277,14 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
               setDraftNeighbors(parseNeighborDraft(row.bgpNeighborsRaw ?? ''));
               setEditingRaw(false);
             }}
-            className="rounded border border-slate-700 px-1.5 py-0.5 text-[9px] text-slate-400 hover:bg-slate-800"
+            className="rounded-sm border border-line px-1.5 py-0.5 text-2xs text-chalk-dim hover:bg-ink-raised-2"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={commitRaw}
-            className="rounded border border-emerald-700/60 bg-emerald-900/40 px-1.5 py-0.5 text-[9px] text-emerald-300 hover:bg-emerald-800/50"
+            className="rounded-sm border border-signal-up/40 bg-signal-up/15 px-1.5 py-0.5 text-2xs text-signal-up hover:bg-signal-up/15"
           >
             Salvar
           </button>
@@ -294,13 +299,25 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="text-[10px] text-slate-400 hover:text-slate-200"
+          className="text-2xs text-chalk-dim hover:text-chalk"
           title={expanded ? 'Recolher peers' : 'Expandir peers'}
         >
-          {expanded ? '▼' : '▶'}{' '}
+          {expanded ? (
+            <ChevronDown
+              size={12}
+              aria-hidden="true"
+              className="inline-block"
+            />
+          ) : (
+            <ChevronRight
+              size={12}
+              aria-hidden="true"
+              className="inline-block"
+            />
+          )}{' '}
           <span
             className={
-              count === 0 ? 'text-slate-600 italic' : 'text-violet-300'
+              count === 0 ? 'text-chalk-faint italic' : 'text-route-vpn'
             }
           >
             {count === 0 ? 'sem peers' : `${count} peer${count > 1 ? 's' : ''}`}
@@ -308,7 +325,7 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
         </button>
         <button
           type="button"
-          title="Editar neighbors"
+          title={studioUi().editNeighbors}
           onClick={() => {
             const initial = parseNeighborDraft(row.bgpNeighborsRaw ?? '');
             const firstCandidate = candidates[0];
@@ -318,24 +335,25 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
             setDraftRemoteAsn(firstCandidate?.remoteAsn ?? '');
             setEditingRaw(true);
           }}
-          className="text-[9px] text-slate-600 hover:text-blue-400"
+          aria-label={studioUi().editNeighbors}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-chalk-faint hover:text-accent"
         >
-          ✎
+          <Pencil size={12} aria-hidden="true" />
         </button>
       </div>
       {expanded && (row.bgpNeighborsParsed?.length ?? 0) > 0 && (
         <table className="mt-0.5 border-collapse">
           <thead>
-            <tr className="text-[9px] text-slate-500">
+            <tr className="text-2xs text-chalk-faint">
               <th className="pr-2 text-left font-normal">Peer IP</th>
               <th className="text-left font-normal">ASN Remoto</th>
             </tr>
           </thead>
           <tbody>
             {row.bgpNeighborsParsed!.map((n, i) => (
-              <tr key={i} className="text-[10px]">
-                <td className="pr-2 font-mono text-slate-300">{n.ip || '—'}</td>
-                <td className="font-mono text-violet-300">
+              <tr key={i} className="text-2xs">
+                <td className="pr-2 font-mono text-chalk-dim">{n.ip || '—'}</td>
+                <td className="font-mono text-route-vpn">
                   {n.remoteAsn || '—'}
                 </td>
               </tr>
@@ -350,25 +368,25 @@ function NeighborsCell({ row }: { row: RoutingProtocolRow }) {
 // ── Static row ────────────────────────────────────────────────────────────────
 function StaticRow({ row }: { row: RoutingProtocolRow }) {
   return (
-    <tr className="hover:bg-slate-800/40">
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-sky-300">
+    <tr className="hover:bg-ink-raised-2">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk">
         {row.siteName}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-300">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk-dim">
         {row.nodeLabel}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <span
-          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+          className={`rounded-sm px-1.5 py-0.5 text-2xs font-semibold ${MODE_CLASS[row.mode]}`}
         >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
       <td
         colSpan={6}
-        className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-600 italic"
+        className="border-b border-line px-2 py-1.5 text-2xs text-chalk-faint italic"
       >
-        Rotas configuradas manualmente — sem protocolo dinâmico
+        {studioUi().staticRoutesHint}
       </td>
     </tr>
   );
@@ -377,22 +395,22 @@ function StaticRow({ row }: { row: RoutingProtocolRow }) {
 // ── OSPF row ──────────────────────────────────────────────────────────────────
 function OspfRow({ row }: { row: RoutingProtocolRow }) {
   return (
-    <tr className="hover:bg-slate-800/40">
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-sky-300">
+    <tr className="hover:bg-ink-raised-2">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk">
         {row.siteName}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-300">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk-dim">
         {row.nodeLabel}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <span
-          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+          className={`rounded-sm px-1.5 py-0.5 text-2xs font-semibold ${MODE_CLASS[row.mode]}`}
         >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
       {/* Área */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfArea"
@@ -401,7 +419,7 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
         />
       </td>
       {/* Hello */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfHello"
@@ -410,7 +428,7 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
         />
       </td>
       {/* Dead */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfDead"
@@ -421,7 +439,7 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
       {/* BGP colunas — vazio */}
       <td
         colSpan={3}
-        className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700"
+        className="border-b border-line px-2 py-1.5 text-2xs text-chalk-faint"
       >
         —
       </td>
@@ -432,16 +450,16 @@ function OspfRow({ row }: { row: RoutingProtocolRow }) {
 // ── BGP row ───────────────────────────────────────────────────────────────────
 function BgpRow({ row }: { row: RoutingProtocolRow }) {
   return (
-    <tr className="hover:bg-slate-800/40">
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-sky-300">
+    <tr className="hover:bg-ink-raised-2">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk">
         {row.siteName}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-300">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk-dim">
         {row.nodeLabel}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <span
-          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+          className={`rounded-sm px-1.5 py-0.5 text-2xs font-semibold ${MODE_CLASS[row.mode]}`}
         >
           {MODE_LABEL[row.mode]}
         </span>
@@ -449,12 +467,12 @@ function BgpRow({ row }: { row: RoutingProtocolRow }) {
       {/* OSPF colunas — vazio */}
       <td
         colSpan={3}
-        className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-700"
+        className="border-b border-line px-2 py-1.5 text-2xs text-chalk-faint"
       >
         —
       </td>
       {/* ASN */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="bgpAsn"
@@ -463,11 +481,11 @@ function BgpRow({ row }: { row: RoutingProtocolRow }) {
         />
       </td>
       {/* Neighbors */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <NeighborsCell row={row} />
       </td>
       {/* MD5 */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <BooleanCell
           nodeId={row.nodeId}
           fieldKey="bgpMd5"
@@ -481,22 +499,22 @@ function BgpRow({ row }: { row: RoutingProtocolRow }) {
 // ── Mixed row ─────────────────────────────────────────────────────────────────
 function MixedRow({ row }: { row: RoutingProtocolRow }) {
   return (
-    <tr className="hover:bg-slate-800/40">
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-sky-300">
+    <tr className="hover:bg-ink-raised-2">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk">
         {row.siteName}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5 text-[10px] text-slate-300">
+      <td className="border-b border-line px-2 py-1.5 text-2xs text-chalk-dim">
         {row.nodeLabel}
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <span
-          className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${MODE_CLASS[row.mode]}`}
+          className={`rounded-sm px-1.5 py-0.5 text-2xs font-semibold ${MODE_CLASS[row.mode]}`}
         >
           {MODE_LABEL[row.mode]}
         </span>
       </td>
       {/* OSPF */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfArea"
@@ -504,7 +522,7 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
           placeholder="0.0.0.0"
         />
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfHello"
@@ -512,7 +530,7 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
           numeric
         />
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="ospfDead"
@@ -521,7 +539,7 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
         />
       </td>
       {/* BGP */}
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <EditableCell
           nodeId={row.nodeId}
           fieldKey="bgpAsn"
@@ -529,10 +547,10 @@ function MixedRow({ row }: { row: RoutingProtocolRow }) {
           placeholder="65001"
         />
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <NeighborsCell row={row} />
       </td>
-      <td className="border-b border-slate-800 px-2 py-1.5">
+      <td className="border-b border-line px-2 py-1.5">
         <BooleanCell
           nodeId={row.nodeId}
           fieldKey="bgpMd5"
@@ -557,7 +575,9 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
         const remoteNetworks = siteNetworks
           .filter((network) => network.siteId !== row.siteId)
           .map((network) => {
-            const networkSite = sites.find((item) => item.id === network.siteId);
+            const networkSite = sites.find(
+              (item) => item.id === network.siteId,
+            );
             const networkAddress = buildNetworkAddress(
               network.addressFamily,
               network.thirdOctet,
@@ -614,9 +634,13 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
     .map((item) => item.trim())
     .filter((item) => item !== '');
   const hasConfiguredPrefixes = prefixesIn.length > 0 || prefixesOut.length > 0;
-  const hasSuggestedPrefixes = suggestedInList.length > 0 || suggestedOutList.length > 0;
+  const hasSuggestedPrefixes =
+    suggestedInList.length > 0 || suggestedOutList.length > 0;
 
-  const commitPrefix = (key: 'bgpPrefixListIn' | 'bgpPrefixListOut', raw: string) => {
+  const commitPrefix = (
+    key: 'bgpPrefixListIn' | 'bgpPrefixListOut',
+    raw: string,
+  ) => {
     dispatch(
       updateNodeTechField({
         id: row.nodeId,
@@ -629,32 +653,38 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
   return (
     <>
       <tr>
-        <td colSpan={9} className="border-b border-slate-800/60 p-0">
+        <td colSpan={9} className="border-b border-line p-0">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="flex w-full items-center gap-1 px-4 py-0.5 text-[9px] text-slate-600 hover:text-slate-400"
+            className="flex w-full items-center gap-1 px-4 py-0.5 text-2xs text-chalk-faint hover:text-chalk-dim"
           >
-            <span>{open ? '▼' : '▶'}</span>
+            <span>
+              {open ? (
+                <ChevronDown size={12} aria-hidden="true" />
+              ) : (
+                <ChevronRight size={12} aria-hidden="true" />
+              )}
+            </span>
             <span>
               Prefix-Lists (opcional){' '}
               {hasConfiguredPrefixes ? (
-                <span className="text-violet-400">configurados</span>
+                <span className="text-route-vpn">configurados</span>
               ) : hasSuggestedPrefixes ? (
-                <span className="text-cyan-300">sugeridos</span>
+                <span className="text-chalk">sugeridos</span>
               ) : (
-                <span className="italic">(não configurados)</span>
+                <span className="italic">{studioUi().notConfigured}</span>
               )}
             </span>
           </button>
         </td>
       </tr>
       {open && (
-        <tr className="bg-slate-800/20">
-          <td colSpan={9} className="border-b border-slate-800 px-4 py-2">
-            <div className="grid grid-cols-2 gap-3 text-[10px]">
+        <tr className="bg-ink-raised-2">
+          <td colSpan={9} className="border-b border-line px-4 py-2">
+            <div className="grid grid-cols-2 gap-3 text-2xs">
               <div>
-                <label className="mb-0.5 block text-[9px] text-slate-500">
+                <label className="mb-0.5 block text-2xs text-chalk-faint">
                   Prefixos aceitos (IN)
                 </label>
                 <input
@@ -668,17 +698,19 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
                       commitPrefix('bgpPrefixListIn', draftIn);
                     }
                   }}
-                  placeholder={suggestedInValue || 'Ex: 10.10.0.0/16, 172.16.20.0/24'}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500/50"
+                  placeholder={
+                    suggestedInValue || 'Ex: 10.10.0.0/16, 172.16.20.0/24'
+                  }
+                  className="w-full rounded-sm border border-line bg-ink px-1.5 py-1 font-mono text-2xs text-chalk placeholder-chalk-faint outline-none focus:border-accent/60"
                 />
                 {suggestedInValue && !row.bgpPrefixListIn?.trim() && (
-                  <p className="mt-0.5 text-[9px] text-cyan-300">
-                    Sugestão inicial aplicada automaticamente.
+                  <p className="mt-0.5 text-2xs text-chalk">
+                    {studioUi().initialSuggestionApplied}
                   </p>
                 )}
               </div>
               <div>
-                <label className="mb-0.5 block text-[9px] text-slate-500">
+                <label className="mb-0.5 block text-2xs text-chalk-faint">
                   Prefixos anunciados (OUT)
                 </label>
                 <input
@@ -693,17 +725,17 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
                     }
                   }}
                   placeholder={suggestedOutValue || 'Ex: 200.30.1.0/24'}
-                  className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-1 font-mono text-[10px] text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500/50"
+                  className="w-full rounded-sm border border-line bg-ink px-1.5 py-1 font-mono text-2xs text-chalk placeholder-chalk-faint outline-none focus:border-accent/60"
                 />
                 {suggestedOutValue && !row.bgpPrefixListOut?.trim() && (
-                  <p className="mt-0.5 text-[9px] text-cyan-300">
-                    Sugestão inicial aplicada automaticamente.
+                  <p className="mt-0.5 text-2xs text-chalk">
+                    {studioUi().initialSuggestionApplied}
                   </p>
                 )}
               </div>
             </div>
-            <p className="mt-1 text-[9px] text-slate-600">
-              Prefix-list é opcional e aceita edição livre por lista CSV.
+            <p className="mt-1 text-2xs text-chalk-faint">
+              {studioUi().prefixListHint}
             </p>
           </td>
         </tr>
@@ -716,11 +748,16 @@ function PrefixRow({ row }: { row: RoutingProtocolRow }) {
 function WarningRow({ row }: { row: RoutingProtocolRow }) {
   if (row.warnings.length === 0) return null;
   return (
-    <tr className="bg-amber-950/20">
-      <td colSpan={9} className="border-b border-amber-900/30 px-4 py-0.5">
+    <tr className="bg-signal-warn/10">
+      <td colSpan={9} className="border-b border-signal-warn/40 px-4 py-0.5">
         {row.warnings.map((w) => (
-          <span key={w} className="mr-3 text-[9px] text-amber-400">
-            ⚠ {w}
+          <span key={w} className="mr-3 text-2xs text-signal-warn">
+            <AlertTriangle
+              size={12}
+              className="mr-1 inline-block -translate-y-px"
+              aria-hidden="true"
+            />
+            {w}
           </span>
         ))}
       </td>
@@ -742,10 +779,10 @@ export default function RoutingProtocolTable({
   const hasBgp = rows.some((r) => r.mode === 'bgp' || r.mode === 'mixed');
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+    <div className="rounded-md border border-line bg-ink/70 p-3">
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">
+        <h3 className="font-display text-heading font-semibold text-chalk">
           Roteamento por Protocolo
         </h3>
         <div className="flex items-center gap-1">
@@ -754,10 +791,10 @@ export default function RoutingProtocolTable({
               key={m}
               type="button"
               onClick={() => setFilterMode(m)}
-              className={`rounded px-2 py-0.5 text-[9px] font-semibold transition ${
+              className={`rounded-sm px-2 py-0.5 text-2xs font-semibold transition ${
                 filterMode === m
-                  ? 'bg-teal-800/60 text-teal-200'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-accent/15 text-chalk'
+                  : 'text-chalk-faint hover:text-chalk-dim'
               }`}
             >
               {m === 'all' ? 'Todos' : MODE_LABEL[m]}
@@ -768,57 +805,55 @@ export default function RoutingProtocolTable({
 
       <div className="theme-scrollbar h-[280px] overflow-x-auto overflow-y-auto text-xs">
         {rows.length === 0 ? (
-          <p className="px-1 py-3 text-[11px] text-slate-600 italic">
+          <p className="px-1 py-3 text-2xs text-chalk-faint italic">
             Nenhum roteador configurado na topologia.
           </p>
         ) : (
           <table className="w-full border-collapse">
             <thead>
-              <tr className="text-left text-[10px] text-slate-500">
-                <th className="border-b border-slate-700 px-2 py-1 w-[100px]">
+              <tr className="text-left text-2xs text-chalk-faint">
+                <th className="border-b border-line px-2 py-1 w-[100px]">
                   Site
                 </th>
-                <th className="border-b border-slate-700 px-2 py-1 w-[90px]">
-                  Nó
-                </th>
-                <th className="border-b border-slate-700 px-2 py-1 w-[60px]">
+                <th className="border-b border-line px-2 py-1 w-[90px]">Nó</th>
+                <th className="border-b border-line px-2 py-1 w-[60px]">
                   Modo
                 </th>
                 {/* OSPF */}
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 w-[80px] ${!hasOspf ? 'text-slate-700' : 'text-blue-400/70'}`}
+                  className={`border-b border-line px-2 py-1 w-[80px] ${!hasOspf ? 'text-chalk-faint' : 'text-accent'}`}
                   title="OSPF — Área"
                 >
                   Área OSPF
                 </th>
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 w-[60px] ${!hasOspf ? 'text-slate-700' : 'text-blue-400/70'}`}
+                  className={`border-b border-line px-2 py-1 w-[60px] ${!hasOspf ? 'text-chalk-faint' : 'text-accent'}`}
                   title="OSPF — Intervalo Hello (s)"
                 >
                   Hello(s)
                 </th>
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 w-[60px] ${!hasOspf ? 'text-slate-700' : 'text-blue-400/70'}`}
+                  className={`border-b border-line px-2 py-1 w-[60px] ${!hasOspf ? 'text-chalk-faint' : 'text-accent'}`}
                   title="OSPF — Intervalo Dead (s)"
                 >
                   Dead(s)
                 </th>
                 {/* BGP */}
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 w-[70px] ${!hasBgp ? 'text-slate-700' : 'text-violet-400/70'}`}
+                  className={`border-b border-line px-2 py-1 w-[70px] ${!hasBgp ? 'text-chalk-faint' : 'text-route-vpn'}`}
                   title="BGP — ASN Local"
                 >
                   ASN Local
                 </th>
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 ${!hasBgp ? 'text-slate-700' : 'text-violet-400/70'}`}
+                  className={`border-b border-line px-2 py-1 ${!hasBgp ? 'text-chalk-faint' : 'text-route-vpn'}`}
                   title="BGP — Peers / Neighbors"
                 >
                   Neighbors
                 </th>
                 <th
-                  className={`border-b border-slate-700 px-2 py-1 w-[50px] ${!hasBgp ? 'text-slate-700' : 'text-violet-400/70'}`}
-                  title="BGP — Autenticação MD5"
+                  className={`border-b border-line px-2 py-1 w-[50px] ${!hasBgp ? 'text-chalk-faint' : 'text-route-vpn'}`}
+                  title={studioUi().bgpMd5Auth}
                 >
                   MD5
                 </th>
@@ -829,7 +864,7 @@ export default function RoutingProtocolTable({
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-2 py-2 text-[10px] text-slate-600 italic"
+                    className="px-2 py-2 text-2xs text-chalk-faint italic"
                   >
                     Nenhum roteador com modo "{filterMode}".
                   </td>

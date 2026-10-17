@@ -1,8 +1,10 @@
 export const MODE_CLASS: Record<string, string> = {
-  static: 'bg-slate-700 text-slate-300',
-  ospf: 'bg-blue-900/60 text-blue-300',
-  bgp: 'bg-violet-900/60 text-violet-300',
-  mixed: 'bg-teal-900/60 text-teal-300',
+  // Mesmo matiz das rotas correspondentes (tokens route-*), pra o modo de
+  // roteamento "bater" com a cor da rota que ele gera na tabela de rotas.
+  static: 'bg-route-static/15 text-route-static',
+  ospf: 'bg-route-direct/15 text-route-direct',
+  bgp: 'bg-route-bgp/15 text-route-bgp',
+  mixed: 'bg-accent/15 text-accent',
 };
 
 export const MODE_LABEL: Record<string, string> = {
