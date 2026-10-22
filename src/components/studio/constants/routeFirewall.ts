@@ -1,6 +1,6 @@
 /**
  * Cor por tipo de rota (badge Fase 4 do redesign Planta — ver
- * .claude/plans/redesign-planta-e-sessao-jwt.md). Tokens fixos, não
+ * .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md). Tokens fixos, não
  * dependem da variante de acento escolhida — são semântica de rede, não
  * identidade de marca.
  */

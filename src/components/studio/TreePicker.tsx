@@ -1,16 +1,18 @@
+import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 /**
  * TreePicker — Site → VLAN → IP tree with checkboxes
  * Computes AclEndpointScope based on selection breadth.
  */
 import { useEffect, useRef, useState } from 'react';
 import type {
-    AclEndpointScope,
-    NodeItem,
-    Site,
-    SiteNetwork,
-    SiteVlan,
-    Subnet,
+  AclEndpointScope,
+  NodeItem,
+  Site,
+  SiteNetwork,
+  SiteVlan,
+  Subnet,
 } from '../../features/network/types/entities';
+import { ui as studioUi } from './utils/studioUi';
 
 export type TreePickerValue = {
   scope: AclEndpointScope;
@@ -43,7 +45,7 @@ export function TreePicker({
   subnets = [],
   value,
   onChange,
-  placeholder = 'Selecionar nó…',
+  placeholder = studioUi().selectNode,
   excludeNodeId,
 }: TreePickerProps) {
   const [open, setOpen] = useState(false);
@@ -110,7 +112,7 @@ export function TreePicker({
   };
 
   const displayLabel = (() => {
-    if (value === 'any') return 'Qualquer (ANY)';
+    if (value === 'any') return studioUi().anyService;
     if (value.startsWith('subnet:')) {
       const sub = subnets.find((s) => s.id === value.slice(7));
       return sub
@@ -135,13 +137,13 @@ export function TreePicker({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-left text-[10px] text-slate-200 hover:border-slate-400"
+        className="w-full rounded-sm border border-line-strong bg-ink-raised-2 px-2 py-1 text-left text-2xs text-chalk hover:border-line-strong"
       >
         <span className="block truncate">{displayLabel}</span>
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-64 rounded border border-slate-600 bg-slate-900 shadow-xl">
+        <div className="absolute z-50 mt-1 w-64 rounded-sm border border-line-strong bg-ink shadow-panel">
           <div className="max-h-64 overflow-y-auto">
             {/* Any option */}
             <button
@@ -150,9 +152,9 @@ export function TreePicker({
                 onChange('any');
                 setOpen(false);
               }}
-              className={`w-full px-2 py-1 text-left text-[10px] hover:bg-slate-700 ${value === 'any' ? 'text-sky-400' : 'text-slate-300'}`}
+              className={`w-full px-2 py-1 text-left text-2xs hover:bg-ink-raised-2 ${value === 'any' ? 'text-accent' : 'text-chalk-dim'}`}
             >
-              ☐ Qualquer (ANY)
+              {studioUi().anyService}
             </button>
 
             {activeSiteIds.map((siteId) => {
@@ -168,9 +170,15 @@ export function TreePicker({
                   <button
                     type="button"
                     onClick={() => toggleSite(siteId)}
-                    className="flex w-full items-center gap-1 bg-slate-800/70 px-2 py-1 text-left text-[10px] font-semibold text-slate-300 hover:text-slate-100"
+                    className="flex w-full items-center gap-1 bg-ink-raised-2 px-2 py-1 text-left text-2xs font-semibold text-chalk-dim hover:text-chalk"
                   >
-                    {hasChildren ? (isExpanded ? '▼' : '▶') : '–'}
+                    {hasChildren ? (
+                      isExpanded ? (
+                        <ChevronDown size={12} aria-hidden="true" />
+                      ) : (
+                        <ChevronRight size={12} aria-hidden="true" />
+                      )
+                    ) : null}
                     <span>{getSiteName(siteId)}</span>
                   </button>
 
@@ -182,7 +190,7 @@ export function TreePicker({
                         if (vlanNodes.length === 0) return null;
                         return (
                           <div key={vlan.id}>
-                            <div className="px-1 py-0.5 text-[9px] font-semibold uppercase text-slate-500">
+                            <div className="px-1 py-0.5 text-2xs font-semibold uppercase text-chalk-faint">
                               VLAN {vlan.vlanId} — {vlan.name}
                             </div>
                             {vlanNodes.map((n) => (
@@ -190,11 +198,17 @@ export function TreePicker({
                                 key={n.id}
                                 type="button"
                                 onClick={() => selectNode(n.id)}
-                                className={`w-full px-2 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === n.id ? 'text-sky-400' : 'text-slate-300'}`}
+                                className={`w-full px-2 py-0.5 text-left text-2xs hover:bg-ink-raised-2 ${value === n.id ? 'text-accent' : 'text-chalk-dim'}`}
                               >
-                                {value === n.id ? '✓ ' : ''}
+                                {value === n.id && (
+                                  <Check
+                                    size={11}
+                                    className="mr-1 inline-block"
+                                    aria-hidden="true"
+                                  />
+                                )}
                                 {n.label}
-                                <span className="ml-1 text-[9px] text-slate-500">
+                                <span className="ml-1 text-2xs text-chalk-faint">
                                   {n.ip}
                                 </span>
                               </button>
@@ -207,7 +221,7 @@ export function TreePicker({
                       {nodesWithoutVlan.length > 0 && (
                         <div>
                           {vlans.length > 0 && (
-                            <div className="px-1 py-0.5 text-[9px] font-semibold uppercase text-slate-500">
+                            <div className="px-1 py-0.5 text-2xs font-semibold uppercase text-chalk-faint">
                               Outros
                             </div>
                           )}
@@ -216,11 +230,17 @@ export function TreePicker({
                               key={n.id}
                               type="button"
                               onClick={() => selectNode(n.id)}
-                              className={`w-full px-2 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === n.id ? 'text-sky-400' : 'text-slate-300'}`}
+                              className={`w-full px-2 py-0.5 text-left text-2xs hover:bg-ink-raised-2 ${value === n.id ? 'text-accent' : 'text-chalk-dim'}`}
                             >
-                              {value === n.id ? '✓ ' : ''}
+                              {value === n.id && (
+                                <Check
+                                  size={11}
+                                  className="mr-1 inline-block"
+                                  aria-hidden="true"
+                                />
+                              )}
                               {n.label}
-                              <span className="ml-1 text-[9px] text-slate-500">
+                              <span className="ml-1 text-2xs text-chalk-faint">
                                 {n.ip}
                               </span>
                             </button>
@@ -236,19 +256,25 @@ export function TreePicker({
             {/* Nodes without site */}
             {nodeBySite['__nossite__'] && (
               <div>
-                <div className="bg-slate-800/70 px-2 py-1 text-[10px] font-semibold text-slate-400">
-                  Sem site
+                <div className="bg-ink-raised-2 px-2 py-1 text-2xs font-semibold text-chalk-dim">
+                  {studioUi().noSite}
                 </div>
                 {nodeBySite['__nossite__'].map((n) => (
                   <button
                     key={n.id}
                     type="button"
                     onClick={() => selectNode(n.id)}
-                    className={`w-full px-3 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === n.id ? 'text-sky-400' : 'text-slate-300'}`}
+                    className={`w-full px-3 py-0.5 text-left text-2xs hover:bg-ink-raised-2 ${value === n.id ? 'text-accent' : 'text-chalk-dim'}`}
                   >
-                    {value === n.id ? '✓ ' : ''}
+                    {value === n.id && (
+                      <Check
+                        size={11}
+                        className="mr-1 inline-block"
+                        aria-hidden="true"
+                      />
+                    )}
                     {n.label}
-                    <span className="ml-1 text-[9px] text-slate-500">
+                    <span className="ml-1 text-2xs text-chalk-faint">
                       {n.ip}
                     </span>
                   </button>
@@ -259,7 +285,7 @@ export function TreePicker({
             {/* ── Subnets (Fase 2) ─────────────────────────────────── */}
             {subnets.length > 0 && (
               <div>
-                <div className="bg-slate-800/70 px-2 py-1 text-[10px] font-semibold text-slate-400">
+                <div className="bg-ink-raised-2 px-2 py-1 text-2xs font-semibold text-chalk-dim">
                   Sub-redes
                 </div>
                 {subnets.map((sub) => {
@@ -272,11 +298,17 @@ export function TreePicker({
                         onChange(key);
                         setOpen(false);
                       }}
-                      className={`w-full px-3 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === key ? 'text-sky-400' : 'text-slate-300'}`}
+                      className={`w-full px-3 py-0.5 text-left text-2xs hover:bg-ink-raised-2 ${value === key ? 'text-accent' : 'text-chalk-dim'}`}
                     >
-                      {value === key ? '✓ ' : ''}
+                      {value === key && (
+                        <Check
+                          size={11}
+                          className="mr-1 inline-block"
+                          aria-hidden="true"
+                        />
+                      )}
                       {sub.name}
-                      <span className="ml-1 font-mono text-[9px] text-slate-500">
+                      <span className="ml-1 font-mono text-2xs text-chalk-faint">
                         {sub.networkAddress}/{sub.cidr}
                       </span>
                     </button>
@@ -288,7 +320,7 @@ export function TreePicker({
             {/* ── Zonas (Fase 2) ───────────────────────────────────── */}
             {uniqueZones.length > 0 && (
               <div>
-                <div className="bg-slate-800/70 px-2 py-1 text-[10px] font-semibold text-slate-400">
+                <div className="bg-ink-raised-2 px-2 py-1 text-2xs font-semibold text-chalk-dim">
                   Zonas
                 </div>
                 {uniqueZones.map((zone) => {
@@ -301,9 +333,15 @@ export function TreePicker({
                         onChange(key);
                         setOpen(false);
                       }}
-                      className={`w-full px-3 py-0.5 text-left text-[10px] hover:bg-slate-700 ${value === key ? 'text-sky-400' : 'text-slate-300'}`}
+                      className={`w-full px-3 py-0.5 text-left text-2xs hover:bg-ink-raised-2 ${value === key ? 'text-accent' : 'text-chalk-dim'}`}
                     >
-                      {value === key ? '✓ ' : ''}
+                      {value === key && (
+                        <Check
+                          size={11}
+                          className="mr-1 inline-block"
+                          aria-hidden="true"
+                        />
+                      )}
                       <span className="capitalize">{zone}</span>
                     </button>
                   );

@@ -53,7 +53,7 @@ type FirewallRuleRow = {
   missingReturn?: boolean;
   natExempt?: boolean;
   fwNatMode?: 'pat' | 'snat' | 'dnat' | 'hybrid' | 'none';
-  ipsecAuthBadge?: 'PSK' | 'PKI' | 'EAP' | 'keypair' | '⚠ sem IKE';
+  ipsecAuthBadge?: 'PSK' | 'PKI' | 'EAP' | 'keypair' | 'NO_IKE';
 };
 
 type GenerateStudioPdfParams = {
@@ -70,6 +70,13 @@ type GenerateStudioPdfParams = {
   documentVersion?: string;
   lastSavedAt?: string | null;
   diagramImageData?: string | null;
+  /** Links cuja descrição não coube no traçado (marcados ①②… na imagem). */
+  connectionNotes?: Array<{
+    marker: string;
+    from: string;
+    to: string;
+    description: string;
+  }>;
   dashboardElement: HTMLElement | null;
   targetWindow: Window | null;
 };
@@ -726,6 +733,62 @@ function drawCoverPage(
     doc.text(value, PAGE_WIDTH - MARGIN_X - 4, cardY + 6.5, { align: 'right' });
     cardY += 19;
   }
+}
+
+function drawConnectionNotesSection(
+  doc: jsPDF,
+  pageSections: string[],
+  params: GenerateStudioPdfParams,
+) {
+  const notes = params.connectionNotes ?? [];
+  if (notes.length === 0) return;
+  const copy = getPdfReportCopy(params.language);
+
+  doc.addPage();
+  setSectionTitle(pageSections, doc, copy.connectionNotesTitle);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text(copy.connectionNotesTitle, MARGIN_X, CONTENT_TOP + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(91, 107, 133); // --paper-dim
+  doc.text(copy.connectionNotesHint, MARGIN_X, CONTENT_TOP + 10);
+
+  autoTable(doc, {
+    startY: CONTENT_TOP + 14,
+    head: [
+      [
+        copy.connectionMarker,
+        copy.connectionFrom,
+        copy.connectionTo,
+        copy.connectionDescription,
+      ],
+    ],
+    // Marcadores ①② não existem na helvetica do jsPDF: o número vai simples.
+    body: notes.map((note, index) => [
+      String(index + 1),
+      note.from,
+      note.to,
+      note.description,
+    ]),
+    styles: {
+      fontSize: 9.4,
+      cellPadding: 2.2,
+      textColor: [15, 23, 42],
+      overflow: 'linebreak',
+    },
+    columnStyles: { 0: { cellWidth: 12, halign: 'center' } },
+    headStyles: {
+      fillColor: [181, 101, 29], // --accent-print (Planta)
+      textColor: [241, 245, 249],
+      fontSize: 10,
+    },
+    margin: { left: MARGIN_X, right: MARGIN_X, bottom: 18 },
+    didDrawPage: () => {
+      setSectionTitle(pageSections, doc, copy.connectionNotesTitle);
+    },
+  });
 }
 
 async function drawDashboardPage(
@@ -2296,6 +2359,7 @@ export async function generateStudioPdfReport(params: GenerateStudioPdfParams) {
   drawTableOfContentsSection(doc, pageSections, params);
   drawRevisionControlSection(doc, pageSections, params);
   await drawDashboardPage(doc, pageSections, params);
+  drawConnectionNotesSection(doc, pageSections, params);
   drawScopePlanningSection(doc, pageSections, params);
   drawRoutesSection(doc, pageSections, params);
   drawFirewallSection(doc, pageSections, params);

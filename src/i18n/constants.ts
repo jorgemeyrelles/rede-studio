@@ -22,37 +22,37 @@ export const LANDING_PAGE_COPY: Record<AppLanguage, LandingPageCopy> = {
     featuresTitle: 'O que dá pra fazer no Studio',
     features: [
       {
-        icon: '🗺️',
+        icon: 'diagram',
         title: 'Diagrama interativo',
         description:
           'Monte sites, camadas e dispositivos visualmente, com tooltips técnicos em cada nó e link.',
       },
       {
-        icon: '🔀',
+        icon: 'routes',
         title: 'Rotas geradas automaticamente',
         description:
           'Direta, Estática, Default, VPN e BGP calculadas a partir da topologia que você desenhar.',
       },
       {
-        icon: '🛡️',
+        icon: 'firewall',
         title: 'Firewall e ACL',
         description:
           'Regras de segurança derivadas da rede, com QoS, exceções de retorno e edição manual.',
       },
       {
-        icon: '🔢',
+        icon: 'addressing',
         title: 'VLANs e endereçamento',
         description:
           'Cadastro de VLANs por site com faixas de IP calculadas automaticamente.',
       },
       {
-        icon: '📡',
+        icon: 'protocols',
         title: 'Protocolos de roteamento',
         description:
           'Configuração inline de OSPF e BGP por roteador, direto na tabela.',
       },
       {
-        icon: '📄',
+        icon: 'report',
         title: 'Relatório técnico em PDF',
         description:
           'Exporte diagrama, tabelas e anexos num documento pronto pra entregar ao cliente.',
@@ -72,37 +72,37 @@ export const LANDING_PAGE_COPY: Record<AppLanguage, LandingPageCopy> = {
     featuresTitle: 'What you can do in Studio',
     features: [
       {
-        icon: '🗺️',
+        icon: 'diagram',
         title: 'Interactive diagram',
         description:
           'Build sites, layers and devices visually, with technical tooltips on every node and link.',
       },
       {
-        icon: '🔀',
+        icon: 'routes',
         title: 'Auto-generated routes',
         description:
           'Direct, Static, Default, VPN and BGP routes computed from the topology you draw.',
       },
       {
-        icon: '🛡️',
+        icon: 'firewall',
         title: 'Firewall & ACL',
         description:
           'Security rules derived from the network, with QoS, return exceptions and manual edits.',
       },
       {
-        icon: '🔢',
+        icon: 'addressing',
         title: 'VLANs & addressing',
         description:
           'Register VLANs per site with IP ranges calculated automatically.',
       },
       {
-        icon: '📡',
+        icon: 'protocols',
         title: 'Routing protocols',
         description:
           'Inline OSPF and BGP configuration per router, right in the table.',
       },
       {
-        icon: '📄',
+        icon: 'report',
         title: 'Technical PDF report',
         description:
           'Export the diagram, tables and annexes into a document ready to hand to your client.',
@@ -123,37 +123,37 @@ export const LANDING_PAGE_COPY: Record<AppLanguage, LandingPageCopy> = {
     featuresTitle: 'Qué puedes hacer en Studio',
     features: [
       {
-        icon: '🗺️',
+        icon: 'diagram',
         title: 'Diagrama interactivo',
         description:
           'Arma sitios, capas y dispositivos visualmente, con tooltips técnicos en cada nodo y enlace.',
       },
       {
-        icon: '🔀',
+        icon: 'routes',
         title: 'Rutas generadas automáticamente',
         description:
           'Directa, Estática, Default, VPN y BGP calculadas a partir de la topología que dibujes.',
       },
       {
-        icon: '🛡️',
+        icon: 'firewall',
         title: 'Firewall y ACL',
         description:
           'Reglas de seguridad derivadas de la red, con QoS, excepciones de retorno y edición manual.',
       },
       {
-        icon: '🔢',
+        icon: 'addressing',
         title: 'VLANs y direccionamiento',
         description:
           'Registro de VLANs por sitio con rangos de IP calculados automáticamente.',
       },
       {
-        icon: '📡',
+        icon: 'protocols',
         title: 'Protocolos de enrutamiento',
         description:
           'Configuración en línea de OSPF y BGP por router, directo en la tabla.',
       },
       {
-        icon: '📄',
+        icon: 'report',
         title: 'Informe técnico en PDF',
         description:
           'Exporta el diagrama, tablas y anexos en un documento listo para entregar al cliente.',
@@ -260,7 +260,7 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
   pt: {
     title: 'Meus projetos',
     subtitle: 'Continue um projeto salvo ou comece um novo.',
-    newProjectButton: '+ Novo projeto',
+    newProjectButton: 'Novo projeto',
     emptyStateTitle: 'Nenhum projeto ainda',
     emptyStateSubtitle:
       'Crie o primeiro projeto pra começar a modelar sua rede.',
@@ -276,15 +276,31 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
       HYBRID: 'Mista',
     },
     createButton: 'Criar projeto',
-    creating: 'Criando...',
+    creating: 'Criando…',
     cancelButton: 'Cancelar',
     defaultProjectNamePrefix: 'Novo Projeto',
     renameAriaLabel: 'Renomear projeto',
+    comingSoon: 'Em breve',
+    networkTypeComingSoonHint:
+      'Multi-cloud e redes mistas chegam em breve. Cloud abre o Studio Cloud (AWS).',
+    deleteAriaLabel: 'Excluir projeto',
+    deleteModalTitle: 'Excluir projeto',
+    deleteModalBody:
+      'O projeto e toda a topologia dele (sites, VLANs, rotas, firewall) serão removidos. Não dá para desfazer.',
+    deleteConfirmLabel: 'Digite o nome do projeto para confirmar',
+    deleteConfirmHint: 'O botão de excluir habilita quando o texto for exatamente:',
+    deleteButton: 'Excluir projeto',
+    deleting: 'Excluindo…',
+    deleteError: 'Não foi possível excluir o projeto. Tente novamente.',
+    emptyStateCta: 'Criar primeiro projeto',
+    loading: 'Carregando projetos…',
+    loadError: 'Não foi possível carregar seus projetos.',
+    retry: 'Tentar novamente',
   },
   en: {
     title: 'My projects',
     subtitle: 'Continue a saved project or start a new one.',
-    newProjectButton: '+ New project',
+    newProjectButton: 'New project',
     emptyStateTitle: 'No projects yet',
     emptyStateSubtitle:
       'Create your first project to start modeling your network.',
@@ -300,15 +316,31 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
       HYBRID: 'Hybrid',
     },
     createButton: 'Create project',
-    creating: 'Creating...',
+    creating: 'Creating…',
     cancelButton: 'Cancel',
     defaultProjectNamePrefix: 'New Project',
     renameAriaLabel: 'Rename project',
+    comingSoon: 'Coming soon',
+    networkTypeComingSoonHint:
+      'Multi-cloud and hybrid networks are coming soon. Cloud opens the Cloud Studio (AWS).',
+    deleteAriaLabel: 'Delete project',
+    deleteModalTitle: 'Delete project',
+    deleteModalBody:
+      'The project and its whole topology (sites, VLANs, routes, firewall) will be removed. This cannot be undone.',
+    deleteConfirmLabel: 'Type the project name to confirm',
+    deleteConfirmHint: 'The delete button enables when the text is exactly:',
+    deleteButton: 'Delete project',
+    deleting: 'Deleting…',
+    deleteError: 'Could not delete the project. Please try again.',
+    emptyStateCta: 'Create first project',
+    loading: 'Loading projects…',
+    loadError: 'Could not load your projects.',
+    retry: 'Try again',
   },
   es: {
     title: 'Mis proyectos',
     subtitle: 'Continúa un proyecto guardado o empieza uno nuevo.',
-    newProjectButton: '+ Nuevo proyecto',
+    newProjectButton: 'Nuevo proyecto',
     emptyStateTitle: 'Aún no hay proyectos',
     emptyStateSubtitle:
       'Crea tu primer proyecto para empezar a modelar tu red.',
@@ -324,10 +356,26 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
       HYBRID: 'Mixta',
     },
     createButton: 'Crear proyecto',
-    creating: 'Creando...',
+    creating: 'Creando…',
     cancelButton: 'Cancelar',
     defaultProjectNamePrefix: 'Nuevo Proyecto',
     renameAriaLabel: 'Renombrar proyecto',
+    comingSoon: 'Próximamente',
+    networkTypeComingSoonHint:
+      'Multi-cloud y redes mixtas llegan pronto. Cloud abre el Studio Cloud (AWS).',
+    deleteAriaLabel: 'Eliminar proyecto',
+    deleteModalTitle: 'Eliminar proyecto',
+    deleteModalBody:
+      'El proyecto y toda su topología (sites, VLANs, rutas, firewall) serán eliminados. No se puede deshacer.',
+    deleteConfirmLabel: 'Escribe el nombre del proyecto para confirmar',
+    deleteConfirmHint: 'El botón de eliminar se habilita cuando el texto sea exactamente:',
+    deleteButton: 'Eliminar proyecto',
+    deleting: 'Eliminando…',
+    deleteError: 'No se pudo eliminar el proyecto. Inténtalo de nuevo.',
+    emptyStateCta: 'Crear primer proyecto',
+    loading: 'Cargando proyectos…',
+    loadError: 'No se pudieron cargar tus proyectos.',
+    retry: 'Reintentar',
   },
 };
 
@@ -337,18 +385,21 @@ export const USER_MENU_COPY: Record<AppLanguage, UserMenuCopy> = {
     newProject: 'Novo projeto',
     settings: 'Configurações',
     logout: 'Sair',
+    loggingOut: 'Salvando e saindo…',
   },
   en: {
     myProjects: 'My projects',
     newProject: 'New project',
     settings: 'Settings',
     logout: 'Log out',
+    loggingOut: 'Saving and logging out…',
   },
   es: {
     myProjects: 'Mis proyectos',
     newProject: 'Nuevo proyecto',
     settings: 'Configuración',
     logout: 'Salir',
+    loggingOut: 'Guardando y saliendo…',
   },
 };
 

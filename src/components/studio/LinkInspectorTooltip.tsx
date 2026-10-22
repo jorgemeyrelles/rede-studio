@@ -1,3 +1,4 @@
+import { ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
@@ -19,22 +20,30 @@ import {
   resolveGateway,
   resolveRouteType,
 } from '../../features/network/utils';
+import RemoveButton from './RemoveButton';
+import { getDiagramTheme } from './utils/diagramTheme';
+import { ui as studioUi } from './utils/studioUi';
 
 // ── Metadados visuais por tipo de link ─────────────────────────────────────────
-const KIND_META: Record<string, { label: string; color: string }> = {
-  lan: { label: 'LAN', color: '#60a5fa' },
-  wan: { label: 'WAN', color: '#fb923c' },
-  vpn: { label: 'VPN', color: '#22d3ee' },
-  ipsec: { label: 'IPSec', color: '#22d3ee' },
-  'inter-lan': { label: 'Inter-LAN', color: '#fbbf24' },
-  other: { label: 'Outro', color: '#94a3b8' },
-};
+// Mesma cor da linha no diagrama (ver `resolveLinkVisual`) — tokens via tema.
+function getKindMeta(kind: string): { label: string; color: string } {
+  const { route, chalkDim } = getDiagramTheme();
+  const map: Record<string, { label: string; color: string }> = {
+    lan: { label: 'LAN', color: route.bgp },
+    wan: { label: 'WAN', color: route.default },
+    vpn: { label: 'VPN', color: route.vpn },
+    ipsec: { label: 'IPSec', color: route.vpn },
+    'inter-lan': { label: 'Inter-LAN', color: chalkDim },
+    other: { label: 'Outro', color: chalkDim },
+  };
+  return map[kind] ?? map.other;
+}
 
 type Props = {
   /** Quando a legenda está aberta, o inspector fica suprimido */
   isLegendOpen: boolean;
   /** Ref do botão-âncora que serve de ponto de ancoragem do tooltip */
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  anchorRef: React.RefObject<HTMLElement | null>;
 };
 
 export default function LinkInspectorTooltip({
@@ -105,7 +114,7 @@ export default function LinkInspectorTooltip({
 
   if (!visible || !activeLink || !pos) return null;
 
-  const kindMeta = KIND_META[activeLink.kind] ?? KIND_META.other;
+  const kindMeta = getKindMeta(activeLink.kind);
   const isBidirectional = activeLink.bidirectional ?? true;
   const isVpnish = activeLink.kind === 'ipsec' || activeLink.kind === 'vpn';
   const isWanLink = activeLink.kind === 'wan';
@@ -207,15 +216,15 @@ export default function LinkInspectorTooltip({
         zIndex: 9999,
       }}
     >
-      <div className="flex max-h-[70vh] w-[300px] flex-col rounded-lg border border-[#2a4a6e] bg-[#060d19] shadow-[0_8px_28px_rgba(0,0,0,0.65)]">
+      <div className="flex max-h-[70vh] w-[300px] flex-col rounded-md border border-line bg-ink shadow-panel">
         {/* ── Cabeçalho ─────────────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
           <div className="flex items-center gap-1.5">
             <svg
               width="14"
               height="9"
               viewBox="0 0 14 9"
-              className="shrink-0 text-slate-400"
+              className="shrink-0 text-chalk-dim"
             >
               <circle cx="1.5" cy="4.5" r="1.5" fill="currentColor" />
               <line
@@ -228,11 +237,11 @@ export default function LinkInspectorTooltip({
               />
               <circle cx="12.5" cy="4.5" r="1.5" fill="currentColor" />
             </svg>
-            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              Inspector de Conexão
+            <span className="text-label text-chalk-dim">
+              {studioUi().connectionInspector}
             </span>
             <span
-              className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+              className="rounded-sm px-1.5 py-0.5 text-label"
               style={{
                 backgroundColor: kindMeta.color + '1e',
                 color: kindMeta.color,
@@ -246,7 +255,7 @@ export default function LinkInspectorTooltip({
             type="button"
             onClick={() => dispatch(setActiveLinkId(null))}
             title="Fechar inspector"
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm text-chalk-faint transition hover:bg-ink-raised-2 hover:text-chalk"
           >
             <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
               <path
@@ -270,11 +279,15 @@ export default function LinkInspectorTooltip({
               color={kindMeta.color}
             />
             <div className="flex items-center gap-1 px-8">
-              <div className="h-px flex-1 bg-slate-700/70" />
-              <span className="text-[10px] font-semibold text-slate-500">
-                {isBidirectional ? '↔' : '→'}
+              <div className="h-px flex-1 bg-ink-raised-2" />
+              <span className="text-chalk-faint">
+                {isBidirectional ? (
+                  <ArrowLeftRight size={13} aria-hidden="true" />
+                ) : (
+                  <ArrowRight size={13} aria-hidden="true" />
+                )}
               </span>
-              <div className="h-px flex-1 bg-slate-700/70" />
+              <div className="h-px flex-1 bg-ink-raised-2" />
             </div>
             <EndpointRow
               direction="Para"
@@ -285,12 +298,10 @@ export default function LinkInspectorTooltip({
           </div>
 
           {/* ── Controles de edição ──────────────────────────────────────── */}
-          <div className="space-y-2.5 border-t border-slate-800 pt-2.5 text-[11px]">
+          <div className="space-y-2.5 border-t border-line pt-2.5 text-2xs">
             {/* Modo stateful */}
             <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-                Modo stateful
-              </span>
+              <span className="text-label text-chalk-faint">Modo stateful</span>
               <select
                 value={activeLink.statefulOverride ?? 'inherited'}
                 onChange={(e) =>
@@ -306,11 +317,15 @@ export default function LinkInspectorTooltip({
                     }),
                   )
                 }
-                className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200"
+                className="rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk"
               >
                 <option value="inherited">Herdado do FW</option>
-                <option value="force-stateful">Forçar stateful</option>
-                <option value="force-stateless">Forçar stateless</option>
+                <option value="force-stateful">
+                  {studioUi().forceStateful}
+                </option>
+                <option value="force-stateless">
+                  {studioUi().forceStateless}
+                </option>
               </select>
             </label>
 
@@ -327,17 +342,15 @@ export default function LinkInspectorTooltip({
                     }),
                   )
                 }
-                className="h-3 w-3 accent-blue-500"
+                className="h-3 w-3 accent-[var(--accent)]"
               />
-              <span className="text-[10px] text-slate-300">
-                Gerar regras ACL
-              </span>
+              <span className="text-2xs text-chalk-dim">Gerar regras ACL</span>
             </label>
 
             {/* Direção do link */}
             <label
               className="flex items-center gap-2"
-              title="Ligado: 1 linha de ida cobre os dois sentidos. Desligado: cria uma linha de exceção de retorno na seção manual da tabela de firewall (apagá-la religa o bidirecional)."
+              title={studioUi().bidirectionalLinkHint}
             >
               <input
                 type="checkbox"
@@ -350,18 +363,14 @@ export default function LinkInspectorTooltip({
                     }),
                   )
                 }
-                className="h-3 w-3 accent-blue-500"
+                className="h-3 w-3 accent-[var(--accent)]"
               />
-              <span className="text-[10px] text-slate-300">
-                Link bidirecional
-              </span>
+              <span className="text-2xs text-chalk-dim">Link bidirecional</span>
             </label>
 
             {/* Duplex físico */}
             <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-                Modo duplex
-              </span>
+              <span className="text-label text-chalk-faint">Modo duplex</span>
               <select
                 value={activeLink.duplexMode ?? 'full'}
                 onChange={(e) =>
@@ -374,7 +383,7 @@ export default function LinkInspectorTooltip({
                     }),
                   )
                 }
-                className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200"
+                className="rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk"
               >
                 <option value="full">Full-duplex</option>
                 <option value="half">Half-duplex</option>
@@ -383,9 +392,7 @@ export default function LinkInspectorTooltip({
 
             {/* Descrição */}
             <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-                Descrição
-              </span>
+              <span className="text-label text-chalk-faint">Descrição</span>
               <input
                 type="text"
                 value={activeLink.description ?? ''}
@@ -397,24 +404,24 @@ export default function LinkInspectorTooltip({
                     }),
                   )
                 }
-                placeholder="Descrição do link..."
-                className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200 placeholder-slate-600"
+                placeholder={studioUi().linkDescriptionPlaceholder}
+                className="rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk placeholder-chalk-faint"
               />
             </label>
 
             {/* ── Perfil WAN do link ───────────────────────────────────── */}
             {isWanLink && (
               <details
-                className="rounded border border-cyan-700/40 bg-cyan-950/20"
+                className="rounded-sm border border-line-strong bg-ink-raised-2"
                 open
               >
-                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-cyan-300">
-                  <span>🔷 Perfil WAN do Link</span>
-                  <span className="text-slate-500">QoS</span>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-label text-chalk">
+                  <span>{studioUi().wanLinkProfile}</span>
+                  <span className="text-chalk-faint">QoS</span>
                 </summary>
                 <div className="space-y-2 px-2 pb-2 pt-1">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[9px] text-slate-500">
+                    <span className="text-2xs text-chalk-faint">
                       Banda total (kbps)
                     </span>
                     <input
@@ -435,7 +442,7 @@ export default function LinkInspectorTooltip({
                         )
                       }
                       placeholder="Ex: 100000"
-                      className="rounded border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] text-slate-200 placeholder-slate-600"
+                      className="rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk placeholder-chalk-faint"
                     />
                   </label>
 
@@ -445,10 +452,10 @@ export default function LinkInspectorTooltip({
                         type="checkbox"
                         checked={linkedTunnelExists}
                         disabled
-                        className="h-3 w-3 accent-cyan-500"
+                        className="h-3 w-3 accent-[var(--accent)]"
                       />
-                      <span className="text-[10px] text-slate-300">
-                        Túnel VPN/IPsec
+                      <span className="text-2xs text-chalk-dim">
+                        {studioUi().vpnTunnel}
                       </span>
                     </label>
                     <label
@@ -468,17 +475,17 @@ export default function LinkInspectorTooltip({
                             }),
                           )
                         }
-                        className="h-3 w-3 accent-cyan-500"
+                        className="h-3 w-3 accent-[var(--accent)]"
                       />
-                      <span className="text-[10px] text-slate-300">
-                        Preservar DSCP no túnel
+                      <span className="text-2xs text-chalk-dim">
+                        {studioUi().preserveDscp}
                       </span>
                     </label>
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     <div>
-                      <p className="mb-1 text-[9px] text-slate-500">
+                      <p className="mb-1 text-2xs text-chalk-faint">
                         Classes garantidas
                       </p>
                       <div className="flex flex-wrap gap-1">
@@ -500,10 +507,10 @@ export default function LinkInspectorTooltip({
                                   }),
                                 );
                               }}
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold transition ${
+                              className={`rounded-sm px-1.5 py-0.5 text-2xs font-bold transition ${
                                 selected
-                                  ? 'border border-emerald-600/60 bg-emerald-900/30 text-emerald-300'
-                                  : 'border border-slate-700 text-slate-500 hover:text-slate-300'
+                                  ? 'border border-signal-up/60 bg-signal-up/15 text-signal-up'
+                                  : 'border border-line text-chalk-faint hover:text-chalk-dim'
                               }`}
                             >
                               {QOSCLASS_LABEL[cls]}
@@ -513,7 +520,7 @@ export default function LinkInspectorTooltip({
                       </div>
                     </div>
                     <div>
-                      <p className="mb-1 text-[9px] text-slate-500">
+                      <p className="mb-1 text-2xs text-chalk-faint">
                         Classes suprimidas
                       </p>
                       <div className="flex flex-wrap gap-1">
@@ -535,10 +542,10 @@ export default function LinkInspectorTooltip({
                                   }),
                                 );
                               }}
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold transition ${
+                              className={`rounded-sm px-1.5 py-0.5 text-2xs font-bold transition ${
                                 selected
-                                  ? 'border border-rose-600/60 bg-rose-900/30 text-rose-300'
-                                  : 'border border-slate-700 text-slate-500 hover:text-slate-300'
+                                  ? 'border border-signal-down/60 bg-signal-down/15 text-signal-down'
+                                  : 'border border-line text-chalk-faint hover:text-chalk-dim'
                               }`}
                             >
                               {QOSCLASS_LABEL[cls]}
@@ -555,27 +562,33 @@ export default function LinkInspectorTooltip({
             {/* ── Metadados de rota derivados ──────────────────────────── */}
             {isWanLink && (
               <details
-                className="rounded border border-sky-700/40 bg-sky-950/15"
+                className="rounded-sm border border-line-strong bg-ink-raised-2"
                 open
               >
-                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-sky-300">
-                  <span>🧭 Metadados de Rota (Derivados)</span>
-                  <span className="text-slate-500">Read-only</span>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-label text-chalk">
+                  <span>{studioUi().derivedRouteMeta}</span>
+                  <span className="text-chalk-faint">Read-only</span>
                 </summary>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 pb-2 pt-1 text-[10px]">
-                  <span className="text-slate-500">Site owner</span>
-                  <span className="text-slate-200">{routeOwnerSiteName}</span>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 pb-2 pt-1 text-2xs">
+                  <span className="text-chalk-faint">
+                    {studioUi().siteOwner}
+                  </span>
+                  <span className="text-chalk">{routeOwnerSiteName}</span>
 
-                  <span className="text-slate-500">Tipo</span>
-                  <span className="text-slate-200">{routeType}</span>
+                  <span className="text-chalk-faint">Tipo</span>
+                  <span className="text-chalk">{routeType}</span>
 
-                  <span className="text-slate-500">Gateway inferido</span>
-                  <span className="font-mono text-slate-200">
+                  <span className="text-chalk-faint">
+                    {studioUi().inferredGateway}
+                  </span>
+                  <span className="font-mono text-chalk">
                     {inferredGateway}
                   </span>
 
-                  <span className="text-slate-500">Destino inferido</span>
-                  <span className="font-mono text-slate-200">
+                  <span className="text-chalk-faint">
+                    {studioUi().inferredDestination}
+                  </span>
+                  <span className="font-mono text-chalk">
                     {routeType === 'Default'
                       ? '0.0.0.0/0'
                       : `${toNode?.ip ?? '0.0.0.0'}/${toNode?.cidr ?? 0}`}
@@ -587,53 +600,57 @@ export default function LinkInspectorTooltip({
             {/* ── Resumo ACL derivado do link ──────────────────────────── */}
             {isWanLink && (
               <details
-                className="rounded border border-amber-700/40 bg-amber-950/15"
+                className="rounded-sm border border-signal-warn/40 bg-signal-warn/10"
                 open
               >
-                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-amber-300">
-                  <span>🛡 Resumo ACL Derivado</span>
-                  <span className="text-slate-500">Topologia</span>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-label text-signal-warn">
+                  <span>{studioUi().derivedAclSummary}</span>
+                  <span className="text-chalk-faint">Topologia</span>
                 </summary>
-                <div className="space-y-1 px-2 pb-2 pt-1 text-[10px]">
+                <div className="space-y-1 px-2 pb-2 pt-1 text-2xs">
                   {!linkedManagedAcl && (
-                    <p className="text-slate-500">
-                      Nenhuma regra ACL gerenciada encontrada para este link.
+                    <p className="text-chalk-faint">
+                      {studioUi().noManagedAcl}
                     </p>
                   )}
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                    <span className="text-slate-500">Origem efetiva</span>
-                    <span className="text-slate-200">
+                    <span className="text-chalk-faint">
+                      {studioUi().effectiveSource}
+                    </span>
+                    <span className="text-chalk">
                       {effectiveSrcNode?.label ??
                         linkedManagedAcl?.sourceNodeId ??
                         activeLink.from}
                     </span>
 
-                    <span className="text-slate-500">Destino efetivo</span>
-                    <span className="text-slate-200">
+                    <span className="text-chalk-faint">
+                      {studioUi().effectiveDestination}
+                    </span>
+                    <span className="text-chalk">
                       {effectiveDstNode?.label ??
                         linkedManagedAcl?.destinationNodeId ??
                         activeLink.to}
                     </span>
 
-                    <span className="text-slate-500">Serviço padrão</span>
-                    <span className="text-slate-200">
-                      {derivedDefaultService}
+                    <span className="text-chalk-faint">
+                      {studioUi().defaultService}
                     </span>
+                    <span className="text-chalk">{derivedDefaultService}</span>
 
-                    <span className="text-slate-500">Gerar ACL</span>
-                    <span className="text-slate-200">
+                    <span className="text-chalk-faint">Gerar ACL</span>
+                    <span className="text-chalk">
                       {(activeLink.generateAcl ?? true) ? 'Sim' : 'Não'}
                     </span>
 
-                    <span className="text-slate-500">Bidirecional</span>
-                    <span className="text-slate-200">
+                    <span className="text-chalk-faint">Bidirecional</span>
+                    <span className="text-chalk">
                       {(activeLink.bidirectional ?? true)
                         ? 'Sim — 1 linha cobre os dois sentidos'
-                        : 'Não — exceção de retorno na seção manual'}
+                        : studioUi().returnExceptionNo}
                     </span>
 
-                    <span className="text-slate-500">Duplex</span>
-                    <span className="text-slate-200">
+                    <span className="text-chalk-faint">Duplex</span>
+                    <span className="text-chalk">
                       {(activeLink.duplexMode ?? 'full') === 'half'
                         ? 'Half-duplex'
                         : 'Full-duplex'}
@@ -646,11 +663,11 @@ export default function LinkInspectorTooltip({
             {/* ── IPsec SAs ────────────────────────────────────────────── */}
             {isVpnish && (
               <details
-                className="rounded border border-indigo-700/40 bg-indigo-950/20"
+                className="rounded-sm border border-route-vpn/40 bg-route-vpn/10"
                 open
               >
-                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-indigo-300">
-                  <span>🔒 IPsec SAs</span>
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-label text-route-vpn">
+                  <span>IPsec SAs</span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -668,52 +685,48 @@ export default function LinkInspectorTooltip({
                         }),
                       );
                     }}
-                    className="rounded bg-indigo-700/30 px-1.5 py-0.5 text-[9px] text-indigo-300 hover:bg-indigo-600/40"
+                    className="rounded-sm bg-route-vpn/15 px-1.5 py-0.5 text-2xs text-route-vpn hover:bg-route-vpn/40"
                   >
                     + SA
                   </button>
                 </summary>
                 <div className="space-y-2 px-2 pb-2 pt-1">
                   {linkIpsecSas.length === 0 && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-2xs text-chalk-faint">
                       Nenhuma SA configurada.
                     </p>
                   )}
                   {linkIpsecSas.map((sa) => (
                     <div
                       key={sa.id}
-                      className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
+                      className="rounded-sm border border-line bg-ink-raised-2 p-2 text-2xs"
                     >
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="font-semibold text-slate-200">
+                        <span className="font-semibold text-chalk">
                           {sa.name}
                         </span>
                         <div className="flex items-center gap-1">
                           <span
-                            className={`rounded px-1 py-0.5 text-[9px] font-semibold ${
+                            className={`rounded-sm px-1 py-0.5 text-2xs font-semibold ${
                               sa.state === 'established'
-                                ? 'bg-green-800/50 text-green-300'
+                                ? 'bg-signal-up/15 text-signal-up'
                                 : sa.state === 'rekeying'
-                                  ? 'bg-yellow-800/50 text-yellow-300'
+                                  ? 'bg-signal-warn/15 text-signal-warn'
                                   : sa.state === 'connecting'
-                                    ? 'bg-blue-800/50 text-blue-300'
-                                    : 'bg-red-800/50 text-red-300'
+                                    ? 'bg-accent/15 text-chalk'
+                                    : 'bg-signal-down/15 text-signal-down'
                             }`}
                           >
                             {sa.state}
                           </span>
-                          <button
-                            type="button"
+                          <RemoveButton
                             onClick={() =>
                               dispatch(removeIpsecSa({ id: sa.id }))
                             }
-                            className="rounded px-1 text-red-400 hover:bg-red-900/30"
-                          >
-                            ✕
-                          </button>
+                          />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-slate-400">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-2xs text-chalk-dim">
                         <span>Fase {sa.phase}</span>
                         <span>DH: {sa.dhGroup ?? '—'}</span>
                         <span>Cifra: {sa.encAlg ?? '—'}</span>
@@ -736,7 +749,7 @@ export default function LinkInspectorTooltip({
                               }),
                             )
                           }
-                          className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                          className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk"
                         >
                           <option value="established">established</option>
                           <option value="rekeying">rekeying</option>
@@ -755,7 +768,7 @@ export default function LinkInspectorTooltip({
                               }),
                             )
                           }
-                          className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                          className="rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk"
                         >
                           <option value={1}>Phase 1</option>
                           <option value={2}>Phase 2</option>
@@ -774,7 +787,7 @@ export default function LinkInspectorTooltip({
                               }),
                             )
                           }
-                          className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
+                          className="rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk placeholder-chalk-faint"
                         />
                         <input
                           type="text"
@@ -788,7 +801,7 @@ export default function LinkInspectorTooltip({
                               }),
                             )
                           }
-                          className="rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
+                          className="rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk placeholder-chalk-faint"
                         />
                       </div>
                     </div>
@@ -799,9 +812,9 @@ export default function LinkInspectorTooltip({
 
             {/* ── SSL-VPN Profiles ─────────────────────────────────────── */}
             {activeLink.kind === 'vpn' && (
-              <details className="rounded border border-cyan-700/40 bg-cyan-950/20">
-                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold uppercase tracking-widest text-cyan-300">
-                  <span>🌐 SSL-VPN</span>
+              <details className="rounded-sm border border-line-strong bg-ink-raised-2">
+                <summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-label text-chalk">
+                  <span>SSL-VPN</span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -816,21 +829,21 @@ export default function LinkInspectorTooltip({
                         }),
                       );
                     }}
-                    className="rounded bg-cyan-700/30 px-1.5 py-0.5 text-[9px] text-cyan-300 hover:bg-cyan-600/40"
+                    className="rounded-sm bg-accent/15 px-1.5 py-0.5 text-2xs text-chalk hover:bg-accent/15"
                   >
                     + Perfil
                   </button>
                 </summary>
                 <div className="space-y-2 px-2 pb-2 pt-1">
                   {linkSslProfiles.length === 0 && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-2xs text-chalk-faint">
                       Nenhum perfil configurado.
                     </p>
                   )}
                   {linkSslProfiles.map((profile) => (
                     <div
                       key={profile.id}
-                      className="rounded border border-slate-700/50 bg-slate-800/30 p-2 text-[10px]"
+                      className="rounded-sm border border-line bg-ink-raised-2 p-2 text-2xs"
                     >
                       <div className="mb-1 flex items-center justify-between">
                         <input
@@ -844,21 +857,17 @@ export default function LinkInspectorTooltip({
                               }),
                             )
                           }
-                          className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[10px] font-semibold text-slate-200"
+                          className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs font-semibold text-chalk"
                         />
-                        <button
-                          type="button"
+                        <RemoveButton
                           onClick={() =>
                             dispatch(removeSslVpnProfile({ id: profile.id }))
                           }
-                          className="ml-1 rounded px-1 text-red-400 hover:bg-red-900/30"
-                        >
-                          ✕
-                        </button>
+                        />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <label className="w-14 shrink-0 text-[9px] text-slate-500">
+                          <label className="w-14 shrink-0 text-2xs text-chalk-faint">
                             Auth
                           </label>
                           <select
@@ -874,7 +883,7 @@ export default function LinkInspectorTooltip({
                                 }),
                               )
                             }
-                            className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                            className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk"
                           >
                             <option value="password">Password</option>
                             <option value="certificate">Certificate</option>
@@ -883,7 +892,7 @@ export default function LinkInspectorTooltip({
                           </select>
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-14 shrink-0 text-[9px] text-slate-500">
+                          <label className="w-14 shrink-0 text-2xs text-chalk-faint">
                             IP Pool
                           </label>
                           <input
@@ -897,12 +906,12 @@ export default function LinkInspectorTooltip({
                                 }),
                               )
                             }
-                            className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200"
+                            className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 font-mono text-2xs text-chalk"
                             placeholder="10.0.50.0/24"
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-14 shrink-0 text-[9px] text-slate-500">
+                          <label className="w-14 shrink-0 text-2xs text-chalk-faint">
                             DNS
                           </label>
                           <input
@@ -917,7 +926,7 @@ export default function LinkInspectorTooltip({
                               )
                             }
                             placeholder="DNS 1"
-                            className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                            className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                           />
                           <input
                             type="text"
@@ -931,11 +940,11 @@ export default function LinkInspectorTooltip({
                               )
                             }
                             placeholder="DNS 2"
-                            className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                            className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-14 shrink-0 text-[9px] text-slate-500">
+                          <label className="w-14 shrink-0 text-2xs text-chalk-faint">
                             Cert.
                           </label>
                           <select
@@ -950,7 +959,7 @@ export default function LinkInspectorTooltip({
                                 }),
                               )
                             }
-                            className="flex-1 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[9px] text-slate-200"
+                            className="flex-1 rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 text-2xs text-chalk"
                           >
                             <option value="">— nenhum —</option>
                             {certificates
@@ -976,14 +985,14 @@ export default function LinkInspectorTooltip({
                                 }),
                               )
                             }
-                            className="h-3 w-3 accent-cyan-500"
+                            className="h-3 w-3 accent-[var(--accent)]"
                           />
-                          <span className="text-[9px] text-slate-400">
+                          <span className="text-2xs text-chalk-dim">
                             MFA habilitado
                           </span>
                         </label>
                         <div>
-                          <label className="text-[9px] text-slate-500">
+                          <label className="text-2xs text-chalk-faint">
                             Split Tunnel (uma rota por linha)
                           </label>
                           <textarea
@@ -1002,7 +1011,7 @@ export default function LinkInspectorTooltip({
                             }
                             rows={2}
                             placeholder="10.0.0.0/8"
-                            className="mt-0.5 w-full rounded border border-slate-700 bg-slate-800 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                            className="mt-0.5 w-full rounded-sm border border-line bg-ink-raised-2 px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                           />
                         </div>
                       </div>
@@ -1033,18 +1042,13 @@ function EndpointRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-0.5 w-7 shrink-0 text-[8px] font-bold uppercase tracking-widest text-slate-500">
+      <span className="mt-0.5 w-7 shrink-0 text-label text-chalk-faint">
         {direction}
       </span>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-        <span
-          className="text-[11px] font-semibold"
-          style={{ color: '#e2e8f0' }}
-        >
-          {label}
-        </span>
+        <span className="text-2xs font-semibold text-chalk">{label}</span>
         {ip && (
-          <span className="font-mono text-[10px]" style={{ color }}>
+          <span className="font-mono text-2xs" style={{ color }}>
             {ip}
           </span>
         )}

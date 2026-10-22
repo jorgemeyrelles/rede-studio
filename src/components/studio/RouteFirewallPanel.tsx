@@ -1,49 +1,69 @@
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  Ban,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Gauge,
+  GripVertical,
+  Info,
+  Lock,
+  MapPin,
+  RotateCcw,
+  Shield,
+  X,
+} from 'lucide-react';
 import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { DSCP_BY_QOSCLASS, QOSCLASS_LABEL } from '../../features/network/constants';
 import {
-    addCustomAclRule,
-    addQosQueue,
-    removeCustomAclRule,
-    removeDhcpScope,
-    removeQosQueue,
-    reorderCustomAclRule,
-    setAclChildOverride,
-    updateAclRule,
-    updateAclRuleQoS,
-    updateLink,
-    updateQosQueue,
-    upsertDhcpScope,
+  DSCP_BY_QOSCLASS,
+  QOSCLASS_LABEL,
+} from '../../features/network/constants';
+import {
+  addCustomAclRule,
+  addQosQueue,
+  removeCustomAclRule,
+  removeDhcpScope,
+  removeQosQueue,
+  reorderCustomAclRule,
+  setAclChildOverride,
+  updateAclRule,
+  updateAclRuleQoS,
+  updateLink,
+  updateQosQueue,
+  upsertDhcpScope,
 } from '../../features/network/networkSlice';
 import {
-    selectFirewallRulesGrouped,
-    selectRouteTable,
-    selectSubnetRouteTable,
+  selectFirewallRulesGrouped,
+  selectRouteTable,
+  selectSubnetRouteTable,
 } from '../../features/network/selectors';
 import type {
-    AclAction,
-    AddressAllocationMode,
-    DhcpScopeIpv6Mode,
-    RouteType,
+  AclAction,
+  AddressAllocationMode,
+  DhcpScopeIpv6Mode,
+  RouteType,
 } from '../../features/network/types';
 import type { QosClass, QosQueue } from '../../features/network/types/entities';
-import type {
-    FirewallRuleRow,
-} from '../../features/network/types/selectors';
+import type { FirewallRuleRow } from '../../features/network/types/selectors';
 import { suggestAclRuleQoS } from '../../features/network/utils';
 import {
-    getRouteFirewallCopy,
-    getSiteOtherIps,
-    groupRoutesBySite,
-    groupSubnetRoutesBySiteAndVlan,
-    ROUTE_TYPE_CLASS,
-    SERVICE_CATALOG,
-    type RouteFirewallPanelProps,
-    type TooltipPosition,
+  getRouteFirewallCopy,
+  getSiteOtherIps,
+  groupRoutesBySite,
+  groupSubnetRoutesBySiteAndVlan,
+  ROUTE_TYPE_CLASS,
+  SERVICE_CATALOG,
+  type RouteFirewallPanelProps,
+  type TooltipPosition,
 } from './catalog';
 import RoutingProtocolTable from './RoutingProtocolTable';
 import type { TableTabDescriptor } from './TableTabs';
 import TreePicker from './TreePicker';
+import RemoveButton from './RemoveButton';
+import { ui as studioUi } from './utils/studioUi';
 
 function HeaderInfoTooltip({
   label,
@@ -79,18 +99,18 @@ function HeaderInfoTooltip({
       <span>{label}</span>
       <button
         type="button"
-        aria-label={`Informacoes sobre ${label}`}
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-slate-500 transition hover:text-slate-200 focus:outline-none"
+        aria-label={`${studioUi().infoAbout} ${label}`}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-2xs text-chalk-faint transition hover:text-chalk"
         onMouseEnter={openTooltipOnMouse}
         onMouseLeave={closeTooltip}
         onFocus={openTooltipOnFocus}
         onBlur={closeTooltip}
       >
-        ⓘ
+        <Info size={12} aria-hidden="true" />
       </button>
       {position && (
         <div
-          className="fixed z-[1000] w-72 -translate-y-1/2 rounded border border-slate-600 bg-slate-900 p-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl"
+          className="fixed z-[1000] w-72 -translate-y-1/2 rounded-sm border border-line-strong bg-ink p-2 text-left text-2xs leading-relaxed text-chalk-dim shadow-panel"
           style={{
             top: position.top,
             left: position.left,
@@ -130,7 +150,7 @@ function TruncatedValueTooltip({
     <>
       <div
         tabIndex={0}
-        className={`${maxWidthClass} cursor-help overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-slate-300 outline-none ${className}`}
+        className={`${maxWidthClass} cursor-help overflow-hidden text-ellipsis whitespace-nowrap text-2xs text-chalk-dim rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent ${className}`}
         onMouseEnter={(event) => openTooltip(event.currentTarget)}
         onMouseLeave={closeTooltip}
         onFocus={(event) => openTooltip(event.currentTarget)}
@@ -141,7 +161,7 @@ function TruncatedValueTooltip({
 
       {position && (
         <div
-          className="fixed z-[1000] max-w-[360px] -translate-y-1/2 rounded border border-slate-600 bg-slate-900 px-3 py-2 text-left text-[11px] leading-relaxed text-slate-200 shadow-xl"
+          className="fixed z-[1000] max-w-[360px] -translate-y-1/2 rounded-sm border border-line-strong bg-ink px-3 py-2 text-left text-2xs leading-relaxed text-chalk shadow-panel"
           style={{
             top: position.top,
             left: position.left,
@@ -174,19 +194,24 @@ function FlagBadge({
 
   return (
     <>
+      {/* Código curto (FD/HD, ←R, stl, ícones) — o significado completo vai
+          no nome acessível; o conteúdo visual fica oculto pra leitor de tela. */}
       <span
-        className={`cursor-help rounded px-1 py-px text-[9px] ${className}`}
+        role="img"
+        aria-label={tooltip}
+        className={`inline-flex cursor-help items-center rounded-sm px-1 py-px text-2xs ${className}`}
         onMouseEnter={(e) => open(e.currentTarget)}
         onMouseLeave={close}
         onFocus={(e) => open(e.currentTarget)}
         onBlur={close}
         tabIndex={0}
       >
-        {children}
+        <span aria-hidden="true">{children}</span>
       </span>
       {position && (
         <div
-          className="fixed z-[1000] max-w-[260px] -translate-y-1/2 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-left text-[11px] leading-relaxed text-slate-200 shadow-xl"
+          role="tooltip"
+          className="fixed z-[1000] max-w-[260px] -translate-y-1/2 rounded-sm border border-line-strong bg-ink px-2 py-1.5 text-left text-2xs leading-relaxed text-chalk shadow-panel"
           style={{ top: position.top, left: position.left }}
         >
           {tooltip}
@@ -228,14 +253,14 @@ function IconActionTooltipButton({
         onMouseLeave={close}
         onFocus={(e) => open(e.currentTarget)}
         onBlur={close}
-        className={`flex h-5 w-5 items-center justify-center rounded border text-[11px] transition ${className}`}
+        className={`flex h-5 w-5 items-center justify-center rounded-sm border text-2xs transition ${className}`}
       >
         {icon}
       </button>
 
       {position && (
         <div
-          className="fixed z-[1000] max-w-[260px] -translate-y-1/2 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-left text-[11px] leading-relaxed text-slate-200 shadow-xl"
+          className="fixed z-[1000] max-w-[260px] -translate-y-1/2 rounded-sm border border-line-strong bg-ink px-2 py-1.5 text-left text-2xs leading-relaxed text-chalk shadow-panel"
           style={{ top: position.top, left: position.left }}
         >
           {tooltip}
@@ -260,50 +285,48 @@ function RuleBadges({ rule }: { rule: FirewallRuleRow }) {
 
   const natTitle =
     rule.fwNatMode === 'pat'
-      ? 'Destino verá IP do FW (PAT)'
+      ? studioUi().natPat
       : rule.fwNatMode === 'snat'
-        ? 'Origem aparece como IP mapeado (SNAT)'
+        ? studioUi().natSnat
         : rule.fwNatMode === 'dnat'
-          ? 'Destino é IP público → privado (DNAT)'
+          ? studioUi().natDnat
           : rule.fwNatMode === 'hybrid'
-            ? 'Modo híbrido NAT + DNAT'
+            ? studioUi().natHybrid
             : '';
 
   const ipsecBadgeColor =
     rule.ipsecAuthBadge === 'PKI' || rule.ipsecAuthBadge === 'keypair'
-      ? 'bg-green-900/60 text-green-300'
+      ? 'bg-signal-up/15 text-signal-up'
       : rule.ipsecAuthBadge === 'EAP'
-        ? 'bg-blue-900/60 text-blue-300'
-        : rule.ipsecAuthBadge === '⚠ sem IKE'
-          ? 'bg-red-900/60 text-red-400'
-          : 'bg-orange-900/60 text-orange-300'; // PSK
+        ? 'bg-route-bgp/15 text-route-bgp'
+        : rule.ipsecAuthBadge === 'NO_IKE'
+          ? 'bg-signal-down/15 text-signal-down'
+          : 'bg-signal-warn/15 text-signal-warn'; // PSK
 
-  const duplexIcon = rule.duplexMode === 'half' ? '⇋' : '⇆';
+  const duplexIcon = rule.duplexMode === 'half' ? 'HD' : 'FD';
   const duplexTitle =
-    rule.duplexMode === 'half'
-      ? 'Half-duplex — transmite e recebe em turnos alternados.'
-      : 'Full-duplex — transmite e recebe simultaneamente.';
+    rule.duplexMode === 'half' ? studioUi().halfDuplex : studioUi().fullDuplex;
   const duplexClass =
     rule.duplexMode === 'half'
-      ? 'bg-fuchsia-900/50 text-fuchsia-200'
-      : 'bg-cyan-900/50 text-cyan-200';
+      ? 'bg-ink-raised-2 text-chalk-dim'
+      : 'bg-ink-raised-2 text-chalk-dim';
 
   return (
     <span className="flex flex-wrap gap-0.5">
       {!rule.stateful && !rule.passthrough && (
         <FlagBadge
-          tooltip="Stateless — sem rastreamento de conexão"
-          className="bg-amber-900/60 text-amber-300"
+          tooltip={studioUi().flagStateless}
+          className="bg-signal-warn/15 text-signal-warn"
         >
           ~
         </FlagBadge>
       )}
       {rule.bidirectional && (
         <FlagBadge
-          tooltip="Bidirecional — regra de retorno gerada automaticamente"
-          className="bg-sky-900/60 text-sky-300"
+          tooltip={studioUi().flagBidirectional}
+          className="bg-accent/15 text-accent"
         >
-          ↔
+          <ArrowLeftRight size={10} aria-hidden="true" />
         </FlagBadge>
       )}
       <FlagBadge tooltip={duplexTitle} className={duplexClass}>
@@ -311,66 +334,68 @@ function RuleBadges({ rule }: { rule: FirewallRuleRow }) {
       </FlagBadge>
       {rule.passthrough && (
         <FlagBadge
-          tooltip="Passthrough — sem firewall ou roteador no caminho"
-          className="bg-slate-700 text-slate-400"
+          tooltip={studioUi().flagPassthrough}
+          className="bg-ink-raised-2 text-chalk-dim"
         >
-          ⊘
+          <Ban size={10} aria-hidden="true" />
         </FlagBadge>
       )}
       {rule.hasConflict && (
         <FlagBadge
-          tooltip="Conflito: regra DENY manual sobrescreve ALLOW de topologia"
-          className="bg-red-900/60 text-red-400"
+          tooltip={studioUi().flagConflict}
+          className="bg-signal-down/15 text-signal-down"
         >
-          ⚠
+          <AlertTriangle size={10} aria-hidden="true" />
         </FlagBadge>
       )}
       {rule.natExempt && (
         <FlagBadge
-          tooltip="NAT Exempt — bypass de NAT para tráfego IPsec"
-          className="bg-emerald-900/60 text-emerald-400"
+          tooltip={studioUi().flagNatExempt}
+          className="bg-signal-up/15 text-signal-up"
         >
-          🛡
+          <Shield size={10} aria-hidden="true" />
         </FlagBadge>
       )}
       {natLabel && (
         <FlagBadge
           tooltip={natTitle}
-          className="bg-amber-900/60 text-amber-300"
+          className="bg-signal-warn/15 text-signal-warn"
         >
           {natLabel}
         </FlagBadge>
       )}
       {rule.ipsecAuthBadge && (
         <FlagBadge
-          tooltip={`IPsec auth: ${rule.ipsecAuthBadge}`}
+          tooltip={`IPsec auth: ${rule.ipsecAuthBadge === 'NO_IKE' ? studioUi().noIke : rule.ipsecAuthBadge}`}
           className={ipsecBadgeColor}
         >
-          {rule.ipsecAuthBadge}
+          {rule.ipsecAuthBadge === 'NO_IKE'
+            ? studioUi().noIke
+            : rule.ipsecAuthBadge}
         </FlagBadge>
       )}
       {rule.managed && (
         <FlagBadge
-          tooltip="Gerenciada automaticamente pela topologia — não editável"
-          className="bg-slate-700 text-slate-400"
+          tooltip={studioUi().flagManaged}
+          className="bg-ink-raised-2 text-chalk-dim"
         >
-          🔒
+          <Lock size={10} aria-hidden="true" />
         </FlagBadge>
       )}
       {rule.isReturnRule && (
         <FlagBadge
-          tooltip="Exceção de retorno — criada ao desligar o bidirecional da linha de ida. Remover esta linha religa o bidirecional."
-          className="bg-purple-900/60 text-purple-300"
+          tooltip={studioUi().flagReturnException}
+          className="bg-route-vpn/15 text-route-vpn"
         >
           ←R
         </FlagBadge>
       )}
       {rule.missingReturn && (
         <FlagBadge
-          tooltip="Stateless sem regra de retorno — tráfego de resposta pode ser bloqueado"
-          className="bg-orange-900/60 text-orange-400"
+          tooltip={studioUi().flagMissingReturn}
+          className="bg-route-default/15 text-route-default"
         >
-          ⚠stl
+          stl
         </FlagBadge>
       )}
     </span>
@@ -391,7 +416,7 @@ function ZoneHeader({
     <tr>
       <td
         colSpan={7}
-        className={`border-y border-slate-700 bg-slate-800/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${color}`}
+        className={`border-y border-line bg-ink-raised-2 px-2 py-1 text-label ${color}`}
       >
         {label} ({count})
       </td>
@@ -424,12 +449,12 @@ function ServicePicker({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-left text-[10px] text-slate-200 hover:border-slate-400"
+        className="w-full rounded-sm border border-line-strong bg-ink-raised-2 px-2 py-1 text-left text-2xs text-chalk hover:border-line-strong"
       >
         <span className="block truncate">{value || 'Selecionar serviço…'}</span>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-72 rounded border border-slate-600 bg-slate-900 shadow-xl">
+        <div className="absolute z-50 mt-1 w-72 rounded-sm border border-line-strong bg-ink shadow-panel">
           <div className="max-h-56 overflow-y-auto">
             {/* Any */}
             <button
@@ -438,18 +463,24 @@ function ServicePicker({
                 onChange('ANY');
                 setOpen(false);
               }}
-              className="w-full px-2 py-1 text-left text-[10px] text-slate-300 hover:bg-slate-700"
+              className="w-full px-2 py-1 text-left text-2xs text-chalk-dim hover:bg-ink-raised-2"
             >
-              ☐ Qualquer (ANY)
+              {studioUi().anyService}
             </button>
             {SERVICE_CATALOG.map((cat) => (
               <div key={cat.group}>
                 <button
                   type="button"
                   onClick={() => toggleGroup(cat.group)}
-                  className="flex w-full items-center gap-1 bg-slate-800/60 px-2 py-1 text-left text-[10px] font-semibold text-slate-400 hover:text-slate-200"
+                  className="flex w-full items-center gap-1 bg-ink-raised-2 px-2 py-1 text-left text-2xs font-semibold text-chalk-dim hover:text-chalk"
                 >
-                  <span>{openGroups.has(cat.group) ? '▼' : '▶'}</span>
+                  <span>
+                    {openGroups.has(cat.group) ? (
+                      <ChevronDown size={12} aria-hidden="true" />
+                    ) : (
+                      <ChevronRight size={12} aria-hidden="true" />
+                    )}
+                  </span>
                   {cat.group}
                 </button>
                 {openGroups.has(cat.group) &&
@@ -461,23 +492,25 @@ function ServicePicker({
                         onChange(item.value);
                         setOpen(false);
                       }}
-                      className="w-full px-4 py-0.5 text-left text-[10px] text-slate-300 hover:bg-slate-700"
+                      className="w-full px-4 py-0.5 text-left text-2xs text-chalk-dim hover:bg-ink-raised-2"
                     >
                       {item.label}
-                      <span className="ml-1 text-slate-500">{item.value}</span>
+                      <span className="ml-1 text-chalk-faint">
+                        {item.value}
+                      </span>
                     </button>
                   ))}
               </div>
             ))}
           </div>
           {/* Custom entry */}
-          <div className="border-t border-slate-700 p-1.5">
+          <div className="border-t border-line p-1.5">
             <div className="flex gap-1">
               <input
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
                 placeholder="ex: tcp/8080"
-                className="flex-1 rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600"
+                className="flex-1 rounded-sm border border-line-strong bg-ink-raised-2 px-1.5 py-0.5 text-2xs text-chalk placeholder-chalk-faint"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && custom.trim()) {
                     onChange(custom.trim());
@@ -495,7 +528,7 @@ function ServicePicker({
                     setOpen(false);
                   }
                 }}
-                className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-300 hover:border-slate-400"
+                className="rounded-sm border border-line-strong px-1.5 py-0.5 text-2xs text-chalk-dim hover:border-line-strong"
               >
                 OK
               </button>
@@ -512,7 +545,7 @@ function ServicePicker({
  * descritores de aba `{ id, label, content }` — StudioPage.tsx combina o
  * retorno com os outros paineis do Studio (VLANs por site, inventário,
  * serviços/certificados) num único `TableTabs` (ver Fase 4 do redesign
- * Planta, .claude/plans/redesign-planta-e-sessao-jwt.md). Continua um hook
+ * Planta, .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md). Continua um hook
  * de verdade (chama useAppSelector/useState normalmente) — só a "casca" de
  * JSX que virou array em vez de <TableTabs>.
  */
@@ -535,7 +568,9 @@ export function useRouteFirewallTabs({
   const nodes = useAppSelector((state) => state.network.nodes);
   const links = useAppSelector((state) => state.network.links);
   const aclRules = useAppSelector((state) => state.network.aclRules);
-  const nodeQosProfiles = useAppSelector((state) => state.network.nodeQosProfiles);
+  const nodeQosProfiles = useAppSelector(
+    (state) => state.network.nodeQosProfiles,
+  );
   const copy = getRouteFirewallCopy(language);
   const routeTypeLabels: Record<RouteType, string> = {
     Direta: copy.routeTypeDirect,
@@ -580,7 +615,9 @@ export function useRouteFirewallTabs({
     raw
       .split(',')
       .map((item) => item.trim())
-      .filter((item, index, self) => item !== '' && self.indexOf(item) === index);
+      .filter(
+        (item, index, self) => item !== '' && self.indexOf(item) === index,
+      );
 
   const suggestDnsForVlan = (vlan: (typeof siteVlans)[number]) => {
     const siteScopedNetworks = siteNetworks.filter(
@@ -603,7 +640,9 @@ export function useRouteFirewallTabs({
       }) ??
       vlanIfaces.find((iface) => {
         const ifaceNode = nodes.find((node) => node.id === iface.nodeId);
-        return ifaceNode?.category === 'router' || ifaceNode?.category === 'firewall';
+        return (
+          ifaceNode?.category === 'router' || ifaceNode?.category === 'firewall'
+        );
       }) ??
       vlanIfaces[0];
 
@@ -654,7 +693,8 @@ export function useRouteFirewallTabs({
           '2606:4700:4700::1111',
         ].filter(
           (value, index, self): value is string =>
-            Boolean(value && value.trim() !== '') && self.indexOf(value) === index,
+            Boolean(value && value.trim() !== '') &&
+            self.indexOf(value) === index,
         )
       : [];
 
@@ -690,7 +730,8 @@ export function useRouteFirewallTabs({
       poolEndIp: scope?.poolEndIp ?? vlan.endIp,
       excludedIps: scope?.excludedIps ?? [],
       leaseMinutes: scope?.leaseMinutes ?? 1440,
-      dnsServers: currentDnsV4.length > 0 ? currentDnsV4 : suggestedDns.dnsServers,
+      dnsServers:
+        currentDnsV4.length > 0 ? currentDnsV4 : suggestedDns.dnsServers,
       ipv6Mode: scope?.ipv6Mode ?? defaultIpv6ModeByAllocation(allocationMode),
       ipv6DnsServers:
         currentDnsV6.length > 0
@@ -725,8 +766,8 @@ export function useRouteFirewallTabs({
     );
     if (preferred) return preferred.id;
     return (
-      nodes.find((node) => node.siteId === siteId && node.category !== 'wan')?.id ??
-      undefined
+      nodes.find((node) => node.siteId === siteId && node.category !== 'wan')
+        ?.id ?? undefined
     );
   };
 
@@ -744,11 +785,11 @@ export function useRouteFirewallTabs({
       providerType,
       providerNodeId:
         providerType === 'node'
-          ? scope?.providerNodeId ?? preferredNodeId
+          ? (scope?.providerNodeId ?? preferredNodeId)
           : undefined,
       relayNodeId:
         providerType === 'relay'
-          ? scope?.relayNodeId ?? preferredNodeId
+          ? (scope?.relayNodeId ?? preferredNodeId)
           : undefined,
       poolStartIp: vlan.startIp,
       poolEndIp: vlan.endIp,
@@ -771,13 +812,15 @@ export function useRouteFirewallTabs({
 
   const dhcpRows = [...siteVlans]
     .sort((left, right) => {
-      if (left.siteId !== right.siteId) return left.siteId.localeCompare(right.siteId);
+      if (left.siteId !== right.siteId)
+        return left.siteId.localeCompare(right.siteId);
       return left.vlanId - right.vlanId;
     })
     .map((vlan) => {
       const key = `${vlan.siteId}|${vlan.vlanId}`;
       const scope = dhcpScopeByVlan.get(key);
-      const siteName = sites.find((site) => site.id === vlan.siteId)?.name ?? vlan.siteId;
+      const siteName =
+        sites.find((site) => site.id === vlan.siteId)?.name ?? vlan.siteId;
       const allocation = vlan.addressAllocation ?? 'dhcpv4';
       const isStatic = isStaticAllocation(allocation);
 
@@ -790,7 +833,10 @@ export function useRouteFirewallTabs({
         : '-';
 
       const serverRelay = scope
-        ? [resolveNodeLabel(scope.providerNodeId), resolveNodeLabel(scope.relayNodeId)]
+        ? [
+            resolveNodeLabel(scope.providerNodeId),
+            resolveNodeLabel(scope.relayNodeId),
+          ]
             .filter((value) => value !== '-')
             .join(' | ') || '-'
         : '-';
@@ -806,8 +852,7 @@ export function useRouteFirewallTabs({
           ? scope.dnsServers
           : suggestedDns.dnsServers;
       const dnsV6 =
-        scope?.ipv6DnsServers &&
-        scope.ipv6DnsServers.length > 0
+        scope?.ipv6DnsServers && scope.ipv6DnsServers.length > 0
           ? scope.ipv6DnsServers
           : suggestedDns.ipv6DnsServers;
 
@@ -817,7 +862,8 @@ export function useRouteFirewallTabs({
 
       const lease = scope?.leaseMinutes ? String(scope.leaseMinutes) : '-';
 
-      const requiresPool = allocation === 'dhcpv4' || allocation === 'dual-dhcp-slaac';
+      const requiresPool =
+        allocation === 'dhcpv4' || allocation === 'dual-dhcp-slaac';
 
       const changeRequired = (() => {
         if (isStatic) return copy.dhcpChangeStaticNoDhcp;
@@ -903,7 +949,8 @@ export function useRouteFirewallTabs({
   const [qosSelectedNodeId, setQosSelectedNodeId] = useState<string>('');
   const [qosFormName, setQosFormName] = useState('');
   const [qosFormClass, setQosFormClass] = useState<QosClass>('default');
-  const [qosFormPriority, setQosFormPriority] = useState<QosQueue['priority']>('best-effort');
+  const [qosFormPriority, setQosFormPriority] =
+    useState<QosQueue['priority']>('best-effort');
   const [qosFormMinBw, setQosFormMinBw] = useState<number | ''>('');
 
   // ── Custom rule creator state ─────────────────────────────────────────────
@@ -1126,18 +1173,18 @@ export function useRouteFirewallTabs({
 
     return (
       <Fragment key={rule.id}>
-        <tr className="hover:bg-slate-800/40">
+        <tr className="hover:bg-ink-raised-2">
           {/* Chevron */}
-          <td className="border-b border-slate-800 px-1 py-1">
+          <td className="border-b border-line px-1 py-1">
             <button
               type="button"
               aria-label={isOpen ? 'Recolher' : 'Expandir'}
               onClick={() => isExpandable && toggleExpand(rule.aclRuleId)}
               disabled={!isExpandable}
-              className={`flex h-5 w-5 items-center justify-center rounded transition-all duration-150 ${
+              className={`flex h-5 w-5 items-center justify-center rounded-sm transition-all duration-150 ${
                 isExpandable
-                  ? 'cursor-pointer text-amber-400 hover:bg-slate-700 hover:text-amber-300'
-                  : 'cursor-not-allowed text-slate-600 opacity-40'
+                  ? 'cursor-pointer text-signal-warn hover:bg-ink-raised-2 hover:text-signal-warn'
+                  : 'cursor-not-allowed text-chalk-faint opacity-40'
               }`}
             >
               <svg
@@ -1155,13 +1202,13 @@ export function useRouteFirewallTabs({
           </td>
 
           {/* Priority / ID */}
-          <td className="border-b border-slate-800 px-1 py-1">
-            <span className="text-[10px] text-slate-500">{rule.priority}</span>
+          <td className="border-b border-line px-1 py-1">
+            <span className="text-2xs text-chalk-faint">{rule.priority}</span>
           </td>
 
           {/* Ação — cor por valor (Fase 4 do redesign Planta): allow em
               --signal-up, deny em --signal-down, nunca o acento de marca. */}
-          <td className="border-b border-slate-800 px-1 py-1">
+          <td className="border-b border-line px-1 py-1">
             <select
               value={rule.acao}
               onChange={(e) =>
@@ -1172,7 +1219,7 @@ export function useRouteFirewallTabs({
                   }),
                 )
               }
-              className={`w-full rounded border bg-ink px-1 py-1 text-[11px] font-semibold ${
+              className={`w-full rounded-sm border bg-ink px-1 py-1 text-2xs font-semibold ${
                 rule.acao === 'ALLOW'
                   ? 'border-signal-up/50 text-signal-up'
                   : 'border-signal-down/50 text-signal-down'
@@ -1184,7 +1231,7 @@ export function useRouteFirewallTabs({
           </td>
 
           {/* Origem */}
-          <td className="border-b border-slate-800 px-1 py-1">
+          <td className="border-b border-line px-1 py-1">
             <TruncatedValueTooltip
               value={rule.origem}
               maxWidthClass="max-w-[140px]"
@@ -1192,7 +1239,7 @@ export function useRouteFirewallTabs({
           </td>
 
           {/* Destino */}
-          <td className="border-b border-slate-800 px-1 py-1">
+          <td className="border-b border-line px-1 py-1">
             <TruncatedValueTooltip
               value={rule.destino}
               maxWidthClass="max-w-[140px]"
@@ -1200,7 +1247,7 @@ export function useRouteFirewallTabs({
           </td>
 
           {/* Serviço */}
-          <td className="border-b border-slate-800 px-1 py-1">
+          <td className="border-b border-line px-1 py-1">
             <input
               value={rule.servico}
               onChange={(e) =>
@@ -1211,19 +1258,19 @@ export function useRouteFirewallTabs({
                   }),
                 )
               }
-              className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-1 text-[10px] text-slate-100"
+              className="w-full rounded-sm border border-line bg-ink px-1 py-1 text-2xs text-chalk"
               placeholder="ANY, HTTPS:443"
             />
           </td>
 
           {/* Badges + actions */}
-          <td className="border-b border-slate-800 px-1 py-1 text-right">
+          <td className="border-b border-line px-1 py-1 text-right">
             <div className="flex flex-wrap items-center justify-end gap-1">
               <RuleBadges rule={rule} />
               {/* QoS toggle button */}
               <button
                 type="button"
-                title="QoS — Qualidade de Serviço"
+                title={studioUi().qosTitle}
                 onClick={() =>
                   setQosExpandedIds((prev) => {
                     const next = new Set(prev);
@@ -1232,13 +1279,18 @@ export function useRouteFirewallTabs({
                     return next;
                   })
                 }
-                className={`flex h-5 items-center rounded px-1 text-[9px] font-bold transition ${
+                className={`flex h-5 items-center rounded-sm px-1 text-2xs font-bold transition ${
                   hasQos
-                    ? 'border border-orange-600/60 bg-orange-900/30 text-orange-300'
-                    : 'text-slate-600 hover:text-slate-400'
+                    ? 'border border-route-default/60 bg-route-default/15 text-route-default'
+                    : 'text-chalk-faint hover:text-chalk-dim'
                 }`}
               >
-                {hasQos ? '🔶' : '◇'} QoS
+                <Gauge
+                  size={11}
+                  aria-hidden="true"
+                  className={hasQos ? 'text-route-default' : ''}
+                />{' '}
+                QoS
               </button>
               {/* G — ↔ toggle bidirecional do link (1 linha ligado / cria exceção de retorno desligado) */}
               {!isManual && !rule.isReturnRule && rule.linkId && (
@@ -1246,9 +1298,15 @@ export function useRouteFirewallTabs({
                   type="button"
                   title={
                     rule.bidirectional
-                      ? 'Bidirecional — 1 linha cobre ida e volta. Desligar cria uma linha de exceção pra volta na seção manual.'
-                      : 'Direcional — existe uma linha de exceção de retorno na seção manual. Clique pra religar o bidirecional e removê-la.'
+                      ? studioUi().bidirectionalOn
+                      : studioUi().bidirectionalOff
                   }
+                  aria-label={
+                    rule.bidirectional
+                      ? studioUi().bidirectionalOn
+                      : studioUi().bidirectionalOff
+                  }
+                  aria-pressed={rule.bidirectional}
                   onClick={() =>
                     dispatch(
                       updateLink({
@@ -1257,13 +1315,13 @@ export function useRouteFirewallTabs({
                       }),
                     )
                   }
-                  className={`ml-1 flex h-5 w-5 items-center justify-center rounded border text-[10px] transition ${
+                  className={`ml-1 flex h-5 w-5 items-center justify-center rounded-sm border text-2xs transition ${
                     rule.bidirectional
-                      ? 'border-sky-600/60 bg-sky-900/30 text-sky-300 hover:bg-red-900/30 hover:text-red-300 hover:border-red-600/60'
-                      : 'border-slate-700 bg-slate-800/40 text-slate-500 hover:bg-sky-900/20 hover:text-sky-400 hover:border-sky-700/60'
+                      ? 'border-accent/60 bg-ink-raised-2 text-chalk hover:bg-signal-down/15 hover:text-signal-down hover:border-signal-down/60'
+                      : 'border-line bg-ink-raised-2 text-chalk-faint hover:bg-ink-raised-2 hover:text-accent hover:border-line-strong'
                   }`}
                 >
-                  ↔
+                  <ArrowLeftRight size={11} aria-hidden="true" />
                 </button>
               )}
               {isManual && (
@@ -1271,7 +1329,7 @@ export function useRouteFirewallTabs({
                   {/* H — drag handle */}
                   <span
                     title="Arrastar para reordenar"
-                    className="flex h-5 w-4 cursor-grab select-none items-center justify-center text-slate-500 active:cursor-grabbing"
+                    className="flex h-5 w-4 cursor-grab select-none items-center justify-center text-chalk-faint active:cursor-grabbing"
                     draggable
                     onDragStart={() => {
                       dragRuleIdRef.current = rule.aclRuleId;
@@ -1292,18 +1350,14 @@ export function useRouteFirewallTabs({
                       );
                     }}
                   >
-                    ⠿
+                    <GripVertical size={12} aria-hidden="true" />
                   </span>
-                  <button
-                    type="button"
-                    title="Remover regra"
+                  <RemoveButton
                     onClick={() =>
                       dispatch(removeCustomAclRule({ id: rule.aclRuleId }))
                     }
-                    className="flex h-5 w-5 items-center justify-center rounded text-red-600 hover:bg-red-900/30 hover:text-red-400"
-                  >
-                    ✕
-                  </button>
+                    label={studioUi().removeRule}
+                  />
                 </div>
               )}
             </div>
@@ -1316,10 +1370,10 @@ export function useRouteFirewallTabs({
             <div
               className={`overflow-hidden transition-all duration-200 ${isQosOpen ? 'max-h-[200px]' : 'max-h-0'}`}
             >
-              <div className="ml-7 border-l-2 border-orange-500/40 bg-orange-950/10 px-3 py-2">
+              <div className="ml-7 rounded-sm border border-route-default/30 bg-route-default/5 px-3 py-2">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest text-orange-400">
-                    QoS — Qualidade de Serviço
+                  <p className="text-label text-route-default">
+                    {studioUi().qosTitle}
                   </p>
                   <button
                     type="button"
@@ -1333,16 +1387,16 @@ export function useRouteFirewallTabs({
                         }),
                       );
                     }}
-                    className="rounded border border-orange-600/50 bg-orange-900/30 px-2 py-0.5 text-[9px] text-orange-300 hover:bg-orange-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-sm border border-route-default/50 bg-route-default/15 px-2 py-0.5 text-2xs text-route-default hover:bg-route-default/15 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Aplicar sugestão
+                    {studioUi().applySuggestion}
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
                   {/* Classe de Tráfego */}
                   <div>
-                    <label className="mb-0.5 block text-[9px] text-slate-500">
-                      Classe de Tráfego
+                    <label className="mb-0.5 block text-2xs text-chalk-faint">
+                      {studioUi().trafficClass}
                     </label>
                     <select
                       value={rawRule?.trafficClass ?? ''}
@@ -1359,19 +1413,19 @@ export function useRouteFirewallTabs({
                           }),
                         )
                       }
-                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+                      className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
                     >
-                      <option value="">— padrão —</option>
-                      <option value="critical">🔴 Critical</option>
-                      <option value="voice">🟠 Voice</option>
-                      <option value="video">🟡 Video</option>
-                      <option value="bulk">🔵 Bulk</option>
-                      <option value="best-effort">⚪ Best-Effort</option>
+                      <option value="">{studioUi().defaultOption}</option>
+                      <option value="critical">Critical</option>
+                      <option value="voice">Voice</option>
+                      <option value="video">Video</option>
+                      <option value="bulk">Bulk</option>
+                      <option value="best-effort">Best-effort</option>
                     </select>
                   </div>
                   {/* DSCP Mark */}
                   <div>
-                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                    <label className="mb-0.5 block text-2xs text-chalk-faint">
                       DSCP Mark (0–63)
                     </label>
                     <div className="flex gap-1">
@@ -1392,7 +1446,7 @@ export function useRouteFirewallTabs({
                           )
                         }
                         placeholder="Ex: 46"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                        className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                       />
                       <select
                         value=""
@@ -1405,7 +1459,7 @@ export function useRouteFirewallTabs({
                               }),
                             );
                         }}
-                        className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-300"
+                        className="rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk-dim"
                       >
                         <option value="">Preset</option>
                         <option value="46">EF=46</option>
@@ -1418,7 +1472,7 @@ export function useRouteFirewallTabs({
                   </div>
                   {/* Banda Garantida */}
                   <div>
-                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                    <label className="mb-0.5 block text-2xs text-chalk-faint">
                       Banda Garantida (kbps)
                     </label>
                     <input
@@ -1437,12 +1491,12 @@ export function useRouteFirewallTabs({
                         )
                       }
                       placeholder="Ex: 1000"
-                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                      className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                     />
                   </div>
                   {/* Banda Máxima */}
                   <div>
-                    <label className="mb-0.5 block text-[9px] text-slate-500">
+                    <label className="mb-0.5 block text-2xs text-chalk-faint">
                       Banda Máxima (kbps)
                     </label>
                     <input
@@ -1461,7 +1515,7 @@ export function useRouteFirewallTabs({
                         )
                       }
                       placeholder="Ex: 5000"
-                      className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[10px] text-slate-100 placeholder-slate-600"
+                      className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
                     />
                   </div>
                 </div>
@@ -1476,10 +1530,10 @@ export function useRouteFirewallTabs({
               <div
                 className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[600px]' : 'max-h-0'}`}
               >
-                <div className="ml-7 border-l-2 border-amber-500/40 bg-slate-800/50">
-                  <div className="flex gap-2 border-b border-slate-700/60 px-2 py-1.5">
+                <div className="ml-7 rounded-sm border border-line bg-ink-raised-2">
+                  <div className="flex gap-2 border-b border-line px-2 py-1.5">
                     <div className="flex flex-1 items-center gap-1">
-                      <span className="shrink-0 text-[10px] text-slate-500">
+                      <span className="shrink-0 text-2xs text-chalk-faint">
                         Origem:
                       </span>
                       <input
@@ -1492,11 +1546,11 @@ export function useRouteFirewallTabs({
                           )
                         }
                         placeholder="filtrar IP / host…"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
+                        className="w-full rounded-sm border border-line bg-ink px-1.5 py-0.5 text-2xs text-chalk placeholder-chalk-faint outline-none focus:border-signal-warn/60"
                       />
                     </div>
                     <div className="flex flex-1 items-center gap-1">
-                      <span className="shrink-0 text-[10px] text-slate-500">
+                      <span className="shrink-0 text-2xs text-chalk-faint">
                         Destino:
                       </span>
                       <input
@@ -1505,28 +1559,24 @@ export function useRouteFirewallTabs({
                           setFilterValue(rule.aclRuleId, 'dest', e.target.value)
                         }
                         placeholder="filtrar IP / host…"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200 placeholder-slate-600 outline-none focus:border-amber-500/60"
+                        className="w-full rounded-sm border border-line bg-ink px-1.5 py-0.5 text-2xs text-chalk placeholder-chalk-faint outline-none focus:border-signal-warn/60"
                       />
                     </div>
                     {(filter.origin || filter.dest) && (
-                      <button
-                        type="button"
+                      <RemoveButton
                         onClick={() =>
                           setExpansionFilters((prev) => ({
                             ...prev,
                             [rule.aclRuleId]: { origin: '', dest: '' },
                           }))
                         }
-                        className="shrink-0 text-[10px] text-slate-500 hover:text-slate-300"
-                        aria-label="Limpar filtros"
-                      >
-                        ✕
-                      </button>
+                        label={studioUi().clearFilters}
+                      />
                     )}
                   </div>
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="text-left text-[10px] text-slate-500">
+                      <tr className="text-left text-2xs text-chalk-faint">
                         <th className="w-6 px-2 py-0.5">#</th>
                         <th className="w-[100px] px-2 py-0.5">Ação</th>
                         <th className="px-2 py-0.5">Origem</th>
@@ -1538,7 +1588,7 @@ export function useRouteFirewallTabs({
                         <tr>
                           <td
                             colSpan={4}
-                            className="px-2 py-1 text-[10px] text-slate-600"
+                            className="px-2 py-1 text-2xs text-chalk-faint"
                           >
                             Nenhum resultado para os filtros aplicados.
                           </td>
@@ -1554,9 +1604,9 @@ export function useRouteFirewallTabs({
                         return (
                           <tr
                             key={row.id}
-                            className={`hover:bg-slate-700/30 ${hasOverride ? 'bg-red-950/20' : ''}`}
+                            className={`hover:bg-ink-raised-2 ${hasOverride ? 'bg-signal-down/10' : ''}`}
                           >
-                            <td className="px-2 py-0.5 text-[10px] text-slate-500">
+                            <td className="px-2 py-0.5 text-2xs text-chalk-faint">
                               {rowIdx + 1}
                             </td>
                             <td className="px-2 py-0.5">
@@ -1570,10 +1620,10 @@ export function useRouteFirewallTabs({
                                     rule.acao,
                                   )
                                 }
-                                className={`w-full rounded border px-1 py-0.5 text-[10px] text-slate-100 ${
+                                className={`w-full rounded-sm border px-1 py-0.5 text-2xs text-chalk ${
                                   hasOverride
-                                    ? 'border-red-600/60 bg-red-900/30 font-semibold text-red-300'
-                                    : 'border-slate-700 bg-slate-900'
+                                    ? 'border-signal-down/60 bg-signal-down/15 font-semibold text-signal-down'
+                                    : 'border-line bg-ink'
                                 }`}
                               >
                                 <option value="ALLOW">ALLOW</option>
@@ -1584,14 +1634,14 @@ export function useRouteFirewallTabs({
                               <TruncatedValueTooltip
                                 value={row.origem}
                                 maxWidthClass="max-w-[200px]"
-                                className="font-mono text-[10px] text-slate-300"
+                                className="font-mono text-2xs text-chalk-dim"
                               />
                             </td>
                             <td className="px-2 py-0.5">
                               <TruncatedValueTooltip
                                 value={row.destino}
                                 maxWidthClass="max-w-[200px]"
-                                className="font-mono text-[10px] text-slate-300"
+                                className="font-mono text-2xs text-chalk-dim"
                               />
                             </td>
                           </tr>
@@ -1600,7 +1650,7 @@ export function useRouteFirewallTabs({
                     </tbody>
                   </table>
                   {filteredRows.length > 0 && (
-                    <p className="px-2 py-1 text-[10px] text-slate-600">
+                    <p className="px-2 py-1 text-2xs text-chalk-faint">
                       {filteredRows.length} de {expansionRows.length} alocaç
                       {expansionRows.length === 1 ? 'ão' : 'ões'}
                     </p>
@@ -1621,17 +1671,17 @@ export function useRouteFirewallTabs({
   const firewallZoneB = (
     <>
       <ZoneHeader
-        label="Exceções manuais (Zona B)"
+        label={studioUi().manualExceptions}
         count={manualGrouped.length}
-        color="text-violet-300"
+        color="text-route-vpn"
       />
       {manualGrouped.length === 0 && (
         <tr>
           <td
             colSpan={7}
-            className="px-2 py-1.5 text-[11px] text-slate-600 italic"
+            className="px-2 py-1.5 text-2xs text-chalk-faint italic"
           >
-            Nenhuma regra manual. Adicione com "+ Regra" acima.
+            {studioUi().noManualRules}
           </td>
         </tr>
       )}
@@ -1653,15 +1703,15 @@ export function useRouteFirewallTabs({
       <ZoneHeader
         label="Regras de topologia (Zona A)"
         count={topologyGrouped.length}
-        color="text-rose-300"
+        color="text-signal-down"
       />
       {topologyGrouped.length === 0 && (
         <tr>
           <td
             colSpan={7}
-            className="px-2 py-1.5 text-[11px] text-slate-600 italic"
+            className="px-2 py-1.5 text-2xs text-chalk-faint italic"
           >
-            Nenhuma regra de topologia gerada ainda.
+            {studioUi().noTopologyRules}
           </td>
         </tr>
       )}
@@ -1683,1055 +1733,1242 @@ export function useRouteFirewallTabs({
       id: 'rotas',
       label: copy.routeTableTitle,
       content: (
-      // ── Linha 1: Tabela de Rotas (largura total) ───────────────────────
-      <div className="rounded-lg border border-line bg-ink-raised p-3">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
-          {copy.routeTableTitle}
-        </h3>
-        <div className="theme-scrollbar h-[280px] overflow-x-auto overflow-y-auto text-xs">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.type}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">VLAN</th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.destinationNetwork}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.destinationNetworkIpv6}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  <HeaderInfoTooltip label={copy.gateway}>
-                    <strong className="mb-1 block text-amber-300">
-                      {copy.routeGatewayByType}
-                    </strong>
-                    <table className="w-full border-collapse">
-                      <tbody>
-                        <tr className="border-b border-slate-700">
-                          <td className="py-0.5 pr-2 font-semibold text-emerald-400">
-                            {copy.routeTypeDirect}
-                          </td>
-                          <td className="py-0.5 text-slate-400">
-                            — {copy.routeHelpDirect}
-                          </td>
-                        </tr>
-                        <tr className="border-b border-slate-700">
-                          <td className="py-0.5 pr-2 font-semibold text-orange-400">
-                            {copy.routeTypeDefault}
-                          </td>
-                          <td className="py-0.5 text-slate-400">
-                            {copy.routeHelpDefault}
-                          </td>
-                        </tr>
-                        <tr className="border-b border-slate-700">
-                          <td className="py-0.5 pr-2 font-semibold text-cyan-300">
-                            {copy.routeTypeVpn}
-                          </td>
-                          <td className="py-0.5 text-slate-400">
-                            {copy.routeHelpVpn}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-0.5 pr-2 font-semibold text-amber-300">
-                            {copy.routeTypeStatic}
-                          </td>
-                          <td className="py-0.5 text-slate-400">
-                            {copy.routeHelpStatic}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </HeaderInfoTooltip>
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.gatewayIpv6}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  <HeaderInfoTooltip label={copy.interface}>
-                    <strong className="mb-1 block text-amber-300">
-                      {copy.interfaceDynamicNumbering}
-                    </strong>
-                    {copy.interfaceHelpLine1}
-                    <br />
-                    {copy.interfaceHelpLine2}
-                    <br />
-                    {copy.interfaceHelpLine3}
-                  </HeaderInfoTooltip>
-                </th>
-                <th className="w-[90px] border-b border-slate-700 px-1 py-1 text-slate-400">
-                  Rede
-                </th>
-                <th className="w-[70px] border-b border-slate-700 px-1 py-1 text-slate-400">
-                  Zona
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {routes.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-1 py-2 text-slate-500">
-                    {copy.emptyRoutes}
-                  </td>
+        // ── Linha 1: Tabela de Rotas (largura total) ───────────────────────
+        <div className="rounded-md border border-line bg-ink-raised p-3">
+          <h3 className="mb-2 font-display text-heading font-semibold text-chalk">
+            {copy.routeTableTitle}
+          </h3>
+          <div className="theme-scrollbar h-[280px] overflow-x-auto overflow-y-auto text-xs">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="text-left text-chalk-dim">
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.type}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">VLAN</th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.destinationNetwork}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.destinationNetworkIpv6}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    <HeaderInfoTooltip label={copy.gateway}>
+                      <strong className="mb-1 block text-signal-warn">
+                        {copy.routeGatewayByType}
+                      </strong>
+                      <table className="w-full border-collapse">
+                        <tbody>
+                          <tr className="border-b border-line">
+                            <td className="py-0.5 pr-2 font-semibold text-signal-up">
+                              {copy.routeTypeDirect}
+                            </td>
+                            <td className="py-0.5 text-chalk-dim">
+                              — {copy.routeHelpDirect}
+                            </td>
+                          </tr>
+                          <tr className="border-b border-line">
+                            <td className="py-0.5 pr-2 font-semibold text-route-default">
+                              {copy.routeTypeDefault}
+                            </td>
+                            <td className="py-0.5 text-chalk-dim">
+                              {copy.routeHelpDefault}
+                            </td>
+                          </tr>
+                          <tr className="border-b border-line">
+                            <td className="py-0.5 pr-2 font-semibold text-chalk">
+                              {copy.routeTypeVpn}
+                            </td>
+                            <td className="py-0.5 text-chalk-dim">
+                              {copy.routeHelpVpn}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-0.5 pr-2 font-semibold text-signal-warn">
+                              {copy.routeTypeStatic}
+                            </td>
+                            <td className="py-0.5 text-chalk-dim">
+                              {copy.routeHelpStatic}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </HeaderInfoTooltip>
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.gatewayIpv6}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    <HeaderInfoTooltip label={copy.interface}>
+                      <strong className="mb-1 block text-signal-warn">
+                        {copy.interfaceDynamicNumbering}
+                      </strong>
+                      {copy.interfaceHelpLine1}
+                      <br />
+                      {copy.interfaceHelpLine2}
+                      <br />
+                      {copy.interfaceHelpLine3}
+                    </HeaderInfoTooltip>
+                  </th>
+                  <th className="w-[90px] border-b border-line px-1 py-1 text-chalk-dim">
+                    {studioUi().networkColumn}
+                  </th>
+                  <th className="w-[70px] border-b border-line px-1 py-1 text-chalk-dim">
+                    {studioUi().zoneColumn}
+                  </th>
                 </tr>
-              )}
-              {groupRoutesBySite(routes).map((group) => (
-                <Fragment key={`group-${group.siteId}`}>
+              </thead>
+              <tbody>
+                {routes.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={9}
-                      className="bg-slate-800/70 px-2 py-1 font-semibold text-sky-300 border-b border-slate-600 border-t border-slate-600"
-                    >
-                      📍 {group.siteName}
+                    <td colSpan={9} className="px-1 py-2 text-chalk-faint">
+                      {copy.emptyRoutes}
                     </td>
                   </tr>
-                  {group.rows.map((route, i) => (
-                    <tr
-                      key={`${group.siteId}-${i}`}
-                      className="hover:bg-slate-800/40"
-                    >
-                      <td className="border-b border-slate-800 px-1 py-1">
-                        <span
-                          className={`font-medium ${ROUTE_TYPE_CLASS[route.tipo] ?? 'text-slate-300'}`}
-                        >
-                          {routeTypeLabels[route.tipo] ?? route.tipo}
-                        </span>
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-300">
-                        {route.vlan}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-200">
-                        {route.redeDest}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-sky-300">
-                        {route.redeDestIpv6 || '-'}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-400">
-                        {route.gateway}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 font-mono text-sky-300">
-                        {route.gatewayIpv6 || '-'}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                        {route.iface}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1 text-slate-400">
-                        {route.networkName}
-                      </td>
-                      <td className="border-b border-slate-800 px-1 py-1">
-                        <span
-                          className={`rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
-                            route.zone === 'wan'
-                              ? 'bg-orange-900/50 text-orange-300'
-                              : route.zone === 'vpn'
-                                ? 'bg-cyan-900/50 text-cyan-300'
-                                : route.zone === 'dmz'
-                                  ? 'bg-amber-900/50 text-amber-300'
-                                  : route.zone === 'lan'
-                                    ? 'bg-emerald-900/50 text-emerald-300'
-                                    : 'bg-slate-700 text-slate-400'
-                          }`}
-                        >
-                          {route.zone}
-                        </span>
+                )}
+                {groupRoutesBySite(routes).map((group) => (
+                  <Fragment key={`group-${group.siteId}`}>
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="bg-ink-raised-2 px-2 py-1 font-semibold text-chalk border-b border-line-strong border-t border-line-strong"
+                      >
+                        <MapPin
+                          size={12}
+                          className="mr-1 inline-block -translate-y-px"
+                          aria-hidden="true"
+                        />
+                        {group.siteName}
                       </td>
                     </tr>
-                  ))}
-                  <tr>
-                    <td
-                      colSpan={9}
-                      className="border-b border-slate-700 px-2 py-1 text-[11px] text-slate-400"
-                    >
-                      {copy.otherIps}:{' '}
-                      {getSiteOtherIps(group.siteId, group.rows, sites)}
-                      {' | '}
-                      {copy.reserveSummary}:{' '}
-                      {group.rows[0]?.reserveMarginPercent ?? 0}%
-                      {group.rows[0]?.reservedSiteRange
-                        ? ` (${copy.reserveRange}: ${group.rows[0].reservedSiteRange}, ${group.rows[0].reservedSiteCount})`
-                        : ''}
-                    </td>
-                  </tr>
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                    {group.rows.map((route, i) => (
+                      <tr
+                        key={`${group.siteId}-${i}`}
+                        className="hover:bg-ink-raised-2"
+                      >
+                        <td className="border-b border-line px-1 py-1">
+                          <span
+                            className={`font-medium ${ROUTE_TYPE_CLASS[route.tipo] ?? 'text-chalk-dim'}`}
+                          >
+                            {routeTypeLabels[route.tipo] ?? route.tipo}
+                          </span>
+                        </td>
+                        <td className="border-b border-line px-1 py-1 font-mono text-chalk-dim">
+                          {route.vlan}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                          {route.redeDest}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                          {route.redeDestIpv6 || '-'}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 font-mono text-chalk-dim">
+                          {route.gateway}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                          {route.gatewayIpv6 || '-'}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                          {route.iface}
+                        </td>
+                        <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                          {route.networkName}
+                        </td>
+                        <td className="border-b border-line px-1 py-1">
+                          <span
+                            className={`rounded-sm px-1 py-0.5 text-2xs font-semibold uppercase ${
+                              route.zone === 'wan'
+                                ? 'bg-route-default/15 text-route-default'
+                                : route.zone === 'vpn'
+                                  ? 'bg-ink-raised-2 text-chalk'
+                                  : route.zone === 'dmz'
+                                    ? 'bg-signal-warn/15 text-signal-warn'
+                                    : route.zone === 'lan'
+                                      ? 'bg-signal-up/15 text-signal-up'
+                                      : 'bg-ink-raised-2 text-chalk-dim'
+                            }`}
+                          >
+                            {route.zone}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="border-b border-line px-2 py-1 text-2xs text-chalk-dim"
+                      >
+                        {copy.otherIps}:{' '}
+                        {getSiteOtherIps(group.siteId, group.rows, sites)}
+                        {' | '}
+                        {copy.reserveSummary}:{' '}
+                        {group.rows[0]?.reserveMarginPercent ?? 0}%
+                        {group.rows[0]?.reservedSiteRange
+                          ? ` (${copy.reserveRange}: ${group.rows[0].reservedSiteRange}, ${group.rows[0].reservedSiteCount})`
+                          : ''}
+                      </td>
+                    </tr>
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       ),
     },
     {
       id: 'vlan-subnet',
       label: copy.vlanSubnetRouteTableTitle,
       content: (
-      <div className="rounded-lg border border-line bg-ink-raised p-3">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
-          {copy.vlanSubnetRouteTableTitle}
-        </h3>
-        <div className="theme-scrollbar h-[240px] overflow-x-auto overflow-y-auto text-xs">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">VLAN</th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.subnetName}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.destinationNetwork}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.destinationNetworkIpv6}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.gateway}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.gatewayIpv6}
-                </th>
-                <th className="border-b border-slate-700 px-1 py-1">
-                  {copy.gatewayNode}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {subnetRouteGroups.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-1 py-2 text-slate-500">
-                    {copy.emptyVlanSubnetRoutes}
-                  </td>
+        <div className="rounded-md border border-line bg-ink-raised p-3">
+          <h3 className="mb-2 font-display text-heading font-semibold text-chalk">
+            {copy.vlanSubnetRouteTableTitle}
+          </h3>
+          <div className="theme-scrollbar h-[240px] overflow-x-auto overflow-y-auto text-xs">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="text-left text-chalk-dim">
+                  <th className="border-b border-line px-1 py-1">VLAN</th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.subnetName}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.destinationNetwork}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.destinationNetworkIpv6}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.gateway}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.gatewayIpv6}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.gatewayNode}
+                  </th>
                 </tr>
-              )}
-              {subnetRouteGroups.map((siteGroup) => (
-                <Fragment key={`subnet-site-${siteGroup.siteId}`}>
+              </thead>
+              <tbody>
+                {subnetRouteGroups.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="border-b border-t border-slate-600 bg-slate-800/70 px-2 py-1 font-semibold text-sky-300"
-                    >
-                      📍 {siteGroup.siteName}
+                    <td colSpan={7} className="px-1 py-2 text-chalk-faint">
+                      {copy.emptyVlanSubnetRoutes}
                     </td>
                   </tr>
-                  {siteGroup.vlans.flatMap((vlanGroup) => [
-                    <tr
-                      key={`subnet-vlan-${siteGroup.siteId}-${vlanGroup.vlanId}`}
-                      className="bg-slate-900/60"
-                    >
+                )}
+                {subnetRouteGroups.map((siteGroup) => (
+                  <Fragment key={`subnet-site-${siteGroup.siteId}`}>
+                    <tr>
                       <td
                         colSpan={7}
-                        className="border-b border-slate-700 px-2 py-1 font-semibold text-cyan-300"
+                        className="border-b border-t border-line-strong bg-ink-raised-2 px-2 py-1 font-semibold text-chalk"
                       >
-                        VLAN {vlanGroup.vlanId} - {vlanGroup.vlanName}
+                        <MapPin
+                          size={12}
+                          className="mr-1 inline-block -translate-y-px"
+                          aria-hidden="true"
+                        />
+                        {siteGroup.siteName}
                       </td>
-                    </tr>,
-                    ...vlanGroup.subnets.flatMap((subnetGroup, subnetIndex) => [
+                    </tr>
+                    {siteGroup.vlans.flatMap((vlanGroup) => [
                       <tr
-                        key={`subnet-group-${siteGroup.siteId}-${vlanGroup.vlanId}-${subnetIndex}`}
-                        className="bg-slate-900/30"
+                        key={`subnet-vlan-${siteGroup.siteId}-${vlanGroup.vlanId}`}
+                        className="bg-ink/60"
                       >
                         <td
                           colSpan={7}
-                          className="border-b border-slate-700/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-violet-300"
+                          className="border-b border-line px-2 py-1 font-semibold text-chalk"
                         >
-                          {copy.subnetName}: {subnetGroup.subnetName}
+                          VLAN {vlanGroup.vlanId} - {vlanGroup.vlanName}
                         </td>
                       </tr>,
-                      ...subnetGroup.rows.map((route, rowIndex) => (
-                        <tr
-                          key={`subnet-row-${siteGroup.siteId}-${vlanGroup.vlanId}-${subnetIndex}-${rowIndex}`}
-                          className="hover:bg-slate-800/40"
-                        >
-                          <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-300">
-                            {route.vlanId}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                            {route.subnetName || '-'}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-200">
-                            {route.destination}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 font-mono text-sky-300">
-                            {route.destinationIpv6 || '-'}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 font-mono text-slate-400">
-                            {route.gateway || '-'}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 font-mono text-sky-300">
-                            {route.gatewayIpv6 || '-'}
-                          </td>
-                          <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                            {route.gatewayNodeLabel || '-'}
-                          </td>
-                        </tr>
-                      )),
-                    ]),
-                  ])}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                      ...vlanGroup.subnets.flatMap(
+                        (subnetGroup, subnetIndex) => [
+                          <tr
+                            key={`subnet-group-${siteGroup.siteId}-${vlanGroup.vlanId}-${subnetIndex}`}
+                            className="bg-ink/30"
+                          >
+                            <td
+                              colSpan={7}
+                              className="border-b border-line px-3 py-1 text-label text-route-vpn"
+                            >
+                              {copy.subnetName}: {subnetGroup.subnetName}
+                            </td>
+                          </tr>,
+                          ...subnetGroup.rows.map((route, rowIndex) => (
+                            <tr
+                              key={`subnet-row-${siteGroup.siteId}-${vlanGroup.vlanId}-${subnetIndex}-${rowIndex}`}
+                              className="hover:bg-ink-raised-2"
+                            >
+                              <td className="border-b border-line px-1 py-1 font-mono text-chalk-dim">
+                                {route.vlanId}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                                {route.subnetName || '-'}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                                {route.destination}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                                {route.destinationIpv6 || '-'}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 font-mono text-chalk-dim">
+                                {route.gateway || '-'}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 font-mono text-chalk">
+                                {route.gatewayIpv6 || '-'}
+                              </td>
+                              <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                                {route.gatewayNodeLabel || '-'}
+                              </td>
+                            </tr>
+                          )),
+                        ],
+                      ),
+                    ])}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       ),
     },
     {
       id: 'firewall',
       label: copy.firewallTitle,
       content: (
-      // ── Firewall / ACL ─────────────────────────────────────────────────
-      <div className="rounded-lg border border-line bg-ink-raised p-3">
-        {/* Header */}
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-300">
-            {copy.firewallTitle}
-          </h3>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setManualZoneFirst((v) => !v)}
-              title="Alternar posição das exceções manuais"
-              className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300 hover:border-slate-400 hover:text-slate-100"
-            >
-              {manualZoneFirst ? 'exceções: antes ▼' : 'exceções: depois ▲'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreator((v) => !v)}
-              className="rounded border border-violet-600 bg-violet-900/30 px-2 py-0.5 text-[10px] text-violet-300 hover:bg-violet-800/40 hover:text-violet-200"
-            >
-              {showCreator ? '✕ Cancelar' : '+ Regra'}
-            </button>
+        // ── Firewall / ACL ─────────────────────────────────────────────────
+        <div className="rounded-md border border-line bg-ink-raised p-3">
+          {/* Header */}
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-display text-heading font-semibold text-chalk">
+              {copy.firewallTitle}
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setManualZoneFirst((v) => !v)}
+                title={studioUi().toggleExceptionsPosition}
+                className="rounded-sm border border-line-strong bg-ink-raised-2 px-2 py-0.5 text-2xs text-chalk-dim hover:border-line-strong hover:text-chalk"
+              >
+                {manualZoneFirst
+                  ? studioUi().exceptionsBefore
+                  : studioUi().exceptionsAfter}
+                {manualZoneFirst ? (
+                  <ChevronDown
+                    size={12}
+                    aria-hidden="true"
+                    className="inline-block"
+                  />
+                ) : (
+                  <ChevronUp
+                    size={12}
+                    className="inline-block"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreator((v) => !v)}
+                className="rounded-sm border border-route-vpn/60 bg-route-vpn/15 px-2 py-0.5 text-2xs text-route-vpn hover:bg-route-vpn/15 hover:text-route-vpn"
+              >
+                {showCreator ? studioUi().cancel : studioUi().newRule}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Custom rule creator */}
-        {showCreator && (
-          <div className="mb-2 rounded border border-violet-700/50 bg-violet-950/30 p-2 text-[11px]">
-            <p className="mb-1.5 font-semibold text-violet-300">
-              Nova regra manual
-            </p>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-slate-400">Origem (nó)</span>
-                <TreePicker
-                  nodes={nodes}
-                  siteVlans={siteVlans}
-                  sites={sites}
-                  value={newSrcNodeId}
-                  onChange={setNewSrcNodeId}
-                  placeholder="— selecione origem —"
-                  excludeNodeId={newDstNodeId}
-                />
-              </label>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-slate-400">Destino (nó)</span>
-                <TreePicker
-                  nodes={nodes}
-                  siteVlans={siteVlans}
-                  sites={sites}
-                  value={newDstNodeId}
-                  onChange={setNewDstNodeId}
-                  placeholder="— selecione destino —"
-                  excludeNodeId={newSrcNodeId}
-                />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-slate-400">Serviço</span>
-                <ServicePicker value={newService} onChange={setNewService} />
-              </label>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-slate-400">Protocolo</span>
-                <select
-                  value={newProtocol}
-                  onChange={(e) =>
-                    setNewProtocol(
-                      e.target.value as 'tcp' | 'udp' | 'icmp' | 'any',
-                    )
-                  }
-                  className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
-                >
-                  <option value="any">Qualquer</option>
-                  <option value="tcp">TCP</option>
-                  <option value="udp">UDP</option>
-                  <option value="icmp">ICMP</option>
-                </select>
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-slate-400">Ação</span>
-                <select
-                  value={newAction}
-                  onChange={(e) => setNewAction(e.target.value as AclAction)}
-                  className="rounded border border-slate-600 bg-slate-800 px-1 py-1 text-slate-200"
-                >
-                  <option value="ALLOW">ALLOW</option>
-                  <option value="DENY">DENY</option>
-                </select>
-              </label>
-              <div className="flex flex-col gap-1 pt-3">
-                <label className="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={newStateful}
-                    onChange={(e) => setNewStateful(e.target.checked)}
-                    className="h-3 w-3 accent-blue-500"
+          {/* Custom rule creator */}
+          {showCreator && (
+            <div className="mb-2 rounded-sm border border-route-vpn/40 bg-route-vpn/15 p-2 text-2xs">
+              <p className="mb-1.5 font-semibold text-route-vpn">
+                {studioUi().newManualRule}
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-chalk-dim">
+                    {studioUi().sourceNode}
+                  </span>
+                  <TreePicker
+                    nodes={nodes}
+                    siteVlans={siteVlans}
+                    sites={sites}
+                    value={newSrcNodeId}
+                    onChange={setNewSrcNodeId}
+                    placeholder="— selecione origem —"
+                    excludeNodeId={newDstNodeId}
                   />
-                  <span className="text-slate-300">Stateful</span>
                 </label>
-                <label className="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={newBidirectional}
-                    onChange={(e) => setNewBidirectional(e.target.checked)}
-                    className="h-3 w-3 accent-sky-500"
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-chalk-dim">
+                    {studioUi().destinationNode}
+                  </span>
+                  <TreePicker
+                    nodes={nodes}
+                    siteVlans={siteVlans}
+                    sites={sites}
+                    value={newDstNodeId}
+                    onChange={setNewDstNodeId}
+                    placeholder="— selecione destino —"
+                    excludeNodeId={newSrcNodeId}
                   />
-                  <span className="text-slate-300">Bidirecional</span>
                 </label>
               </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCreator(false)}
-                className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleAddCustomRule}
-                disabled={!newSrcNodeId || !newDstNodeId}
-                className="rounded border border-violet-600 bg-violet-900/40 px-2 py-1 text-[10px] text-violet-300 hover:bg-violet-800/50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-slate-400">
-                <th className="w-7 border-b border-slate-700 px-1 py-1 text-center" />
-                <th
-                  className="w-[42px] border-b border-slate-700 px-1 py-1 text-center"
-                  title="Prioridade — menor valor = avaliado primeiro"
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-chalk-dim">Serviço</span>
+                  <ServicePicker value={newService} onChange={setNewService} />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-chalk-dim">Protocolo</span>
+                  <select
+                    value={newProtocol}
+                    onChange={(e) =>
+                      setNewProtocol(
+                        e.target.value as 'tcp' | 'udp' | 'icmp' | 'any',
+                      )
+                    }
+                    className="rounded-sm border border-line-strong bg-ink-raised-2 px-1 py-1 text-chalk"
+                  >
+                    <option value="any">Qualquer</option>
+                    <option value="tcp">TCP</option>
+                    <option value="udp">UDP</option>
+                    <option value="icmp">ICMP</option>
+                  </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-chalk-dim">Ação</span>
+                  <select
+                    value={newAction}
+                    onChange={(e) => setNewAction(e.target.value as AclAction)}
+                    className="rounded-sm border border-line-strong bg-ink-raised-2 px-1 py-1 text-chalk"
+                  >
+                    <option value="ALLOW">ALLOW</option>
+                    <option value="DENY">DENY</option>
+                  </select>
+                </label>
+                <div className="flex flex-col gap-1 pt-3">
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={newStateful}
+                      onChange={(e) => setNewStateful(e.target.checked)}
+                      className="h-3 w-3 accent-[var(--accent)]"
+                    />
+                    <span className="text-chalk-dim">Stateful</span>
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={newBidirectional}
+                      onChange={(e) => setNewBidirectional(e.target.checked)}
+                      className="h-3 w-3 accent-[var(--accent)]"
+                    />
+                    <span className="text-chalk-dim">Bidirecional</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreator(false)}
+                  className="rounded-sm border border-line-strong px-2 py-1 text-2xs text-chalk-dim hover:text-chalk"
                 >
-                  Prio
-                </th>
-                <th className="w-[60px] border-b border-slate-700 px-1 py-1 text-center">
-                  {copy.action}
-                </th>
-                <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
-                  {copy.source}
-                </th>
-                <th className="w-[140px] border-b border-slate-700 px-1 py-1 text-center">
-                  {copy.destination}
-                </th>
-                <th className="w-[120px] border-b border-slate-700 px-1 py-1 text-center">
-                  {copy.portService}
-                </th>
-                <th className="w-[160px] border-b border-slate-700 px-1 py-1 text-center">
-                  Flags
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {manualGrouped.length === 0 &&
-                topologyGrouped.length === 0 &&
-                natGrouped.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-1 py-2 text-slate-500">
-                      {copy.emptyRules}
-                    </td>
-                  </tr>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddCustomRule}
+                  disabled={!newSrcNodeId || !newDstNodeId}
+                  className="rounded-sm border border-route-vpn/60 bg-route-vpn/15 px-2 py-1 text-2xs text-route-vpn hover:bg-route-vpn/15 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="theme-scrollbar h-[400px] overflow-x-auto overflow-y-auto text-xs">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="text-chalk-dim">
+                  <th className="w-7 border-b border-line px-1 py-1 text-center" />
+                  <th
+                    className="w-[42px] border-b border-line px-1 py-1 text-center"
+                    title={studioUi().priorityHint}
+                  >
+                    Prio
+                  </th>
+                  <th className="w-[60px] border-b border-line px-1 py-1 text-center">
+                    {copy.action}
+                  </th>
+                  <th className="w-[140px] border-b border-line px-1 py-1 text-center">
+                    {copy.source}
+                  </th>
+                  <th className="w-[140px] border-b border-line px-1 py-1 text-center">
+                    {copy.destination}
+                  </th>
+                  <th className="w-[120px] border-b border-line px-1 py-1 text-center">
+                    {copy.portService}
+                  </th>
+                  <th className="w-[160px] border-b border-line px-1 py-1 text-center">
+                    Flags
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {manualGrouped.length === 0 &&
+                  topologyGrouped.length === 0 &&
+                  natGrouped.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-1 py-2 text-chalk-faint">
+                        {copy.emptyRules}
+                      </td>
+                    </tr>
+                  )}
+
+                {manualZoneFirst ? (
+                  <>
+                    {firewallZoneB}
+                    {firewallZoneA}
+                  </>
+                ) : (
+                  <>
+                    {firewallZoneA}
+                    {firewallZoneB}
+                  </>
                 )}
 
-              {manualZoneFirst ? (
-                <>
-                  {firewallZoneB}
-                  {firewallZoneA}
-                </>
-              ) : (
-                <>
-                  {firewallZoneA}
-                  {firewallZoneB}
-                </>
-              )}
+                {natGrouped.length > 0 && (
+                  <>
+                    <ZoneHeader
+                      label="NAT Exempt"
+                      count={natGrouped.length}
+                      color="text-signal-up"
+                    />
+                    {natGrouped.map(({ parent, children }, idx) =>
+                      renderRuleGroup(
+                        parent,
+                        children,
+                        idx,
+                        natGrouped.length,
+                        false,
+                        [],
+                      ),
+                    )}
+                  </>
+                )}
 
-              {natGrouped.length > 0 && (
-                <>
-                  <ZoneHeader
-                    label="NAT Exempt"
-                    count={natGrouped.length}
-                    color="text-emerald-300"
-                  />
-                  {natGrouped.map(({ parent, children }, idx) =>
-                    renderRuleGroup(
-                      parent,
-                      children,
-                      idx,
-                      natGrouped.length,
-                      false,
-                      [],
-                    ),
-                  )}
-                </>
-              )}
-
-
-              {/* Implicit deny footer */}
-              <tr className="bg-signal-down/10">
-                <td
-                  colSpan={2}
-                  className="border-t border-slate-700 px-1 py-1"
-                />
-                <td className="border-t border-slate-700 px-1 py-1">
-                  <span className="rounded bg-signal-down/15 px-1 py-0.5 text-[10px] text-signal-down font-semibold">
-                    DENY
-                  </span>
-                </td>
-                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                  any
-                </td>
-                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                  any
-                </td>
-                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-500">
-                  *
-                </td>
-                <td className="border-t border-slate-700 px-1 py-1 text-[10px] text-slate-600 italic">
-                  implicit deny
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                {/* Implicit deny footer */}
+                <tr className="bg-signal-down/10">
+                  <td colSpan={2} className="border-t border-line px-1 py-1" />
+                  <td className="border-t border-line px-1 py-1">
+                    <span className="rounded-sm bg-signal-down/15 px-1 py-0.5 text-2xs text-signal-down font-semibold">
+                      DENY
+                    </span>
+                  </td>
+                  <td className="border-t border-line px-1 py-1 text-2xs text-chalk-faint">
+                    any
+                  </td>
+                  <td className="border-t border-line px-1 py-1 text-2xs text-chalk-faint">
+                    any
+                  </td>
+                  <td className="border-t border-line px-1 py-1 text-2xs text-chalk-faint">
+                    *
+                  </td>
+                  <td className="border-t border-line px-1 py-1 text-2xs text-chalk-faint italic">
+                    implicit deny
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {/* fim card firewall */}
         </div>
-        {/* fim card firewall */}
-      </div>
       ),
     },
     {
       id: 'protocolo',
-      label: 'Roteamento (OSPF/BGP)',
+      label: studioUi().routingProtocolsTab,
       content: <RoutingProtocolTable language={language} />,
     },
     {
       id: 'dhcp',
       label: copy.dhcpContainerTitle,
       content: (
-      <div className="rounded-lg border border-line bg-ink-raised p-3">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300">
-            {copy.dhcpContainerTitle}
-          </h3>
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="rounded border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-[9px] text-slate-300">
-              {copy.dhcpSummaryTotal}: {dhcpSummary.total}
-            </span>
-            <span className="rounded border border-amber-700/60 bg-amber-900/20 px-2 py-0.5 text-[9px] text-amber-300">
-              {copy.dhcpSummaryPending}: {dhcpSummary.pending}
-            </span>
-            <span className="rounded border border-emerald-700/60 bg-emerald-900/20 px-2 py-0.5 text-[9px] text-emerald-300">
-              {copy.dhcpSummaryConfigured}: {dhcpSummary.configured}
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowDhcpPendingOnly((prev) => !prev)}
-              className="rounded border border-cyan-700/60 bg-cyan-900/20 px-2 py-0.5 text-[9px] text-cyan-200 hover:bg-cyan-800/30"
-            >
-              {showDhcpPendingOnly
-                ? copy.dhcpFilterAll
-                : copy.dhcpFilterPending}
-            </button>
+        <div className="rounded-md border border-line bg-ink-raised p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-heading font-semibold text-chalk">
+              {copy.dhcpContainerTitle}
+            </h3>
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="rounded-sm border border-line bg-ink/60 px-2 py-0.5 text-2xs text-chalk-dim">
+                {copy.dhcpSummaryTotal}: {dhcpSummary.total}
+              </span>
+              <span className="rounded-sm border border-signal-warn/40 bg-signal-warn/10 px-2 py-0.5 text-2xs text-signal-warn">
+                {copy.dhcpSummaryPending}: {dhcpSummary.pending}
+              </span>
+              <span className="rounded-sm border border-signal-up/40 bg-signal-up/10 px-2 py-0.5 text-2xs text-signal-up">
+                {copy.dhcpSummaryConfigured}: {dhcpSummary.configured}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDhcpPendingOnly((prev) => !prev)}
+                className="rounded-sm border border-line-strong bg-ink-raised-2 px-2 py-0.5 text-2xs text-chalk hover:bg-accent/15"
+              >
+                {showDhcpPendingOnly
+                  ? copy.dhcpFilterAll
+                  : copy.dhcpFilterPending}
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="theme-scrollbar h-[230px] overflow-x-auto overflow-y-auto text-xs">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-left text-slate-400">
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnSite}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnVlan}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnAllocation}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnProvider}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnServerRelay}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnPool}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnIpv6Policy}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnLease}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnDns}</th>
-                <th className="border-b border-slate-700 px-1 py-1">{copy.dhcpColumnChangeRequired}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dhcpVisibleRows.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="px-1 py-2 text-slate-500">
-                    {copy.dhcpEmpty}
-                  </td>
+          <div className="theme-scrollbar h-[230px] overflow-x-auto overflow-y-auto text-xs">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="text-left text-chalk-dim">
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnSite}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnVlan}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnAllocation}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnProvider}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnServerRelay}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnPool}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnIpv6Policy}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnLease}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnDns}
+                  </th>
+                  <th className="border-b border-line px-1 py-1">
+                    {copy.dhcpColumnChangeRequired}
+                  </th>
                 </tr>
-              )}
-              {dhcpVisibleRows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={`hover:bg-slate-800/40 ${
-                    row.status === 'pending'
-                      ? 'bg-amber-950/10'
-                      : row.status === 'ok'
-                        ? 'bg-emerald-950/10'
-                        : ''
-                  }`}
-                >
-                  <td className="border-b border-slate-800 px-1 py-1 align-middle">
-                    <TruncatedValueTooltip
-                      value={row.siteName}
-                      maxWidthClass="max-w-[96px]"
-                      className="text-sky-300"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 align-middle">
-                    <TruncatedValueTooltip
-                      value={row.vlanLabel}
-                      maxWidthClass="max-w-[150px]"
-                      className="text-slate-200"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 align-middle">
-                    <TruncatedValueTooltip
-                      value={row.allocationLabel}
-                      maxWidthClass="max-w-[120px]"
-                      className="text-slate-300"
-                    />
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <select
-                        value={row.scope?.providerType ?? 'node'}
-                        onChange={(event) => {
-                          const providerType = event.target.value as
-                            | 'node'
-                            | 'relay'
-                            | 'external';
-                          updateDhcpScope(row.vlan, {
-                            providerType,
-                            providerNodeId:
-                              providerType === 'node'
-                                ? row.scope?.providerNodeId
-                                : undefined,
-                            relayNodeId:
-                              providerType === 'relay'
-                                ? row.scope?.relayNodeId
-                                : undefined,
-                          });
-                        }}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                      >
-                        <option value="node">{copy.dhcpProviderNode}</option>
-                        <option value="relay">{copy.dhcpProviderRelay}</option>
-                        <option value="external">{copy.dhcpProviderExternal}</option>
-                      </select>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 font-mono text-[10px] text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') ? (
-                      <span className="text-slate-500">-</span>
-                    ) : row.scope?.providerType === 'external' ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <select
-                        value={
-                          row.scope?.providerType === 'relay'
-                            ? row.scope?.relayNodeId ?? ''
-                            : row.scope?.providerNodeId ?? ''
-                        }
-                        onChange={(event) => {
-                          const nextId = event.target.value || undefined;
-                          if ((row.scope?.providerType ?? 'node') === 'relay') {
-                            updateDhcpScope(row.vlan, { relayNodeId: nextId });
-                          } else {
-                            updateDhcpScope(row.vlan, { providerNodeId: nextId });
-                          }
-                        }}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                      >
-                        <option value="">-</option>
-                        {nodes
-                          .filter(
-                            (node) =>
-                              node.siteId === row.siteId && node.category !== 'wan',
-                          )
-                          .map((node) => (
-                            <option key={node.id} value={node.id}>
-                              {node.label} ({node.ip})
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 font-mono text-[10px] text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') || !row.requiresPool ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <div className="flex min-w-[210px] gap-1">
-                        <input
-                          defaultValue={row.scope?.poolStartIp ?? row.vlan.startIp}
-                          onBlur={(event) =>
-                            updateDhcpScope(row.vlan, {
-                              poolStartIp: event.target.value.trim() || row.vlan.startIp,
-                            })
-                          }
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                        />
-                        <input
-                          defaultValue={row.scope?.poolEndIp ?? row.vlan.endIp}
-                          onBlur={(event) =>
-                            updateDhcpScope(row.vlan, {
-                              poolEndIp: event.target.value.trim() || row.vlan.endIp,
-                            })
-                          }
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                        />
-                      </div>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <select
-                        value={
-                          row.scope?.ipv6Mode ??
-                          defaultIpv6ModeByAllocation(
-                            row.vlan.addressAllocation ?? 'dhcpv4',
-                          )
-                        }
-                        onChange={(event) =>
-                          updateDhcpScope(row.vlan, {
-                            ipv6Mode: event.target.value as DhcpScopeIpv6Mode,
-                          })
-                        }
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                      >
-                        <option value="none">none</option>
-                        <option value="slaac">slaac</option>
-                        <option value="dhcpv6-stateless">dhcpv6-stateless</option>
-                        <option value="dhcpv6-stateful">dhcpv6-stateful</option>
-                      </select>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <input
-                        type="number"
-                        min={1}
-                        max={43200}
-                        defaultValue={row.scope?.leaseMinutes ?? 1440}
-                        onBlur={(event) => {
-                          const value = Number(event.target.value);
-                          if (!Number.isFinite(value)) return;
-                          updateDhcpScope(row.vlan, {
-                            leaseMinutes: Math.max(1, Math.min(43200, Math.trunc(value))),
-                          });
-                        }}
-                        className="w-[86px] rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
+              </thead>
+              <tbody>
+                {dhcpVisibleRows.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-1 py-2 text-chalk-faint">
+                      {copy.dhcpEmpty}
+                    </td>
+                  </tr>
+                )}
+                {dhcpVisibleRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={`hover:bg-ink-raised-2 ${
+                      row.status === 'pending'
+                        ? 'bg-signal-warn/10'
+                        : row.status === 'ok'
+                          ? 'bg-signal-up/10'
+                          : ''
+                    }`}
+                  >
+                    <td className="border-b border-line px-1 py-1 align-middle">
+                      <TruncatedValueTooltip
+                        value={row.siteName}
+                        maxWidthClass="max-w-[96px]"
+                        className="text-chalk"
                       />
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 text-slate-300">
-                    {isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') ? (
-                      <span className="text-slate-500">-</span>
-                    ) : (
-                      <div className="min-w-[200px] space-y-1">
-                        <input
-                          defaultValue={row.dnsV4.join(', ')}
-                          onBlur={(event) =>
+                    </td>
+                    <td className="border-b border-line px-1 py-1 align-middle">
+                      <TruncatedValueTooltip
+                        value={row.vlanLabel}
+                        maxWidthClass="max-w-[150px]"
+                        className="text-chalk"
+                      />
+                    </td>
+                    <td className="border-b border-line px-1 py-1 align-middle">
+                      <TruncatedValueTooltip
+                        value={row.allocationLabel}
+                        maxWidthClass="max-w-[120px]"
+                        className="text-chalk-dim"
+                      />
+                    </td>
+                    <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <select
+                          value={row.scope?.providerType ?? 'node'}
+                          onChange={(event) => {
+                            const providerType = event.target.value as
+                              | 'node'
+                              | 'relay'
+                              | 'external';
                             updateDhcpScope(row.vlan, {
-                              dnsServers: normalizeList(event.target.value),
-                            })
+                              providerType,
+                              providerNodeId:
+                                providerType === 'node'
+                                  ? row.scope?.providerNodeId
+                                  : undefined,
+                              relayNodeId:
+                                providerType === 'relay'
+                                  ? row.scope?.relayNodeId
+                                  : undefined,
+                            });
+                          }}
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        >
+                          <option value="node">{copy.dhcpProviderNode}</option>
+                          <option value="relay">
+                            {copy.dhcpProviderRelay}
+                          </option>
+                          <option value="external">
+                            {copy.dhcpProviderExternal}
+                          </option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="border-b border-line px-1 py-1 font-mono text-2xs text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : row.scope?.providerType === 'external' ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <select
+                          value={
+                            row.scope?.providerType === 'relay'
+                              ? (row.scope?.relayNodeId ?? '')
+                              : (row.scope?.providerNodeId ?? '')
                           }
-                          placeholder={copy.dhcpDnsV4Placeholder}
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                        />
-                        <input
-                          defaultValue={row.dnsV6.join(', ')}
-                          onBlur={(event) =>
-                            updateDhcpScope(row.vlan, {
-                              ipv6DnsServers: normalizeList(event.target.value),
-                            })
-                          }
-                          placeholder={copy.dhcpDnsV6Placeholder}
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[10px] text-slate-100"
-                        />
-                      </div>
-                    )}
-                  </td>
-                  <td className="border-b border-slate-800 px-1 py-1 align-middle">
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-1">
-                      <div className="flex w-full justify-center">
-                        <TruncatedValueTooltip
-                          value={row.changeRequired}
-                          maxWidthClass="max-w-[170px]"
-                          className="mx-auto text-center text-[10px] !text-amber-300"
-                        />
-                      </div>
-
-                      {!isStaticAllocation(row.vlan.addressAllocation ?? 'dhcpv4') && (
-                        <div className="flex items-center justify-center gap-1">
-                          <IconActionTooltipButton
-                            icon="✓"
-                            tooltip={copy.dhcpActionApplyProposal}
-                            ariaLabel={copy.dhcpActionApplyProposal}
-                            className="border-cyan-700/60 bg-cyan-900/30 text-cyan-200 hover:bg-cyan-800/40"
-                            onClick={() => applyDhcpProposal(row.vlan)}
-                          />
-
-                          <IconActionTooltipButton
-                            icon="↺"
-                            tooltip={copy.dhcpActionRestoreDns}
-                            ariaLabel={copy.dhcpActionRestoreDns}
-                            className="border-blue-700/60 bg-blue-900/30 text-blue-200 hover:bg-blue-800/40"
-                            onClick={() =>
+                          onChange={(event) => {
+                            const nextId = event.target.value || undefined;
+                            if (
+                              (row.scope?.providerType ?? 'node') === 'relay'
+                            ) {
                               updateDhcpScope(row.vlan, {
-                                dnsServers: suggestDnsForVlan(row.vlan).dnsServers,
-                                ipv6DnsServers: suggestDnsForVlan(row.vlan).ipv6DnsServers,
+                                relayNodeId: nextId,
+                              });
+                            } else {
+                              updateDhcpScope(row.vlan, {
+                                providerNodeId: nextId,
+                              });
+                            }
+                          }}
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        >
+                          <option value="">-</option>
+                          {nodes
+                            .filter(
+                              (node) =>
+                                node.siteId === row.siteId &&
+                                node.category !== 'wan',
+                            )
+                            .map((node) => (
+                              <option key={node.id} value={node.id}>
+                                {node.label} ({node.ip})
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className="border-b border-line px-1 py-1 font-mono text-2xs text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) || !row.requiresPool ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <div className="flex min-w-[210px] gap-1">
+                          <input
+                            defaultValue={
+                              row.scope?.poolStartIp ?? row.vlan.startIp
+                            }
+                            onBlur={(event) =>
+                              updateDhcpScope(row.vlan, {
+                                poolStartIp:
+                                  event.target.value.trim() || row.vlan.startIp,
                               })
                             }
+                            className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
                           />
-
-                          {row.hasScope && (
-                            <IconActionTooltipButton
-                              icon="✕"
-                              tooltip={copy.dhcpActionRemoveScope}
-                              ariaLabel={copy.dhcpActionRemoveScope}
-                              className="border-rose-700/60 bg-rose-900/20 text-rose-300 hover:bg-rose-800/30"
-                              onClick={() =>
-                                dispatch(
-                                  removeDhcpScope({
-                                    siteId: row.vlan.siteId,
-                                    vlanId: row.vlan.vlanId,
-                                  }),
-                                )
-                              }
-                            />
-                          )}
+                          <input
+                            defaultValue={
+                              row.scope?.poolEndIp ?? row.vlan.endIp
+                            }
+                            onBlur={(event) =>
+                              updateDhcpScope(row.vlan, {
+                                poolEndIp:
+                                  event.target.value.trim() || row.vlan.endIp,
+                              })
+                            }
+                            className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                          />
                         </div>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <select
+                          value={
+                            row.scope?.ipv6Mode ??
+                            defaultIpv6ModeByAllocation(
+                              row.vlan.addressAllocation ?? 'dhcpv4',
+                            )
+                          }
+                          onChange={(event) =>
+                            updateDhcpScope(row.vlan, {
+                              ipv6Mode: event.target.value as DhcpScopeIpv6Mode,
+                            })
+                          }
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        >
+                          <option value="none">none</option>
+                          <option value="slaac">slaac</option>
+                          <option value="dhcpv6-stateless">
+                            dhcpv6-stateless
+                          </option>
+                          <option value="dhcpv6-stateful">
+                            dhcpv6-stateful
+                          </option>
+                        </select>
+                      )}
+                    </td>
+                    <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <input
+                          type="number"
+                          min={1}
+                          max={43200}
+                          defaultValue={row.scope?.leaseMinutes ?? 1440}
+                          onBlur={(event) => {
+                            const value = Number(event.target.value);
+                            if (!Number.isFinite(value)) return;
+                            updateDhcpScope(row.vlan, {
+                              leaseMinutes: Math.max(
+                                1,
+                                Math.min(43200, Math.trunc(value)),
+                              ),
+                            });
+                          }}
+                          className="w-[86px] rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        />
+                      )}
+                    </td>
+                    <td className="border-b border-line px-1 py-1 text-chalk-dim">
+                      {isStaticAllocation(
+                        row.vlan.addressAllocation ?? 'dhcpv4',
+                      ) ? (
+                        <span className="text-chalk-faint">-</span>
+                      ) : (
+                        <div className="min-w-[200px] space-y-1">
+                          <input
+                            defaultValue={row.dnsV4.join(', ')}
+                            onBlur={(event) =>
+                              updateDhcpScope(row.vlan, {
+                                dnsServers: normalizeList(event.target.value),
+                              })
+                            }
+                            placeholder={copy.dhcpDnsV4Placeholder}
+                            className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                          />
+                          <input
+                            defaultValue={row.dnsV6.join(', ')}
+                            onBlur={(event) =>
+                              updateDhcpScope(row.vlan, {
+                                ipv6DnsServers: normalizeList(
+                                  event.target.value,
+                                ),
+                              })
+                            }
+                            placeholder={copy.dhcpDnsV6Placeholder}
+                            className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                          />
+                        </div>
+                      )}
+                    </td>
+                    <td className="border-b border-line px-1 py-1 align-middle">
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1">
+                        <div className="flex w-full justify-center">
+                          <TruncatedValueTooltip
+                            value={row.changeRequired}
+                            maxWidthClass="max-w-[170px]"
+                            className="mx-auto text-center text-2xs !text-signal-warn"
+                          />
+                        </div>
+
+                        {!isStaticAllocation(
+                          row.vlan.addressAllocation ?? 'dhcpv4',
+                        ) && (
+                          <div className="flex items-center justify-center gap-1">
+                            <IconActionTooltipButton
+                              icon={<Check size={11} aria-hidden="true" />}
+                              tooltip={copy.dhcpActionApplyProposal}
+                              ariaLabel={copy.dhcpActionApplyProposal}
+                              className="border-line-strong bg-ink-raised-2 text-chalk hover:bg-accent/15"
+                              onClick={() => applyDhcpProposal(row.vlan)}
+                            />
+
+                            <IconActionTooltipButton
+                              icon={<RotateCcw size={11} aria-hidden="true" />}
+                              tooltip={copy.dhcpActionRestoreDns}
+                              ariaLabel={copy.dhcpActionRestoreDns}
+                              className="border-line-strong bg-ink-raised-2 text-chalk hover:bg-accent/15"
+                              onClick={() =>
+                                updateDhcpScope(row.vlan, {
+                                  dnsServers: suggestDnsForVlan(row.vlan)
+                                    .dnsServers,
+                                  ipv6DnsServers: suggestDnsForVlan(row.vlan)
+                                    .ipv6DnsServers,
+                                })
+                              }
+                            />
+
+                            {row.hasScope && (
+                              <IconActionTooltipButton
+                                icon={<X size={11} aria-hidden="true" />}
+                                tooltip={copy.dhcpActionRemoveScope}
+                                ariaLabel={copy.dhcpActionRemoveScope}
+                                className="border-signal-down/40 bg-signal-down/10 text-signal-down hover:bg-signal-down/15"
+                                onClick={() =>
+                                  dispatch(
+                                    removeDhcpScope({
+                                      siteId: row.vlan.siteId,
+                                      vlanId: row.vlan.vlanId,
+                                    }),
+                                  )
+                                }
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       ),
     },
     {
       id: 'qos',
       label: 'QoS',
-      content: (
-      // ── P16 — QoS Profile — Filas de Scheduling ───────────────────────────
-      (() => {
-        const qosNodes = nodes.filter(
-          (n) => n.category === 'router' || n.category === 'firewall' || n.category === 'switch',
-        );
-        const activeNode = qosNodes.find((n) => n.id === qosSelectedNodeId) ?? qosNodes[0] ?? null;
-        const profile = activeNode ? nodeQosProfiles.find((p) => p.nodeId === activeNode.id) : null;
-        const queues = profile?.queues ?? [];
-        const sumBw = queues.reduce((acc, q) => acc + (q.minBandwidthPercent ?? 0), 0);
-        const strictCount = queues.filter((q) => q.priority === 'strict').length;
-        const hasBestEffort = queues.some((q) => q.priority === 'best-effort');
+      content:
+        // ── P16 — QoS Profile — Filas de Scheduling ───────────────────────────
+        (() => {
+          const qosNodes = nodes.filter(
+            (n) =>
+              n.category === 'router' ||
+              n.category === 'firewall' ||
+              n.category === 'switch',
+          );
+          const activeNode =
+            qosNodes.find((n) => n.id === qosSelectedNodeId) ??
+            qosNodes[0] ??
+            null;
+          const profile = activeNode
+            ? nodeQosProfiles.find((p) => p.nodeId === activeNode.id)
+            : null;
+          const queues = profile?.queues ?? [];
+          const sumBw = queues.reduce(
+            (acc, q) => acc + (q.minBandwidthPercent ?? 0),
+            0,
+          );
+          const strictCount = queues.filter(
+            (q) => q.priority === 'strict',
+          ).length;
+          const hasBestEffort = queues.some(
+            (q) => q.priority === 'best-effort',
+          );
 
-        return (
-          <div className="rounded-lg border border-line bg-ink-raised p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-300">
-                ◆ QoS Profile — Filas de Scheduling
-              </h3>
-              {qosNodes.length > 1 && (
-                <select
-                  value={activeNode?.id ?? ''}
-                  onChange={(e) => {
-                    setQosSelectedNodeId(e.target.value);
-                    setQosFormName('');
-                    setQosFormMinBw('');
-                    setQosFormPriority('best-effort');
-                    setQosFormClass('default');
-                  }}
-                  className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-200"
-                >
-                  {qosNodes.map((n) => (
-                    <option key={n.id} value={n.id}>{n.label || n.id}</option>
-                  ))}
-                </select>
+          return (
+            <div className="rounded-md border border-line bg-ink-raised p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="font-display text-heading font-semibold text-chalk">
+                  QoS profile — filas de scheduling
+                </h3>
+                {qosNodes.length > 1 && (
+                  <select
+                    value={activeNode?.id ?? ''}
+                    onChange={(e) => {
+                      setQosSelectedNodeId(e.target.value);
+                      setQosFormName('');
+                      setQosFormMinBw('');
+                      setQosFormPriority('best-effort');
+                      setQosFormClass('default');
+                    }}
+                    className="rounded-sm border border-line-strong bg-ink-raised-2 px-1.5 py-0.5 text-2xs text-chalk"
+                  >
+                    {qosNodes.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {n.label || n.id}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {!activeNode && (
+                <p className="text-2xs italic text-chalk-faint">
+                  Nenhum roteador, firewall ou switch no diagrama.
+                </p>
               )}
-            </div>
 
-            {!activeNode && (
-              <p className="text-[10px] italic text-slate-600">Nenhum roteador, firewall ou switch no diagrama.</p>
-            )}
+              {activeNode && (
+                <>
+                  {/* Warnings */}
+                  {sumBw > 100 && (
+                    <p className="mb-1 rounded-sm bg-signal-down/15 px-1.5 py-0.5 text-2xs text-signal-down">
+                      <AlertTriangle
+                        size={12}
+                        className="mr-1 inline-block -translate-y-px"
+                        aria-hidden="true"
+                      />
+                      Soma de % mínima ({sumBw}%) excede 100%.
+                    </p>
+                  )}
+                  {strictCount > 1 && (
+                    <p className="mb-1 rounded-sm bg-signal-warn/15 px-1.5 py-0.5 text-2xs text-signal-warn">
+                      <AlertTriangle
+                        size={12}
+                        className="mr-1 inline-block -translate-y-px"
+                        aria-hidden="true"
+                      />
+                      {studioUi().multipleStrictQueues}
+                    </p>
+                  )}
+                  {queues.length > 0 && !hasBestEffort && (
+                    <p className="mb-1 rounded-sm bg-ink-raised-2 px-1.5 py-0.5 text-2xs text-chalk-faint">
+                      {studioUi().addBestEffortQueue}
+                    </p>
+                  )}
 
-            {activeNode && (
-              <>
-                {/* Warnings */}
-                {sumBw > 100 && (
-                  <p className="mb-1 rounded bg-red-950/40 px-1.5 py-0.5 text-[9px] text-red-400">
-                    ⚠ Soma de % mínima ({sumBw}%) excede 100%.
-                  </p>
-                )}
-                {strictCount > 1 && (
-                  <p className="mb-1 rounded bg-amber-950/40 px-1.5 py-0.5 text-[9px] text-amber-400">
-                    ⚠ Mais de uma fila strict — apenas uma é recomendada.
-                  </p>
-                )}
-                {queues.length > 0 && !hasBestEffort && (
-                  <p className="mb-1 rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">
-                    ℹ Adicione uma fila best-effort como fallback.
-                  </p>
-                )}
-
-                {/* Lista de filas */}
-                {queues.length === 0 && (
-                  <p className="mb-2 text-[10px] italic text-slate-600">Nenhuma fila configurada para {activeNode.label || activeNode.id}.</p>
-                )}
-                <div className="mb-3 space-y-1">
-                  {queues.map((q) => (
-                    <div key={q.id} className="rounded border border-slate-700/50 bg-slate-800/30 px-2 py-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="flex-1 font-mono text-[10px] text-slate-200">{q.name}</span>
-                        <span className="rounded bg-orange-900/30 px-1 text-[9px] text-orange-300">
-                          {QOSCLASS_LABEL[q.trafficClass]}
-                        </span>
-                        <span className="text-[9px] text-slate-500">DSCP {DSCP_BY_QOSCLASS[q.trafficClass]}</span>
-                        <button
-                          type="button"
-                          onClick={() => dispatch(removeQosQueue({ nodeId: activeNode.id, queueId: q.id }))}
-                          className="text-red-600 hover:text-red-400 text-[11px]"
-                        >✕</button>
-                      </div>
-                      <div className="mt-1 grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[9px] text-slate-500">% mín</label>
-                          <input
-                            type="number" min={0} max={100}
-                            value={q.minBandwidthPercent ?? ''}
-                            onChange={(e) => dispatch(updateQosQueue({
-                              nodeId: activeNode.id,
-                              queueId: q.id,
-                              changes: { minBandwidthPercent: e.target.value !== '' ? Number(e.target.value) : undefined },
-                            }))}
-                            placeholder="—"
-                            className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
+                  {/* Lista de filas */}
+                  {queues.length === 0 && (
+                    <p className="mb-2 text-2xs italic text-chalk-faint">
+                      Nenhuma fila configurada para{' '}
+                      {activeNode.label || activeNode.id}.
+                    </p>
+                  )}
+                  <div className="mb-3 space-y-1">
+                    {queues.map((q) => (
+                      <div
+                        key={q.id}
+                        className="rounded-sm border border-line bg-ink-raised-2 px-2 py-1.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="flex-1 font-mono text-2xs text-chalk">
+                            {q.name}
+                          </span>
+                          <span className="rounded-sm bg-route-default/15 px-1 text-2xs text-route-default">
+                            {QOSCLASS_LABEL[q.trafficClass]}
+                          </span>
+                          <span className="text-2xs text-chalk-faint">
+                            DSCP {DSCP_BY_QOSCLASS[q.trafficClass]}
+                          </span>
+                          <RemoveButton
+                            onClick={() =>
+                              dispatch(
+                                removeQosQueue({
+                                  nodeId: activeNode.id,
+                                  queueId: q.id,
+                                }),
+                              )
+                            }
                           />
                         </div>
-                        <div>
-                          <label className="text-[9px] text-slate-500">Disciplina</label>
-                          <select
-                            value={q.priority}
-                            onChange={(e) => dispatch(updateQosQueue({
-                              nodeId: activeNode.id,
-                              queueId: q.id,
-                              changes: { priority: e.target.value as QosQueue['priority'] },
-                            }))}
-                            className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
-                          >
-                            <option value="strict">strict</option>
-                            <option value="weighted">weighted</option>
-                            <option value="best-effort">best-effort</option>
-                          </select>
+                        <div className="mt-1 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-2xs text-chalk-faint">
+                              % mín
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={q.minBandwidthPercent ?? ''}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateQosQueue({
+                                    nodeId: activeNode.id,
+                                    queueId: q.id,
+                                    changes: {
+                                      minBandwidthPercent:
+                                        e.target.value !== ''
+                                          ? Number(e.target.value)
+                                          : undefined,
+                                    },
+                                  }),
+                                )
+                              }
+                              placeholder="—"
+                              className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-2xs text-chalk-faint">
+                              Disciplina
+                            </label>
+                            <select
+                              value={q.priority}
+                              onChange={(e) =>
+                                dispatch(
+                                  updateQosQueue({
+                                    nodeId: activeNode.id,
+                                    queueId: q.id,
+                                    changes: {
+                                      priority: e.target
+                                        .value as QosQueue['priority'],
+                                    },
+                                  }),
+                                )
+                              }
+                              className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                            >
+                              <option value="strict">strict</option>
+                              <option value="weighted">weighted</option>
+                              <option value="best-effort">best-effort</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Formulário nova fila */}
-                <div className="border-t border-orange-700/30 pt-2">
-                  <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-slate-500">+ Nova fila</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[9px] text-slate-500">Nome</label>
-                      <input
-                        value={qosFormName}
-                        onChange={(e) => setQosFormName(e.target.value)}
-                        placeholder="ex: q0"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200 placeholder-slate-600"
-                      />
+                  {/* Formulário nova fila */}
+                  <div className="border-t border-route-default/40 pt-2">
+                    <p className="mb-1.5 text-label text-chalk-faint">
+                      + Nova fila
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-2xs text-chalk-faint">
+                          Nome
+                        </label>
+                        <input
+                          value={qosFormName}
+                          onChange={(e) => setQosFormName(e.target.value)}
+                          placeholder="ex: q0"
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk placeholder-chalk-faint"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-2xs text-chalk-faint">
+                          Classe
+                        </label>
+                        <select
+                          value={qosFormClass}
+                          onChange={(e) =>
+                            setQosFormClass(e.target.value as QosClass)
+                          }
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        >
+                          {(Object.keys(QOSCLASS_LABEL) as QosClass[]).map(
+                            (c) => (
+                              <option key={c} value={c}>
+                                {QOSCLASS_LABEL[c]}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-2xs text-chalk-faint">
+                          Disciplina
+                        </label>
+                        <select
+                          value={qosFormPriority}
+                          onChange={(e) =>
+                            setQosFormPriority(
+                              e.target.value as QosQueue['priority'],
+                            )
+                          }
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 text-2xs text-chalk"
+                        >
+                          <option value="strict">strict</option>
+                          <option value="weighted">weighted</option>
+                          <option value="best-effort">best-effort</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-2xs text-chalk-faint">
+                          % mín
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={qosFormMinBw}
+                          onChange={(e) =>
+                            setQosFormMinBw(
+                              e.target.value !== ''
+                                ? Number(e.target.value)
+                                : '',
+                            )
+                          }
+                          placeholder="—"
+                          className="w-full rounded-sm border border-line bg-ink px-1 py-0.5 font-mono text-2xs text-chalk placeholder-chalk-faint"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">Classe</label>
-                      <select
-                        value={qosFormClass}
-                        onChange={(e) => setQosFormClass(e.target.value as QosClass)}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        disabled={!qosFormName.trim()}
+                        onClick={() => {
+                          if (!qosFormName.trim()) return;
+                          dispatch(
+                            addQosQueue({
+                              nodeId: activeNode.id,
+                              queue: {
+                                name: qosFormName.trim(),
+                                trafficClass: qosFormClass,
+                                priority: qosFormPriority,
+                                minBandwidthPercent:
+                                  qosFormMinBw !== ''
+                                    ? qosFormMinBw
+                                    : undefined,
+                              },
+                            }),
+                          );
+                          setQosFormName('');
+                          setQosFormMinBw('');
+                          setQosFormPriority('best-effort');
+                          setQosFormClass('default');
+                        }}
+                        className="rounded-sm border border-route-default/50 bg-route-default/15 px-3 py-1 text-2xs text-route-default hover:bg-route-default/15 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {(Object.keys(QOSCLASS_LABEL) as QosClass[]).map((c) => (
-                          <option key={c} value={c}>{QOSCLASS_LABEL[c]}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">Disciplina</label>
-                      <select
-                        value={qosFormPriority}
-                        onChange={(e) => setQosFormPriority(e.target.value as QosQueue['priority'])}
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-[9px] text-slate-200"
-                      >
-                        <option value="strict">strict</option>
-                        <option value="weighted">weighted</option>
-                        <option value="best-effort">best-effort</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[9px] text-slate-500">% mín</label>
-                      <input
-                        type="number" min={0} max={100}
-                        value={qosFormMinBw}
-                        onChange={(e) => setQosFormMinBw(e.target.value !== '' ? Number(e.target.value) : '')}
-                        placeholder="—"
-                        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 font-mono text-[9px] text-slate-200 placeholder-slate-600"
-                      />
+                        + Fila
+                      </button>
                     </div>
                   </div>
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      disabled={!qosFormName.trim()}
-                      onClick={() => {
-                        if (!qosFormName.trim()) return;
-                        dispatch(addQosQueue({
-                          nodeId: activeNode.id,
-                          queue: {
-                            name: qosFormName.trim(),
-                            trafficClass: qosFormClass,
-                            priority: qosFormPriority,
-                            minBandwidthPercent: qosFormMinBw !== '' ? qosFormMinBw : undefined,
-                          },
-                        }));
-                        setQosFormName('');
-                        setQosFormMinBw('');
-                        setQosFormPriority('best-effort');
-                        setQosFormClass('default');
-                      }}
-                      className="rounded border border-orange-600/50 bg-orange-900/30 px-3 py-1 text-[9px] text-orange-300 hover:bg-orange-800/40 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      + Fila
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })()
-      ),
+                </>
+              )}
+            </div>
+          );
+        })(),
     },
   ];
 }

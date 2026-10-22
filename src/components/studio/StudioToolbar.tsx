@@ -1,5 +1,14 @@
+import {
+  Cable,
+  ChevronDown,
+  PanelLeft,
+  Plus,
+  Redo2,
+  Undo2,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { redo, undo } from '../../features/network/history';
 import { addFloatingNode, addSite } from '../../features/network/networkSlice';
 import type { NodeCategory } from '../../features/network/types';
 import {
@@ -10,6 +19,7 @@ import {
   type StudioLanguage,
 } from './catalog';
 import LinkInspectorTooltip from './LinkInspectorTooltip';
+import { ui as studioUi } from './utils/studioUi';
 
 type StudioToolbarProps = {
   language: StudioLanguage;
@@ -26,107 +36,92 @@ export default function StudioToolbar({
   const { sites } = useAppSelector((state) => state.network);
   const isSiteLimitReached = sites.length >= 4;
   const activeLinkId = useAppSelector((state) => state.network.ui.activeLinkId);
+  const { canUndo, canRedo } = useAppSelector((state) => state.history);
 
-  const inspectorAnchorRef = useRef<HTMLButtonElement>(null);
+  const inspectorAnchorRef = useRef<HTMLSpanElement>(null);
   const [floatingCategory, setFloatingCategory] = useState<NodeCategory>('vpn');
   const [openFloatingPicker, setOpenFloatingPicker] = useState(false);
   const [floatingSearch, setFloatingSearch] = useState('');
   const copy = getStudioToolbarCopy(language);
 
   return (
-    <section className="rounded-lg border border-line bg-ink-raised p-3 shadow-[0_0_0_1px_rgba(27,49,77,0.35),0_12px_24px_rgba(0,0,0,0.28)]">
+    <section className="rounded-md border border-line bg-ink-raised p-3">
       <div className="grid gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
         <div className="flex items-center gap-2">
-          {/* Âncora do inspector de link — não clicável, apenas ponto de referência visual */}
-          <button
+          {/* Âncora do inspetor de conexão: indicador visual (não é botão).
+              Acende quando há um link selecionado no diagrama. */}
+          <span
             ref={inspectorAnchorRef}
-            type="button"
-            tabIndex={-1}
             aria-hidden="true"
-            title="Inspector de conexão"
-            className={`flex shrink-0 cursor-default items-center justify-center rounded border px-2 py-1.5 transition-colors ${
-              activeLinkId && !isLegendOpen
-                ? 'border-accent/60 bg-accent/20 text-accent'
-                : 'border-line bg-ink-raised-2 text-chalk-faint'
+            title={studioUi().connectionInspector}
+            className={`flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
+              activeLinkId && !isLegendOpen ? 'text-accent' : 'text-chalk-faint'
             }`}
           >
-            {/* Ícone: dois nós ligados por uma linha */}
-            <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-              <circle cx="2" cy="5" r="2" fill="currentColor" />
-              <line
-                x1="4"
-                y1="5"
-                x2="12"
-                y2="5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <circle cx="14" cy="5" r="2" fill="currentColor" />
-            </svg>
-          </button>
+            <Cable size={15} />
+          </span>
 
           {/* Hamburguer — abre/fecha legenda */}
           {onToggleLegend && (
             <button
               type="button"
               onClick={onToggleLegend}
-              aria-label={isLegendOpen ? 'Fechar legenda' : 'Abrir legenda'}
-              title={isLegendOpen ? 'Fechar legenda' : 'Abrir legenda'}
-              className={`flex shrink-0 flex-col items-center justify-center gap-[5px] rounded border px-2 py-1.5 transition ${
+              aria-label={isLegendOpen ? copy.closeLegend : copy.openLegend}
+              aria-expanded={isLegendOpen}
+              aria-controls="studio-structure-drawer"
+              title={isLegendOpen ? copy.closeLegend : copy.openLegend}
+              className={`btn btn-sm btn-icon border ${
                 isLegendOpen
-                  ? 'border-accent bg-accent/20 text-accent'
-                  : 'border-line bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
+                  ? 'border-accent bg-accent/15 text-accent'
+                  : 'border-line text-chalk-dim enabled:hover:bg-ink-raised-2 enabled:hover:text-chalk'
               }`}
             >
-              <span className="block h-[2px] w-4 rounded-full bg-current" />
-              <span className="block h-[2px] w-4 rounded-full bg-current" />
-              <span className="block h-[2px] w-4 rounded-full bg-current" />
+              <PanelLeft size={15} aria-hidden="true" />
             </button>
           )}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => dispatch(undo())}
+              disabled={!canUndo}
+              aria-label={copy.undo}
+              title={copy.undo}
+              className="btn btn-ghost btn-sm btn-icon"
+            >
+              <Undo2 size={15} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(redo())}
+              disabled={!canRedo}
+              aria-label={copy.redo}
+              title={copy.redo}
+              className="btn btn-ghost btn-sm btn-icon"
+            >
+              <Redo2 size={15} aria-hidden="true" />
+            </button>
+          </div>
+          <span className="h-5 w-px bg-line" aria-hidden="true" />
           <button
             onClick={() => dispatch(addSite())}
             disabled={isSiteLimitReached}
-            className="btn-planta-solid rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            className="btn btn-primary btn-sm"
           >
+            <Plus size={14} aria-hidden="true" />
             {copy.newSite}
           </button>
-          <span className="text-xs text-chalk-dim">
-            {copy.total}: {sites.length}
+          <span className="text-xs tabular-nums text-chalk-faint">
+            {sites.length}/4 {copy.sitesCount}
           </span>
         </div>
-
-        {/* <div className="flex items-end gap-2">
-          <select
-            value={selectedSite}
-            onChange={(event) => {
-              setSelectedSite(event.target.value);
-            }}
-            className="w-full rounded-md border border-[#2c4464] bg-[#0d1a2e] px-2 py-2 text-sm text-slate-100"
-          >
-            <option value="">Selecionar site</option>
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() =>
-              selectedSite && dispatch(addLayer({ siteId: selectedSite }))
-            }
-            disabled={!selectedSite}
-            className="rounded-md bg-emerald-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-600"
-          >
-            Nova Camada
-          </button>
-        </div> */}
 
         <div className="relative flex items-center gap-2 justify-self-end">
           <button
             type="button"
             onClick={() => setOpenFloatingPicker((prev) => !prev)}
-            className="flex items-center gap-2 rounded-md border border-line bg-ink-raised-2 px-2 py-2 text-sm text-chalk"
+            aria-expanded={openFloatingPicker}
+            aria-haspopup="listbox"
+            className="btn btn-secondary btn-sm"
           >
             <img
               src={getNodeIconSrc(floatingCategory)}
@@ -134,11 +129,16 @@ export default function StudioToolbar({
               className="h-4 w-4 object-contain"
             />
             {getNodeVisual(floatingCategory).label}
+            <ChevronDown
+              size={13}
+              aria-hidden="true"
+              className="text-chalk-faint"
+            />
           </button>
 
           {openFloatingPicker && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded border border-line bg-ink-raised-2 p-2 shadow-lg">
-              <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-chalk-faint">
+            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-line bg-ink-raised p-2 shadow-panel">
+              <div className="text-label mb-2 flex items-center justify-between text-chalk-faint">
                 <span>{copy.relationsTitle}</span>
                 <span className="text-accent">
                   {copy.active}: [{getNodeVisual(floatingCategory).short}]
@@ -148,7 +148,7 @@ export default function StudioToolbar({
                 value={floatingSearch}
                 onChange={(event) => setFloatingSearch(event.target.value)}
                 placeholder={copy.searchPlaceholder}
-                className="mb-2 w-full rounded border border-line bg-ink-raised-2 px-2 py-1.5 text-[11px] text-chalk outline-none focus:border-accent"
+                className="field-sm mb-2"
               />
               <div className="theme-scrollbar grid max-h-36 grid-cols-1 gap-1 overflow-y-auto">
                 {RELATION_OPTION_CATEGORIES.filter((category) => {
@@ -171,16 +171,16 @@ export default function StudioToolbar({
                         setFloatingCategory(category);
                         setOpenFloatingPicker(false);
                       }}
-                      className={`flex items-center justify-between rounded px-2 py-1 text-left text-[11px] transition ${
+                      className={`flex items-center justify-between rounded-sm px-2 py-1.5 text-left text-xs transition-colors ${
                         isSelected
-                          ? 'border border-accent/60 bg-accent/20 text-accent'
-                          : 'border border-line bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
+                          ? 'bg-accent/15 text-accent'
+                          : 'text-chalk-dim hover:bg-ink-raised-2 hover:text-chalk'
                       }`}
                     >
                       <span className="flex items-center gap-2">
                         <img
                           src={getNodeIconSrc(category)}
-                          alt={visual.label}
+                          alt=""
                           className="h-4 w-4 object-contain"
                         />
                         <span>{visual.label}</span>
@@ -196,8 +196,9 @@ export default function StudioToolbar({
             onClick={() =>
               dispatch(addFloatingNode({ category: floatingCategory }))
             }
-            className="btn-planta-solid rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            className="btn btn-secondary btn-sm"
           >
+            <Plus size={14} aria-hidden="true" />
             {copy.addRelationSite}
           </button>
         </div>

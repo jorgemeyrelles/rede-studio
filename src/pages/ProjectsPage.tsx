@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { ArrowRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Modal from '../components/Modal';
+import NetworkTypeIcon from '../components/NetworkTypeIcon';
 import NewProjectModal from '../components/NewProjectModal';
 import { useSessionQuery } from '../features/auth/queries';
 import {
   useCreateProjectMutation,
+  useDeleteProjectMutation,
   useProjectsQuery,
   useRenameProjectMutation,
 } from '../features/projects/queries';
@@ -21,12 +25,14 @@ function ProjectCard({
   copy,
   onOpen,
   onRename,
+  onDelete,
 }: {
   project: ProjectSummary;
   language: AppLanguage;
   copy: ProjectsPageCopy;
   onOpen: () => void;
   onRename: (name: string) => void;
+  onDelete: () => void;
 }) {
   const [isEditing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(project.name);
@@ -42,63 +48,180 @@ function ProjectCard({
   };
 
   return (
-    <div className="relative flex flex-col items-start gap-2 border border-line bg-ink-raised-2 p-5 pl-6 transition hover:border-accent">
-      <span
-        className="absolute left-0 top-0 h-full w-[3px] bg-accent"
-        aria-hidden="true"
-      />
-      <span className="rounded-sm bg-ink-raised px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-chalk-faint">
-        {copy.networkTypeOptions[project.networkType]}
-      </span>
+    <article className="group flex flex-col rounded-md border border-line bg-ink-raised transition-colors hover:border-line-strong">
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        {isEditing ? (
+          <input
+            autoFocus
+            aria-label={copy.renameAriaLabel}
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit();
+              if (e.key === 'Escape') {
+                setDraftName(project.name);
+                setEditing(false);
+              }
+            }}
+            className="field font-display text-heading font-semibold"
+          />
+        ) : (
+          <h2 className="font-display text-heading font-semibold text-chalk [overflow-wrap:anywhere]">
+            <button
+              type="button"
+              onClick={onOpen}
+              className="rounded-sm text-left hover:text-accent"
+            >
+              {project.name}
+            </button>
+          </h2>
+        )}
 
-      {isEditing ? (
-        <input
-          autoFocus
-          value={draftName}
-          onChange={(e) => setDraftName(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit();
-            if (e.key === 'Escape') {
-              setDraftName(project.name);
-              setEditing(false);
-            }
-          }}
-          className="w-full rounded-sm border border-accent bg-ink px-2 py-1 text-sm text-chalk outline-none"
-        />
-      ) : (
-        <div className="flex w-full items-center justify-between gap-2">
-          <span className="flex items-center gap-2 text-sm font-semibold text-chalk">
-            <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-signal-up shadow-[0_0_5px_var(--signal-up)]"
-              aria-hidden="true"
-            />
-            {project.name}
+        <div className="mt-auto flex flex-col items-start gap-2">
+          <span className="chip">
+            <NetworkTypeIcon type={project.networkType} size={12} />
+            {copy.networkTypeOptions[project.networkType]}
           </span>
+          <p className="text-xs text-chalk-faint">
+            {copy.lastEditedLabel}{' '}
+            <time dateTime={project.updatedAt} className="tabular-nums">
+              {new Date(project.updatedAt).toLocaleString(language, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </time>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 border-t border-line px-3 py-2">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="btn btn-ghost btn-sm text-accent enabled:hover:text-accent"
+        >
+          {copy.openProject}
+          <ArrowRight size={14} aria-hidden="true" />
+        </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          aria-label={copy.renameAriaLabel}
+          title={copy.renameAriaLabel}
+          className="btn btn-ghost btn-sm btn-icon"
+        >
+          <Pencil size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={copy.deleteAriaLabel}
+          title={copy.deleteAriaLabel}
+          className="btn btn-ghost btn-sm btn-icon enabled:hover:text-signal-down"
+        >
+          <Trash2 size={14} aria-hidden="true" />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function DeleteProjectModal({
+  project,
+  copy,
+  onClose,
+}: {
+  project: ProjectSummary;
+  copy: ProjectsPageCopy;
+  onClose: () => void;
+}) {
+  const deleteMutation = useDeleteProjectMutation();
+  const [typedName, setTypedName] = useState('');
+  const matches = typedName.trim() === project.name.trim();
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!matches) return;
+    deleteMutation.mutate(project.id, { onSuccess: onClose });
+  };
+
+  return (
+    <Modal
+      onClose={onClose}
+      title={copy.deleteModalTitle}
+      closeLabel={copy.cancelButton}
+      size="md"
+      dismissible={!deleteMutation.isPending}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2 text-sm text-chalk-dim">
+          <p className="font-semibold text-chalk [overflow-wrap:anywhere]">
+            {project.name}
+          </p>
+          <p>{copy.deleteModalBody}</p>
+        </div>
+
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+          {copy.deleteConfirmLabel}
+          <input
+            type="text"
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            value={typedName}
+            onChange={(e) => setTypedName(e.target.value)}
+            aria-describedby="delete-confirm-hint"
+            className="field"
+          />
+          <span
+            id="delete-confirm-hint"
+            className="font-normal text-chalk-faint [overflow-wrap:anywhere]"
+          >
+            {copy.deleteConfirmHint}{' '}
+            <span className="font-mono text-chalk-dim">{project.name}</span>
+          </span>
+        </label>
+
+        {deleteMutation.isError && (
+          <p role="alert" className="text-xs text-signal-down">
+            {copy.deleteError}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
           <button
             type="button"
-            onClick={() => setEditing(true)}
-            aria-label={copy.renameAriaLabel}
-            title={copy.renameAriaLabel}
-            className="shrink-0 text-chalk-faint transition hover:text-accent"
+            onClick={onClose}
+            disabled={deleteMutation.isPending}
+            className="btn btn-secondary btn-md"
           >
-            ✎
+            {copy.cancelButton}
+          </button>
+          <button
+            type="submit"
+            disabled={!matches || deleteMutation.isPending}
+            aria-busy={deleteMutation.isPending}
+            className="btn btn-danger btn-md"
+          >
+            {deleteMutation.isPending ? copy.deleting : copy.deleteButton}
           </button>
         </div>
-      )}
+      </form>
+    </Modal>
+  );
+}
 
-      <span className="font-mono text-xs text-chalk-faint">
-        {copy.lastEditedLabel}{' '}
-        {new Date(project.updatedAt).toLocaleString(language)}
-      </span>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline"
-      >
-        {copy.openProject} →
-      </button>
+function ProjectCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex h-[150px] flex-col gap-3 rounded-md border border-line bg-ink-raised p-5"
+    >
+      <span className="h-3 w-20 animate-pulse rounded-sm bg-ink-raised-2" />
+      <span className="h-4 w-2/3 animate-pulse rounded-sm bg-ink-raised-2" />
+      <span className="mt-auto h-3 w-1/2 animate-pulse rounded-sm bg-ink-raised-2" />
     </div>
   );
 }
@@ -110,11 +233,19 @@ export default function ProjectsPage() {
   const copy = getProjectsPageCopy(language);
 
   const { data: currentUser } = useSessionQuery();
-  const { data: items = [], isLoading } = useProjectsQuery(currentUser?.id);
+  const {
+    data: items = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useProjectsQuery(currentUser?.id);
   const createProjectMutation = useCreateProjectMutation();
   const renameProjectMutation = useRenameProjectMutation();
   const [isModalOpen, setModalOpen] = useState(false);
   const [isCreating, setCreating] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(
+    null,
+  );
 
   const handleCreate = async (
     name: string,
@@ -133,36 +264,76 @@ export default function ProjectsPage() {
     }
   };
 
+  const showEmpty = !isLoading && !isError && items.length === 0;
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 text-chalk sm:px-6">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-chalk">{copy.title}</h1>
+    <div className="mx-auto w-full max-w-6xl px-4 py-10 text-chalk sm:px-6">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-display text-title font-bold text-chalk">
+            {copy.title}
+          </h1>
           <p className="text-sm text-chalk-dim">{copy.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
+        {!showEmpty && (
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="btn-planta-solid rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-wider"
+            className="btn btn-primary btn-md"
           >
+            <Plus size={16} aria-hidden="true" />
             {copy.newProjectButton}
           </button>
-        </div>
-      </div>
+        )}
+      </header>
 
-      {!isLoading && items.length === 0 && (
-        <div className="rounded-sm border border-dashed border-line py-16 text-center">
-          <p className="text-sm font-semibold text-chalk-dim">
-            {copy.emptyStateTitle}
-          </p>
-          <p className="mt-1 text-xs text-chalk-faint">
-            {copy.emptyStateSubtitle}
-          </p>
+      {isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-signal-down/40 bg-signal-down/5 px-4 py-3 text-sm text-chalk"
+        >
+          {copy.loadError}
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn btn-secondary btn-sm"
+          >
+            {copy.retry}
+          </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {showEmpty && (
+        <div className="flex flex-col items-center gap-4 rounded-md border border-dashed border-line px-6 py-16 text-center">
+          <div className="flex flex-col gap-1">
+            <p className="font-display text-heading font-semibold text-chalk">
+              {copy.emptyStateTitle}
+            </p>
+            <p className="text-sm text-chalk-dim">{copy.emptyStateSubtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="btn btn-primary btn-md"
+          >
+            <Plus size={16} aria-hidden="true" />
+            {copy.emptyStateCta}
+          </button>
+        </div>
+      )}
+
+      <div
+        aria-busy={isLoading}
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        {isLoading && (
+          <>
+            <span className="sr-only">{copy.loading}</span>
+            <ProjectCardSkeleton />
+            <ProjectCardSkeleton />
+            <ProjectCardSkeleton />
+          </>
+        )}
         {items.map((project) => (
           <ProjectCard
             key={project.id}
@@ -173,6 +344,7 @@ export default function ProjectsPage() {
             onRename={(name) =>
               renameProjectMutation.mutate({ id: project.id, name })
             }
+            onDelete={() => setProjectToDelete(project)}
           />
         ))}
       </div>
@@ -184,6 +356,14 @@ export default function ProjectsPage() {
           defaultName={`${copy.defaultProjectNamePrefix} ${items.length + 1}`}
           isCreating={isCreating}
           copy={copy}
+        />
+      )}
+
+      {projectToDelete && (
+        <DeleteProjectModal
+          project={projectToDelete}
+          copy={copy}
+          onClose={() => setProjectToDelete(null)}
         />
       )}
     </div>

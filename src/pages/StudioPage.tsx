@@ -1,6 +1,12 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { Ellipsis, Eraser, FileText, Pencil } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
+import Modal from '../components/Modal';
+import NetworkTypeIcon from '../components/NetworkTypeIcon';
+import SaveStatusButton from '../components/studio/SaveStatusButton';
+import Toast from '../components/Toast';
+import { ui as studioUi } from '../components/studio/utils/studioUi';
 import CertificatePanel from '../components/studio/CertificatePanel';
 import CustomServicePanel from '../components/studio/CustomServicePanel';
 import EquipmentInventoryPanel from '../components/studio/EquipmentInventoryPanel';
@@ -34,6 +40,7 @@ import {
   selectFirewallRules,
   selectRouteTable,
 } from '../features/network/selectors';
+import { redo, undo } from '../features/network/history';
 import { useAutosave } from '../features/network/useAutosave';
 import {
   useProjectsQuery,
@@ -62,9 +69,13 @@ export default function StudioPage({ language }: StudioPageProps) {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
   const [printShowLinkDescriptions, setPrintShowLinkDescriptions] =
     useState(true);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [showErasedToast, setShowErasedToast] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.projectName);
   const diagramCaptureRef = useRef<HTMLDivElement | null>(null);
@@ -89,11 +100,11 @@ export default function StudioPage({ language }: StudioPageProps) {
     },
     {
       id: 'servicos-certificados',
-      label: 'Serviços e Certificados',
+      label: copy.servicesAndCertificatesTab,
       content: (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <CustomServicePanel />
-          <CertificatePanel />
+          <CustomServicePanel language={language} />
+          <CertificatePanel language={language} />
         </div>
       ),
     },
@@ -128,30 +139,96 @@ export default function StudioPage({ language }: StudioPageProps) {
   }
 
   function confirmReset() {
-    // O autosave (ver app/store.ts) grava esse estado resetado no slot
-    // do projeto ativo sozinho — não precisa limpar storage aqui.
+    // O autosave (`useAutosave`) grava esse estado resetado no slot do
+    // projeto ativo sozinho — não precisa limpar storage aqui. O reset entra
+    // no histórico como passo próprio, então o toast pode desfazê-lo.
     dispatch(resetNetworkState());
     setIsResetModalOpen(false);
+    setShowErasedToast(true);
   }
+
+  // Ctrl/Cmd+Z desfaz, Ctrl/Cmd+Shift+Z ou Ctrl+Y refaz. Dentro de campos de
+  // texto o desfazer nativo do campo continua valendo.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        dispatch(undo());
+      } else if ((key === 'z' && event.shiftKey) || key === 'y') {
+        event.preventDefault();
+        dispatch(redo());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [dispatch]);
+
+  // Gaveta Estrutura: Esc fecha e devolve o foco ao botão da toolbar.
+  useEffect(() => {
+    if (!isLegendOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"]')) return; // modal aberto
+      setIsLegendOpen(false);
+      document
+        .querySelector<HTMLElement>('[aria-controls="studio-structure-drawer"]')
+        ?.focus();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isLegendOpen]);
+
+  // Menu "⋯": fecha com clique fora ou Esc.
+  useEffect(() => {
+    if (!isMoreMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!moreMenuRef.current?.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMoreMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isMoreMenuOpen]);
+
 
   function handleOpenPrintModal() {
     setPrintShowLinkDescriptions(true);
+    setPdfError(false);
     setIsPrintModalOpen(true);
   }
 
   async function confirmPrint() {
     if (isGeneratingPdf) return;
 
+    setPdfError(false);
     const targetWindow = window.open('', '_blank');
     if (!targetWindow) {
-      setIsPrintModalOpen(false);
+      // Popup bloqueado: mantém o modal aberto com a mensagem de erro.
+      setPdfError(true);
       return;
     }
 
     try {
       targetWindow.document.open();
       targetWindow.document.write(
-        '<!doctype html><html><head><meta charset="utf-8" /><title>PDF</title><style>body{margin:0;display:grid;place-items:center;height:100vh;background:#0f172a;color:#e2e8f0;font-family:Arial,sans-serif;} .msg{font-size:14px;letter-spacing:.02em;}</style></head><body><div class="msg">Gerando PDF...</div></body></html>',
+        `<!doctype html><html><head><meta charset="utf-8" /><title>PDF</title><style>body{margin:0;display:grid;place-items:center;height:100vh;background:#0a1220;color:#8fa3c4;font:14px 'Public Sans',system-ui,sans-serif;}</style></head><body><div>${copy.generatingPdf}</div></body></html>`,
       );
       targetWindow.document.close();
     } catch {
@@ -161,11 +238,9 @@ export default function StudioPage({ language }: StudioPageProps) {
     setIsGeneratingPdf(true);
 
     try {
-      const diagramImageData = networkDiagramRef.current?.exportImageDataForPdf(
-        {
-          showLinkDescriptions: printShowLinkDescriptions,
-        },
-      );
+      const diagramExport = networkDiagramRef.current?.exportImageDataForPdf({
+        showLinkDescriptions: printShowLinkDescriptions,
+      });
 
       // Sprint equipamentos Fase 13 — cruza o inventário (já expandido por
       // unidade, Fase 12) com o catálogo (marca+modelo) para anexar preço
@@ -198,15 +273,17 @@ export default function StudioPage({ language }: StudioPageProps) {
         routes,
         firewallRules,
         equipmentInventory,
-        diagramImageData,
+        diagramImageData: diagramExport?.imageData ?? null,
+        connectionNotes: diagramExport?.connectionNotes ?? [],
         dashboardElement: diagramCaptureRef.current,
         targetWindow,
       });
       setIsPrintModalOpen(false);
     } catch (error) {
-      // Keep simple browser feedback to avoid silent failure when popup/navigation is blocked.
+      // Erro fica visível dentro do próprio modal (que continua aberto),
+      // localizado, com o botão de gerar servindo de "tentar novamente".
       console.error('Falha ao gerar relatório PDF', error);
-      window.alert('Nao foi possivel gerar o PDF. Tente novamente.');
+      setPdfError(true);
       targetWindow.close();
     } finally {
       setIsGeneratingPdf(false);
@@ -216,15 +293,18 @@ export default function StudioPage({ language }: StudioPageProps) {
   return (
     <main className="mx-auto max-w-[1600px] space-y-3 p-4">
       <div className="relative">
-        {/* ── Legend drawer overlay ─────────────────────────────────────── */}
+        {/* ── Gaveta "Estrutura" (sobreposta ao diagrama) ─────────────── */}
         {isLegendOpen && (
           <div
-            className="absolute inset-0 z-40 bg-black/30"
+            className="absolute inset-0 z-40 bg-ink/40"
             onClick={() => setIsLegendOpen(false)}
           />
         )}
         <div
-          className={`absolute left-0 top-0 z-50 h-full w-[390px] shadow-2xl transition-transform duration-200 ${
+          id="studio-structure-drawer"
+          inert={!isLegendOpen}
+          aria-hidden={!isLegendOpen}
+          className={`absolute left-0 top-0 z-50 h-full w-[360px] transition-transform duration-200 ${
             isLegendOpen ? 'translate-x-0' : '-translate-x-[110%]'
           }`}
         >
@@ -232,13 +312,14 @@ export default function StudioPage({ language }: StudioPageProps) {
         </div>
 
         <section className="space-y-3">
-          <div className="rounded-lg border border-line bg-ink-raised px-4 py-3">
+          <header className="rounded-md border border-line bg-ink-raised px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
+              <div className="flex min-w-0 flex-col gap-1">
                 {isEditingTitle ? (
                   <form onSubmit={handleTitleSubmit}>
                     <input
                       autoFocus
+                      aria-label={copy.renameProjectAriaLabel}
                       value={titleDraft}
                       onChange={(event) => setTitleDraft(event.target.value)}
                       onBlur={commitTitle}
@@ -248,75 +329,102 @@ export default function StudioPage({ language }: StudioPageProps) {
                           setIsEditingTitle(false);
                         }
                       }}
-                      className="w-full max-w-md rounded-sm border border-accent bg-ink px-2 py-1 text-lg font-semibold text-chalk outline-none"
+                      className="field max-w-md font-display text-title font-bold"
                     />
                   </form>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={startEditingTitle}
-                    aria-label={copy.renameProjectAriaLabel}
-                    title={copy.renameProjectAriaLabel}
-                    className="group flex min-w-0 max-w-full items-center gap-2 rounded-sm px-1 py-1 -mx-1 text-left hover:bg-ink-raised-2"
-                  >
-                    <h2 className="truncate text-lg font-semibold text-chalk">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <h1 className="truncate font-display text-title font-bold text-chalk">
                       {meta.projectName || copy.untitledProject}
-                    </h2>
-                    <span className="shrink-0 text-sm text-chalk-faint opacity-0 transition group-hover:opacity-100">
-                      ✎
-                    </span>
-                  </button>
+                    </h1>
+                    <button
+                      type="button"
+                      onClick={startEditingTitle}
+                      aria-label={copy.renameProjectAriaLabel}
+                      title={copy.renameProjectAriaLabel}
+                      className="btn btn-ghost btn-sm btn-icon"
+                    >
+                      <Pencil size={14} aria-hidden="true" />
+                    </button>
+                    {activeProject && (
+                      <span className="chip">
+                        <NetworkTypeIcon
+                          type={activeProject.networkType}
+                          size={12}
+                        />
+                        {
+                          projectsCopy.networkTypeOptions[
+                            activeProject.networkType
+                          ]
+                        }
+                      </span>
+                    )}
+                  </div>
                 )}
-                {activeProject && (
-                  <span className="mt-1 inline-block rounded-sm bg-ink-raised-2 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-chalk-faint">
-                    {projectsCopy.networkTypeOptions[activeProject.networkType]}
-                  </span>
-                )}
-                <p className="mt-1 text-xs text-chalk-dim">{copy.infoHint}</p>
+                <p className="text-xs text-chalk-dim">{copy.infoHint}</p>
               </div>
 
-              {/* "Medidor de sinal" — mesma lógica de 3 estados de antes
-                  (persistWarning/saving/idle), agora em barras coloridas
-                  pelos tokens de sinal do redesign Planta em vez de
-                  amber/sky/emerald soltos. */}
-              <button
-                type="button"
-                onClick={forceSave}
-                title={
-                  meta.lastSavedAt
-                    ? new Date(meta.lastSavedAt).toLocaleString(language)
-                    : copy.notSavedYet
-                }
-                className={`flex shrink-0 items-center gap-2 rounded-sm border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition ${
-                  meta.persistWarning
-                    ? 'border-line text-signal-warn hover:bg-ink-raised-2'
-                    : meta.saveStatus === 'saving'
-                      ? 'border-line text-accent'
-                      : 'border-line text-signal-up hover:bg-ink-raised-2'
-                }`}
-              >
-                <span
-                  className="flex h-[11px] items-end gap-[2px]"
-                  aria-hidden="true"
+              <div className="flex items-center gap-2">
+                <SaveStatusButton
+                  saveStatus={meta.saveStatus}
+                  persistWarning={meta.persistWarning}
+                  lastSavedAt={meta.lastSavedAt}
+                  language={language}
+                  copy={copy}
+                  onClick={forceSave}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleOpenPrintModal}
+                  className="btn btn-secondary btn-sm"
                 >
-                  {[4, 8, 11, 6].map((height, index) => (
-                    <span
-                      key={index}
-                      className={`w-[2px] ${meta.saveStatus === 'saving' ? 'animate-pulse' : ''}`}
-                      style={{ height, backgroundColor: 'currentColor' }}
-                    />
-                  ))}
-                </span>
-                {meta.persistWarning
-                  ? copy.warning
-                  : meta.saveStatus === 'saving'
-                    ? copy.saving
-                    : meta.lastSavedAt
-                      ? `${copy.saved} ${new Date(meta.lastSavedAt).toLocaleTimeString(language)}`
-                      : copy.notSavedYet}
-              </button>
+                  <FileText size={14} aria-hidden="true" />
+                  {copy.printPdf}
+                </button>
+
+                <div className="relative" ref={moreMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsMoreMenuOpen((open) => !open)}
+                    aria-haspopup="menu"
+                    aria-expanded={isMoreMenuOpen}
+                    aria-label={copy.moreActions}
+                    title={copy.moreActions}
+                    className="btn btn-ghost btn-sm btn-icon"
+                  >
+                    <Ellipsis size={16} aria-hidden="true" />
+                  </button>
+                  {isMoreMenuOpen && (
+                    <div
+                      role="menu"
+                      aria-label={copy.moreActions}
+                      className="absolute right-0 top-[calc(100%+6px)] z-30 w-64 overflow-hidden rounded-md border border-line bg-ink-raised py-1 shadow-panel"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        autoFocus
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          handleReset();
+                        }}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-signal-down transition-colors hover:bg-signal-down/10 focus-visible:bg-signal-down/10"
+                      >
+                        <Eraser size={15} aria-hidden="true" />
+                        {copy.eraseContent}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+            {meta.persistWarning && (
+              <p role="alert" className="mt-2 text-xs text-signal-warn">
+                {copy.warning}: {meta.persistWarning}
+              </p>
+            )}
+          </header>
 
           <StudioToolbar
             language={language}
@@ -324,10 +432,12 @@ export default function StudioPage({ language }: StudioPageProps) {
             onToggleLegend={() => setIsLegendOpen((v) => !v)}
           />
 
-          <div className="rounded-lg border border-line bg-ink-raised p-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
-            <div className="mb-2 flex items-center justify-between px-1 text-[11px] uppercase tracking-[0.16em] text-chalk-faint">
-              <span>{copy.dashboardTitle}</span>
-              <span>Zoom: {(ui.zoom * 100).toFixed(0)}%</span>
+          <div className="rounded-md border border-line bg-ink-raised p-2">
+            <div className="text-label mb-2 flex items-center justify-between px-1 text-chalk-faint">
+              <h2>{copy.dashboardTitle}</h2>
+              <span className="tabular-nums">
+                {studioUi().zoom} {(ui.zoom * 100).toFixed(0)}%
+              </span>
             </div>
 
             <div ref={diagramCaptureRef} className="relative">
@@ -337,73 +447,78 @@ export default function StudioPage({ language }: StudioPageProps) {
         </section>
       </div>
 
-      <TableTabs tabs={studioTabs} defaultTabId="rotas" />
-
-      <div className="w-full rounded-lg border border-line bg-ink-raised px-3 py-2 text-xs text-chalk-dim">
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div>
-              {copy.localPersistence}:{' '}
-              <span className="font-semibold text-signal-up">JSON</span>
-            </div>
-            {meta.persistWarning && (
-              <div className="text-signal-warn">
-                {copy.warning}: {meta.persistWarning}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleOpenPrintModal}
-              className="rounded-sm border border-signal-up/60 bg-signal-up/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal-up transition hover:bg-signal-up/20"
-            >
-              {copy.printPdf}
-            </button>
-            <button
-              onClick={handleReset}
-              className="rounded-sm border border-signal-down/60 bg-signal-down/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-signal-down transition hover:bg-signal-down/20"
-            >
-              {copy.resetData}
-            </button>
-          </div>
-        </div>
-      </div>
+      <TableTabs
+        tabs={studioTabs}
+        groups={[
+          {
+            id: 'routing',
+            label: copy.groupRouting,
+            tabIds: ['rotas', 'vlan-subnet', 'protocolo'],
+          },
+          {
+            id: 'security',
+            label: copy.groupSecurity,
+            tabIds: ['firewall', 'qos', 'servicos-certificados'],
+          },
+          {
+            id: 'addressing',
+            label: copy.groupAddressing,
+            tabIds: ['vlans-site', 'dhcp', 'inventario'],
+          },
+        ]}
+        defaultTabId="rotas"
+        storageKey={
+          projectId ? `rede-sp-cwb-studio-tab:${projectId}` : undefined
+        }
+      />
 
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 px-4">
-          <div className="w-full max-w-md rounded-xl border border-line bg-ink-raised p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
-              {copy.confirmReset}
-            </h3>
-            <p className="mt-2 text-sm text-chalk-dim">{copy.resetQuestion}</p>
-
-            <div className="mt-4 flex items-center justify-end gap-2">
+        <Modal
+          onClose={() => setIsResetModalOpen(false)}
+          title={copy.eraseTitle}
+          closeLabel={copy.cancel}
+          size="md"
+        >
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2 text-sm text-chalk-dim">
+              <p className="font-semibold text-chalk [overflow-wrap:anywhere]">
+                {meta.projectName || copy.untitledProject}
+              </p>
+              <p>{copy.eraseQuestion}</p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
               <button
+                type="button"
+                autoFocus
                 onClick={() => setIsResetModalOpen(false)}
-                className="rounded-sm border border-line bg-ink-raised-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised"
+                className="btn btn-secondary btn-md"
               >
                 {copy.cancel}
               </button>
               <button
+                type="button"
                 onClick={confirmReset}
-                className="rounded-sm border border-signal-down/60 bg-signal-down/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-signal-down transition hover:bg-signal-down/20"
+                className="btn btn-danger btn-md"
               >
-                {copy.confirm}
+                {copy.eraseConfirm}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {isPrintModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 px-4">
-          <div className="w-full max-w-md rounded-xl border border-line bg-ink-raised p-4 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-signal-up">
-              {copy.confirmPrint}
-            </h3>
-            <p className="mt-2 text-sm text-chalk-dim">{copy.printWarning}</p>
+        <Modal
+          onClose={() => setIsPrintModalOpen(false)}
+          title={copy.confirmPrint}
+          closeLabel={copy.cancel}
+          size="md"
+          dismissible={!isGeneratingPdf}
+        >
+          <div className="flex flex-col gap-5">
+            <p className="text-sm text-chalk-dim">{copy.printWarning}</p>
 
-            <label className="mt-3 flex items-start gap-2 text-sm text-chalk-dim">
+            <label className="flex items-start gap-2.5 text-sm text-chalk">
               <input
                 type="checkbox"
                 checked={printShowLinkDescriptions}
@@ -411,29 +526,49 @@ export default function StudioPage({ language }: StudioPageProps) {
                   setPrintShowLinkDescriptions(event.target.checked)
                 }
                 disabled={isGeneratingPdf}
-                className="mt-0.5 h-4 w-4 rounded border-line bg-ink-raised-2 text-accent focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-0.5 h-4 w-4 accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
               />
               <span>{copy.printShowLinkDescriptions}</span>
             </label>
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            {pdfError && (
+              <p role="alert" className="text-xs text-signal-down">
+                {copy.pdfError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
               <button
+                type="button"
                 onClick={() => setIsPrintModalOpen(false)}
                 disabled={isGeneratingPdf}
-                className="rounded-sm border border-line bg-ink-raised-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn btn-secondary btn-md"
               >
-                {copy.exit}
+                {copy.cancel}
               </button>
               <button
+                type="button"
+                autoFocus
                 onClick={confirmPrint}
                 disabled={isGeneratingPdf}
-                className="rounded-sm border border-signal-up/60 bg-signal-up/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-signal-up transition hover:bg-signal-up/20 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-busy={isGeneratingPdf}
+                className="btn btn-primary btn-md"
               >
+                <FileText size={16} aria-hidden="true" />
                 {isGeneratingPdf ? copy.generatingPdf : copy.print}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
+      )}
+      {showErasedToast && (
+        <Toast
+          message={copy.contentErased}
+          actionLabel={copy.undo}
+          onAction={() => dispatch(undo())}
+          dismissLabel={copy.dismiss}
+          onDismiss={() => setShowErasedToast(false)}
+        />
       )}
     </main>
   );

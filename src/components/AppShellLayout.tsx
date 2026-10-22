@@ -1,73 +1,42 @@
-import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-    getStudioAppCopy,
-    STUDIO_LANGUAGE_OPTIONS,
-    type StudioLanguage,
-} from './studio/catalog';
-import { replaceLangSegment } from '../app/routing/replaceLangSegment';
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { getStudioAppCopy, type StudioLanguage } from './studio/catalog';
 import BrandMark from './BrandMark';
+import LanguageSwitcher from './LanguageSwitcher';
 import UserBadgeMenu from './UserBadgeMenu';
-import { servicesRoutes } from '../services';
 
 /**
- * Shell visual do app logado: header com título, nav e seletor de
- * idioma (agora navega trocando o segmento `:lang` da URL, em vez de só
- * trocar um estado local). Envolve as rotas autenticadas (dashboard,
- * Studio, Slides enquanto ainda existir).
+ * Shell visual do app logado: header com a marca (leva a "Meus projetos"),
+ * seletor de idioma e menu do usuário. Envolve as rotas autenticadas
+ * (dashboard e Studio).
  */
 export default function AppShellLayout() {
   const { lang } = useParams<{ lang: StudioLanguage }>();
   const language = lang ?? 'pt';
-  const location = useLocation();
-  const navigate = useNavigate();
   const appCopy = getStudioAppCopy(language);
-
-  const handleLanguageChange = (nextLang: StudioLanguage) => {
-    servicesRoutes.language.setStoredLanguage(nextLang);
-    navigate(replaceLangSegment(location.pathname, nextLang));
-  };
+  // O header alinha com a coluna de conteúdo da rota: dashboard usa o
+  // container de 6xl; o Studio usa a largura cheia (1600px).
+  const isStudio = useLocation().pathname.includes('/studio/');
 
   return (
     <div className="bg-blueprint min-h-screen text-chalk">
-      <header className="sticky top-0 z-20 border-b border-line bg-ink/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
-          <h1 className="flex items-center gap-3 text-sm font-semibold tracking-[0.2em] text-accent">
-            <BrandMark className="h-8 w-8" />
+      <header className="sticky top-0 z-20 border-b border-line bg-ink">
+        <div
+          className={`mx-auto flex h-14 items-center justify-between gap-4 px-4 ${
+            isStudio ? 'max-w-[1600px]' : 'max-w-6xl sm:px-6'
+          }`}
+        >
+          <Link
+            to={`/${language}/projects`}
+            className="flex items-center gap-2.5 rounded-sm font-display text-sm font-bold uppercase tracking-[0.16em] text-accent"
+          >
+            <BrandMark className="h-7 w-7" />
             {appCopy.headerTitle}
-          </h1>
-          <nav className="flex items-center gap-2">
-            <div
-              className="flex items-center gap-1 rounded-sm border border-line bg-ink-raised p-1"
-              aria-label={appCopy.languageAriaLabel}
-              title={appCopy.languageAriaLabel}
-            >
-              {STUDIO_LANGUAGE_OPTIONS.map((option) => {
-                const isActive = option.value === language;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleLanguageChange(option.value)}
-                    aria-label={option.label}
-                    title={option.label}
-                    className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-bold tracking-wide transition ${
-                      isActive
-                        ? 'bg-accent text-accent-ink'
-                        : 'bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
-                    }`}
-                  >
-                    <img
-                      src={option.flagSrc}
-                      width={20}
-                      height={15}
-                      alt={option.label}
-                      className="rounded-[1px] object-cover"
-                    />
-                    {option.flag}
-                  </button>
-                );
-              })}
-            </div>
+          </Link>
+          <nav className="flex items-center gap-3">
+            <LanguageSwitcher
+              language={language}
+              ariaLabel={appCopy.languageAriaLabel}
+            />
             <UserBadgeMenu language={language} />
           </nav>
         </div>

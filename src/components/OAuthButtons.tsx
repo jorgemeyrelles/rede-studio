@@ -23,7 +23,12 @@ type OAuthButtonsProps = {
  * (despachar `loginWithOAuthProvider` e rodar o mesmo `onSuccess`), só o
  * texto do botão do Google muda (signin_with vs signup_with).
  */
-export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthButtonsProps) {
+export default function OAuthButtons({
+  language,
+  mode,
+  copy,
+  onSuccess,
+}: OAuthButtonsProps) {
   const oauthLoginMutation = useOAuthLoginMutation();
   const googleContainerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +44,10 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
       text: mode === 'login' ? 'signin_with' : 'signup_with',
       onCredential: async (idToken) => {
         setError(null);
-        const result = await oauthLoginMutation.mutateAsync({ provider: 'google', idToken });
+        const result = await oauthLoginMutation.mutateAsync({
+          provider: 'google',
+          idToken,
+        });
         if (result.ok) {
           await onSuccess();
         } else {
@@ -54,7 +62,10 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
     setMicrosoftLoading(true);
     try {
       const idToken = await signInWithMicrosoft();
-      const result = await oauthLoginMutation.mutateAsync({ provider: 'microsoft', idToken });
+      const result = await oauthLoginMutation.mutateAsync({
+        provider: 'microsoft',
+        idToken,
+      });
       if (result.ok) {
         await onSuccess();
       } else {
@@ -69,23 +80,27 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-chalk-faint">
+      <div className="flex items-center gap-3 text-xs text-chalk-faint">
         <span className="h-px flex-1 bg-line" />
         {copy.orDivider}
         <span className="h-px flex-1 bg-line" />
       </div>
 
-      {/* Largura fixa em 320px pros dois botões ficarem com o mesmo formato
-          — o botão do Google é renderizado pelo próprio Google com
-          width: 320 (ver googleAuth.ts), então o da Microsoft segue igual. */}
-      <div className="mx-auto flex w-full max-w-[320px] flex-col gap-2">
-        <div ref={googleContainerRef} />
+      {/* Os dois botões ocupam a largura da coluna do formulário, como os
+          inputs. O do Google é o componente oficial do GIS (retangular,
+          largura = largura deste container — ver googleAuth.ts); o da
+          Microsoft segue a mesma altura (40px) e o raio do sistema. */}
+      <div className="flex w-full flex-col gap-2">
+        <div
+          ref={googleContainerRef}
+          className="flex min-h-10 w-full justify-center"
+        />
 
         <button
           type="button"
           onClick={handleMicrosoft}
           disabled={microsoftLoading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn h-10 w-full border border-line bg-ink px-4 text-sm font-medium text-chalk enabled:hover:border-chalk-faint enabled:hover:bg-ink-raised-2"
         >
           <MicrosoftLogo />
           {copy.continueWithMicrosoft}
@@ -99,7 +114,13 @@ export default function OAuthButtons({ language, mode, copy, onSuccess }: OAuthB
 
 function MicrosoftLogo() {
   return (
-    <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true" className="shrink-0">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 21 21"
+      aria-hidden="true"
+      className="shrink-0"
+    >
       <rect x="1" y="1" width="9" height="9" fill="#F25022" />
       <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
       <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
