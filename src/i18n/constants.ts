@@ -282,7 +282,7 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     renameAriaLabel: 'Renomear projeto',
     comingSoon: 'Em breve',
     networkTypeComingSoonHint:
-      'Cloud, multi-cloud e redes mistas chegam em breve. Por enquanto, o Studio modela redes on-premise.',
+      'Multi-cloud e redes mistas chegam em breve. Cloud abre o Studio Cloud (AWS).',
     deleteAriaLabel: 'Excluir projeto',
     deleteModalTitle: 'Excluir projeto',
     deleteModalBody:
@@ -322,7 +322,7 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     renameAriaLabel: 'Rename project',
     comingSoon: 'Coming soon',
     networkTypeComingSoonHint:
-      'Cloud, multi-cloud and hybrid networks are coming soon. For now, the Studio models on-premise networks.',
+      'Multi-cloud and hybrid networks are coming soon. Cloud opens the Cloud Studio (AWS).',
     deleteAriaLabel: 'Delete project',
     deleteModalTitle: 'Delete project',
     deleteModalBody:
@@ -362,7 +362,7 @@ export const PROJECTS_PAGE_COPY: Record<AppLanguage, ProjectsPageCopy> = {
     renameAriaLabel: 'Renombrar proyecto',
     comingSoon: 'Próximamente',
     networkTypeComingSoonHint:
-      'Cloud, multi-cloud y redes mixtas llegan pronto. Por ahora, el Studio modela redes on-premise.',
+      'Multi-cloud y redes mixtas llegan pronto. Cloud abre el Studio Cloud (AWS).',
     deleteAriaLabel: 'Eliminar proyecto',
     deleteModalTitle: 'Eliminar proyecto',
     deleteModalBody:

@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import Modal from '../components/Modal';
 import NetworkTypeIcon from '../components/NetworkTypeIcon';
+import SaveStatusButton from '../components/studio/SaveStatusButton';
 import Toast from '../components/Toast';
 import { ui as studioUi } from '../components/studio/utils/studioUi';
 import CertificatePanel from '../components/studio/CertificatePanel';
@@ -206,16 +207,6 @@ export default function StudioPage({ language }: StudioPageProps) {
     };
   }, [isMoreMenuOpen]);
 
-  const saveLabel = meta.persistWarning
-    ? copy.warning
-    : meta.saveStatus === 'saving'
-      ? copy.saving
-      : meta.lastSavedAt
-        ? `${copy.saved} ${new Date(meta.lastSavedAt).toLocaleTimeString(
-            language,
-            { hour: '2-digit', minute: '2-digit' },
-          )}`
-        : copy.notSavedYet;
 
   function handleOpenPrintModal() {
     setPrintShowLinkDescriptions(true);
@@ -374,45 +365,14 @@ export default function StudioPage({ language }: StudioPageProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* "Medidor de sinal" — 3 estados (persistWarning/saving/idle)
-                    em barras coloridas pelos tokens de sinal. Clicar força o
-                    save imediato. O anúncio pra leitor de tela fica no
-                    <span> sr-only abaixo, não no botão. */}
-                <button
-                  type="button"
+                <SaveStatusButton
+                  saveStatus={meta.saveStatus}
+                  persistWarning={meta.persistWarning}
+                  lastSavedAt={meta.lastSavedAt}
+                  language={language}
+                  copy={copy}
                   onClick={forceSave}
-                  title={
-                    meta.lastSavedAt
-                      ? new Date(meta.lastSavedAt).toLocaleString(language)
-                      : copy.notSavedYet
-                  }
-                  className={`btn btn-sm border border-line font-medium tabular-nums enabled:hover:bg-ink-raised-2 ${
-                    meta.persistWarning
-                      ? 'text-signal-warn'
-                      : meta.saveStatus === 'saving'
-                        ? 'text-accent'
-                        : 'text-signal-up'
-                  }`}
-                >
-                  <span
-                    className="flex h-[11px] items-end gap-[2px]"
-                    aria-hidden="true"
-                  >
-                    {[4, 8, 11, 6].map((height, index) => (
-                      <span
-                        key={index}
-                        className={`w-[2px] ${meta.saveStatus === 'saving' ? 'animate-pulse' : ''}`}
-                        style={{ height, backgroundColor: 'currentColor' }}
-                      />
-                    ))}
-                  </span>
-                  {saveLabel}
-                </button>
-                <span className="sr-only" role="status" aria-live="polite">
-                  {meta.saveStatus === 'saving' || meta.persistWarning
-                    ? saveLabel
-                    : ''}
-                </span>
+                />
 
                 <button
                   type="button"

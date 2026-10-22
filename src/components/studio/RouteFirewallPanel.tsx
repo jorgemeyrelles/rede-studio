@@ -545,7 +545,7 @@ function ServicePicker({
  * descritores de aba `{ id, label, content }` — StudioPage.tsx combina o
  * retorno com os outros paineis do Studio (VLANs por site, inventário,
  * serviços/certificados) num único `TableTabs` (ver Fase 4 do redesign
- * Planta, .claude/plans/redesign-planta-e-sessao-jwt.md). Continua um hook
+ * Planta, .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md). Continua um hook
  * de verdade (chama useAppSelector/useState normalmente) — só a "casca" de
  * JSX que virou array em vez de <TableTabs>.
  */

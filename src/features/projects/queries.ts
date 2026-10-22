@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CloudState } from '../cloud/types';
 import type { NetworkState } from '../network/types';
 import { projectsRoutes } from '../../services/routes/projectsRoutes';
 import type { CreateProjectInput } from './types';
@@ -72,6 +73,18 @@ export function useSaveProjectSnapshotMutation() {
       id: string;
       networkState: NetworkState;
     }) => projectsRoutes.saveProjectSnapshot(id, networkState),
+    onSuccess: (result) => {
+      if (result.ok) invalidate();
+    },
+  });
+}
+
+/** Autosave do Studio Cloud (ver `features/cloud/useCloudAutosave.ts`) — mesma regra do on-prem. */
+export function useSaveCloudSnapshotMutation() {
+  const invalidate = useInvalidateProjects();
+  return useMutation({
+    mutationFn: ({ id, cloudState }: { id: string; cloudState: CloudState }) =>
+      projectsRoutes.saveCloudSnapshot(id, cloudState),
     onSuccess: (result) => {
       if (result.ok) invalidate();
     },

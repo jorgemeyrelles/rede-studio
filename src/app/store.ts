@@ -1,5 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
 import {
+  cloudHistoryMiddleware,
+  cloudHistoryReducer,
+} from '../features/cloud/cloudHistory';
+import cloudReducer from '../features/cloud/cloudSlice';
+import {
   historyMiddleware,
   historyReducer,
 } from '../features/network/history';
@@ -9,15 +14,18 @@ import networkReducer from '../features/network/networkSlice';
 // um hook usado dentro de `StudioPage.tsx` — lê `projectId` da URL e salva via
 // React Query (`useSaveProjectSnapshotMutation`). Sessão (`auth`) e lista de
 // projetos (`projects`) também saíram do Redux — ver `features/auth/queries.ts`
-// e `features/projects/queries.ts`. Só sobra aqui o estado de cliente puro da
-// topologia (`network`).
+// e `features/projects/queries.ts`. Só sobra aqui o estado de cliente puro do
+// projeto aberto: `network` (Studio on-prem) ou `cloud` (Studio Cloud).
 export const store = configureStore({
   reducer: {
     network: networkReducer,
     // Só os flags canUndo/canRedo — as pilhas vivem no middleware.
     history: historyReducer,
+    cloud: cloudReducer,
+    cloudHistory: cloudHistoryReducer,
   },
-  middleware: (getDefault) => getDefault().concat(historyMiddleware),
+  middleware: (getDefault) =>
+    getDefault().concat(historyMiddleware, cloudHistoryMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

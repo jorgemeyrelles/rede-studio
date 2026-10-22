@@ -1,7 +1,7 @@
 /**
  * Ícone de rede do Rede Studio — usado no header do app e na landing page.
  * Logo "Nó & Malha" (01) do redesign Planta — ver
- * .claude/plans/redesign-planta-e-sessao-jwt.md. Cores vêm dos tokens
+ * .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md. Cores vêm dos tokens
  * definidos em src/styles/global.css (var(--accent)/var(--accent-2)), não de
  * hex fixos, pra acompanhar qualquer troca de variante de paleta.
  */

@@ -22,7 +22,7 @@
   --display: 'Archivo', 'Arial Black', sans-serif;
 
   /* ── Tokens do redesign "Planta" (variante âmbar/cobre) ──
-     Ver .claude/plans/redesign-planta-e-sessao-jwt.md. Usados via classes
+     Ver .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md. Usados via classes
      Tailwind (tailwind.config.js mapeia bg-ink, text-accent etc. pra estas
      custom properties) e diretamente em SVG (BrandMark.tsx, favicon.svg). */
   --ink: #0a1220;
@@ -80,6 +80,19 @@
   --tier-dmz-rgb: 251 146 60;
   --tier-management-rgb: 167 139 250;
   --tier-custom-rgb: 122 143 179;
+
+  /* Studio Cloud — cores de grupo do guia oficial da AWS (as mesmas dos
+     ícones de grupo em src/assets/aws-icons). Cor de IDENTIDADE do
+     container (borda e ícone), nunca de texto: os títulos ficam em giz. */
+  --aws-account-rgb: 231 21 123;
+  --aws-region-rgb: 0 164 166;
+  --aws-vpc-rgb: 140 79 255;
+  --aws-az-rgb: 0 164 166;
+  --aws-subnet-public-rgb: 122 161 22;
+  --aws-subnet-private-rgb: 0 164 166;
+  --aws-asg-rgb: 237 113 0;
+  /* Grupo "AWS Cloud" do guia (versão escura): serviços globais. */
+  --aws-cloud-rgb: 196 204 214;
 }
 
 /* Archivo como face de título em todo o app logado/deslogado — não precisa
@@ -196,7 +209,7 @@ html::-webkit-scrollbar-corner {
 
 /* Tooltip Modal GoJS — inspetor de nó/link no Studio (ATIVO, não é deck de
    slides: usado por NetworkDiagram.tsx). Fase 5 do redesign Planta — ver
-   .claude/plans/redesign-planta-e-sessao-jwt.md. */
+   .claude/plans/_arquivo/redesign-planta-e-sessao-jwt.md. */
 .gojs-tooltip-modal {
   background: var(--ink-raised);
   border: 1px solid var(--line);

@@ -359,6 +359,15 @@ O diálogo compartilhado de todo o app. Painel `ink-raised` de 6px, padding de 2
 ### Painel Estrutura (assinatura)
 Gaveta de 360px sobre o diagrama (fundo `ink` a 40%), cabeçalho fixo com título em Heading e dica em Small. Árvore Site → LAN → camada → componente com linhas de 32px e recuo de 16px por nível, guia vertical em `line`. Camada mostra o ponto `tier-*`; componente mostra o ícone com um ponto da família por papel. Ações aparecem no hover/foco: `+` (adicionar filho) e `⋯` (menu, com o destrutivo dentro). Dentro de cada LAN, o "esqueleto" de camadas na ordem do diagrama: as que faltam são linhas tracejadas que criam a camada com um clique. Clicar num componente o localiza no diagrama.
 
+### Studio Cloud (canvas AWS)
+Containers da hierarquia AWS (conta, região, VPC, AZ, subnet) com borda de 1px na cor de grupo oficial da AWS (tokens `--aws-*`, mesmas cores dos ícones de grupo), fundo da mesma cor a 3–6%, AZ e região tracejadas; título em giz 12px/600 com o ícone oficial de 24px e o metadado técnico (código da região, CIDR, resumo IAM) em mono 11px à direita. A cor de grupo nunca vai para texto. Recurso folha: cartão `ink-raised` 112×92 com o ícone oficial de 40px e o nome em 11px. Selecionado: contorno âmbar de 2px. Paleta por camada (L0–L5) com o motivo do bloqueio sempre visível e o selo "Próximo passo" em âmbar a 15%.
+
+Foco do teclado no canvas: o nó ganha o contorno âmbar de 2px com 2px de afastamento; a conexão focada pinta a linha e as setas em âmbar com o traço da seleção (o `<g>` do SVG não desenha outline).
+
+**Aba Validação:** a tabela técnica com Severidade · Regra · Elemento · Como corrigir. A severidade é sempre ícone + palavra: erro em `signal-down` (`CircleX`), aviso em `signal-warn` (`AlertTriangle`), dica em giz apagado (`Lightbulb`). O elemento é um botão de texto com mira (`Crosshair`) que seleciona e enquadra no canvas. Filtro por severidade no segmentado padrão (o mesmo do USD ⇄ BRL), com a contagem em mono. Sem itens: o `CircleCheck` em `signal-up` e uma frase.
+
+**Exceção aos ícones:** no Studio Cloud, os produtos AWS usam os **ícones oficiais da AWS** (`src/assets/aws-icons`, sem alteração), não lucide — é o vocabulário que o engenheiro reconhece num diagrama AWS. Controles e ações continuam em lucide.
+
 ### Toast
 Aviso efêmero, um por vez, centralizado embaixo: `ink-raised` com borda `line-strong` e sombra overlay, texto 14px, ação opcional em `btn-secondary btn-sm` e fechar só-ícone. `role="status"`, Esc dispensa, some sozinho em 10s. Usado para oferecer "Desfazer" depois de ação destrutiva reversível.
 

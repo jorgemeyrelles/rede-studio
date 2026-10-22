@@ -30,3 +30,13 @@ coverage/
 
 .claude/
 CLAUDE.md
+# Saída regenerada pelo .claude/scratch/verify-cloud-terraform.ts (os golden files ficam versionados)
+.claude/scratch/terraform-out/
+.terraform/
+.terraform.lock.hcl
+
+# Harness do navegador: capturas, perfil do Chrome e console
+.claude/scratch/browser/out/
+
+# Cópias temporárias do tf-validate (apagadas ao fim de cada execução)
+.claude/scratch/.tf-validate.*

@@ -13,7 +13,7 @@ type ModalProps = {
   leading?: ReactNode;
   /** Alinha o cabeçalho ao centro (auth) em vez de à esquerda. */
   centered?: boolean;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /**
    * `false` enquanto uma operação não pode ser interrompida (ex.: gerando
    * PDF): Esc, clique fora e o botão de fechar ficam inativos.
@@ -103,7 +103,7 @@ export default function Modal({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
         className={`relative max-h-[90vh] w-full overflow-y-auto rounded-md border border-line bg-ink-raised p-6 shadow-overlay outline-none ${
-          size === 'md' ? 'max-w-md' : 'max-w-sm'
+          size === 'lg' ? 'max-w-2xl' : size === 'md' ? 'max-w-md' : 'max-w-sm'
         }`}
       >
         <button

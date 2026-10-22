@@ -1,3 +1,5 @@
+import { cloudInitialState } from '../../features/cloud/cloudSlice';
+import type { CloudState } from '../../features/cloud/types';
 import { MAX_BYTES } from '../../features/network/constants';
 import { networkInitialState } from '../../features/network/networkSlice';
 import type { NetworkState } from '../../features/network/types';
@@ -34,7 +36,8 @@ type ProjectSummaryResponse = {
 };
 
 type ProjectResponse = ProjectSummaryResponse & {
-  networkState: NetworkState;
+  networkState: NetworkState | null;
+  cloudState?: CloudState | null;
 };
 
 const NETWORK_TYPES: readonly ProjectNetworkType[] = [
@@ -62,9 +65,20 @@ function withNetworkType<T extends { networkType: unknown }>(item: T): T {
 }
 
 function toSummary(record: ProjectRecord): ProjectSummary {
-  const { networkState: _networkState, ...summary } = record;
+  const { networkState: _networkState, cloudState: _cloudState, ...summary } = record;
   void _networkState;
+  void _cloudState;
   return withNetworkType(summary);
+}
+
+/** Registro vindo da API ou de um cache antigo (sem `cloudState`) → forma atual. */
+function toRecord(raw: ProjectResponse | ProjectRecord): ProjectRecord {
+  const typed = withNetworkType({ ...raw });
+  return {
+    ...typed,
+    networkState: typed.networkState ?? null,
+    cloudState: typed.cloudState ?? null,
+  };
 }
 
 /**
@@ -85,7 +99,7 @@ function writeCacheSafely(mutate: (document: ProjectsDocument) => void) {
 
 /** Espelha um `ProjectResponse` da API no cache local (localStorage). */
 function cacheProject(response: ProjectResponse): ProjectRecord {
-  const record: ProjectRecord = withNetworkType({ ...response });
+  const record = toRecord(response);
   writeCacheSafely((document) => {
     document.projects[record.id] = record;
   });
@@ -99,7 +113,9 @@ function cacheSummary(raw: ProjectSummaryResponse): ProjectSummary {
     const existing = document.projects[response.id];
     document.projects[response.id] = existing
       ? { ...existing, ...response }
-      : { ...response, networkState: networkInitialState };
+      : response.networkType === 'CLOUD'
+        ? { ...response, networkState: null, cloudState: cloudInitialState }
+        : { ...response, networkState: networkInitialState, cloudState: null };
   });
   return response;
 }
@@ -150,23 +166,30 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
 getProject.local = function getProjectLocal(id: string): ProjectRecord | null {
   const document = loadProjectsDocument();
   const record = document.projects[id];
-  return record ? withNetworkType(record) : null;
+  return record ? toRecord(record) : null;
 };
 
+/**
+ * Cria o projeto com o estado inicial do Studio certo pro tipo: `CLOUD`
+ * nasce com um rascunho cloud vazio, os demais com a topologia on-prem
+ * inicial (a API recusa o estado trocado — ver `CreateProjectRequest`).
+ */
 export async function createProject(
   input: CreateProjectInput,
 ): Promise<ProjectRecord> {
-  const networkState: NetworkState = JSON.parse(
-    JSON.stringify(networkInitialState),
-  );
+  const name = input.name.trim() || 'Novo Projeto';
+  const initialState =
+    input.networkType === 'CLOUD'
+      ? { cloudState: { ...cloneJson(cloudInitialState), meta: { ...cloudInitialState.meta, projectName: name } } }
+      : { networkState: cloneJson(networkInitialState) };
   const response = await httpPost<ProjectResponse>('/api/projects', {
-    body: {
-      name: input.name.trim() || 'Novo Projeto',
-      networkType: input.networkType,
-      networkState,
-    },
+    body: { name, networkType: input.networkType, ...initialState },
   });
   return cacheProject(response);
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 /**
@@ -257,6 +280,45 @@ export async function saveProjectSnapshot(
 }
 
 /**
+ * Autosave do Studio Cloud — mesma política do `saveProjectSnapshot`
+ * (grava local primeiro, depois sincroniza), na rota própria
+ * `PUT /api/projects/{id}/cloud-snapshot`.
+ */
+export async function saveCloudSnapshot(
+  id: string,
+  cloudState: CloudState,
+): Promise<StatePersistenceResult> {
+  const bytes = new TextEncoder().encode(JSON.stringify(cloudState)).length;
+  if (bytes > MAX_BYTES) {
+    return {
+      ok: false,
+      warning:
+        'Projeto excedeu limite seguro de persistencia local. Considere exportar JSON.',
+    };
+  }
+
+  writeCacheSafely((document) => {
+    const record = document.projects[id];
+    if (record) {
+      record.cloudState = cloudState;
+      record.updatedAt = new Date().toISOString();
+    }
+  });
+
+  try {
+    await httpPut(`/api/projects/${id}/cloud-snapshot`, { body: { cloudState } });
+    return { ok: true, warning: null };
+  } catch (err) {
+    if (err instanceof ApiError && err.isUnauthorized) throw err;
+    return {
+      ok: false,
+      warning:
+        'Salvo localmente, mas não foi possível sincronizar com o servidor.',
+    };
+  }
+}
+
+/**
  * Migra o projeto único legado (localStorage de antes das contas de
  * usuário) pra um projeto novo anexado ao usuário que acabou de logar ou
  * se registrar. Roda uma única vez por navegador.
@@ -304,5 +366,6 @@ export const projectsRoutes = {
   renameProject,
   deleteProject,
   saveProjectSnapshot,
+  saveCloudSnapshot,
   migrateLegacyProjectIfNeeded,
 };

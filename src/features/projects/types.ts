@@ -1,3 +1,4 @@
+import type { CloudState } from '../cloud/types';
 import type { NetworkState } from '../network/types';
 
 /**
@@ -23,8 +24,14 @@ export type ProjectSummary = {
   updatedAt: string;
 };
 
+/**
+ * Projeto completo. Exatamente um dos dois estados vem preenchido, decidido
+ * pelo `networkType`: `CLOUD` → `cloudState` (Studio Cloud); os demais →
+ * `networkState` (Studio on-prem). Mesma regra da rede-studio-api.
+ */
 export type ProjectRecord = ProjectSummary & {
-  networkState: NetworkState;
+  networkState: NetworkState | null;
+  cloudState: CloudState | null;
 };
 
 export type CreateProjectInput = {

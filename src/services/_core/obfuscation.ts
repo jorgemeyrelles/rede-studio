@@ -4,7 +4,7 @@
  * apareça em texto plano ao abrir o DevTools/exportar o storage; a "chave"
  * (o próprio algoritmo, fixo no bundle JS público) não é secreta, então
  * isso é reversível por qualquer um com acesso ao código-fonte publicado.
- * Ver `.claude/plans/grid-e-camada-de-dados.md` (Fase 5 / "Fora de escopo")
+ * Ver `.claude/plans/_arquivo/grid-e-camada-de-dados.md` (Fase 5 / "Fora de escopo")
  * pra por que criptografia real não se aplica aqui.
  */
 

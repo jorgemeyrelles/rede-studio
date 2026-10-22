@@ -17,7 +17,6 @@ const NETWORK_TYPE_OPTIONS: ProjectNetworkType[] = [
  * não selecionáveis) até a modelagem cloud existir. Remover daqui libera.
  */
 const COMING_SOON_TYPES = new Set<ProjectNetworkType>([
-  'CLOUD',
   'MULTI_CLOUD',
   'HYBRID',
 ]);
