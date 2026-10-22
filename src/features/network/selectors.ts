@@ -351,7 +351,7 @@ export const selectFirewallRules = createSelector(
             : ipsecAuth === 'keypair'
               ? 'keypair'
               : ipsecAuth === 'none'
-                ? '⚠ sem IKE'
+                ? 'NO_IKE'
                 : ipsecAuth === 'psk'
                   ? 'PSK'
                   : undefined;

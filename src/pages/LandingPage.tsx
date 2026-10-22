@@ -1,70 +1,59 @@
 import {
-    Link,
-    Outlet,
-    useLocation,
-    useNavigate,
-    useParams,
-} from 'react-router-dom';
-import {
-    STUDIO_LANGUAGE_OPTIONS,
-    type StudioLanguage,
-} from '../components/studio/catalog';
-import { replaceLangSegment } from '../app/routing/replaceLangSegment';
+  FileText,
+  Hash,
+  Radio,
+  Route,
+  ShieldCheck,
+  Waypoints,
+  type LucideIcon,
+} from 'lucide-react';
+import { Link, Outlet, useParams } from 'react-router-dom';
 import BrandMark from '../components/BrandMark';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import {
+  getStudioAppCopy,
+  type StudioLanguage,
+} from '../components/studio/catalog';
+import type { LandingFeatureIcon } from '../i18n/types';
 import { getLandingPageCopy } from '../i18n/utils';
-import { servicesRoutes } from '../services';
 
-/** CTA cheia — ver .btn-planta-solid em src/styles/global.css. */
-const CTA_SOLID_CLASS = 'btn-planta-solid rounded-sm';
+const FEATURE_ICONS: Record<LandingFeatureIcon, LucideIcon> = {
+  diagram: Waypoints,
+  routes: Route,
+  firewall: ShieldCheck,
+  addressing: Hash,
+  protocols: Radio,
+  report: FileText,
+};
 
 export default function LandingPage() {
   const { lang } = useParams<{ lang: StudioLanguage }>();
   const language = lang ?? 'pt';
-  const location = useLocation();
-  const navigate = useNavigate();
   const copy = getLandingPageCopy(language);
-
-  const handleLanguageChange = (nextLang: StudioLanguage) => {
-    servicesRoutes.language.setStoredLanguage(nextLang);
-    navigate(replaceLangSegment(location.pathname, nextLang));
-  };
+  const appCopy = getStudioAppCopy(language);
 
   return (
-    <div className="bg-blueprint min-h-screen text-chalk">
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2.5 text-xs font-semibold tracking-[0.2em] text-accent sm:text-sm">
+    <div className="bg-blueprint flex min-h-screen flex-col text-chalk">
+      <header className="border-b border-line bg-ink">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <span className="flex items-center gap-2.5 font-display text-xs font-bold uppercase tracking-[0.16em] text-accent sm:text-sm">
             <BrandMark className="h-7 w-7" />
             {copy.brand}
-          </div>
+          </span>
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-1 rounded-sm border border-line bg-ink-raised p-1 sm:flex">
-              {STUDIO_LANGUAGE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleLanguageChange(option.value)}
-                  aria-label={option.label}
-                  title={option.label}
-                  className={`rounded-sm px-2 py-1 text-[11px] font-bold tracking-wide transition ${
-                    option.value === language
-                      ? 'bg-accent text-accent-ink'
-                      : 'bg-ink-raised-2 text-chalk-dim hover:bg-ink-raised'
-                  }`}
-                >
-                  {option.flag}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitcher
+              language={language}
+              ariaLabel={appCopy.languageAriaLabel}
+            />
             <Link
               to={`/${language}/login`}
-              className="rounded-sm px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised hover:text-chalk"
+              className="btn btn-ghost btn-md hidden sm:inline-flex"
             >
               {copy.ctaLogin}
             </Link>
             <Link
               to={`/${language}/register`}
-              className={`${CTA_SOLID_CLASS} px-3 py-1.5 text-xs font-semibold uppercase tracking-wider`}
+              className="btn btn-primary btn-md hidden sm:inline-flex"
             >
               {copy.ctaRegister}
             </Link>
@@ -72,63 +61,69 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main>
-        <section className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 pb-16 pt-16 text-center sm:pt-24">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-chalk-faint">
-            {copy.tagline}
-          </span>
-          <h1 className="text-3xl font-bold leading-tight text-chalk sm:text-4xl md:text-5xl">
+      <main className="flex flex-1 flex-col">
+        <section className="mx-auto flex max-w-4xl flex-col items-center px-4 pb-16 pt-16 text-center sm:px-6 sm:pb-24 sm:pt-24">
+          <h1 className="max-w-3xl text-balance font-display text-display font-extrabold text-chalk">
             {copy.heroTitle}{' '}
-            <span className="bg-[linear-gradient(120deg,var(--accent),var(--accent-2))] bg-clip-text text-transparent">
-              {copy.heroTitleHighlight}
-            </span>
+            <span className="text-accent">{copy.heroTitleHighlight}</span>
           </h1>
-          <p className="max-w-2xl text-sm text-chalk-dim sm:text-base">
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-chalk-dim sm:text-lg">
             {copy.heroSubtitle}
           </p>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
             <Link
               to={`/${language}/register`}
-              className={`${CTA_SOLID_CLASS} px-6 py-3 text-xs font-semibold uppercase tracking-wider`}
+              className="btn btn-primary btn-md h-11 px-6 text-sm"
             >
               {copy.ctaRegister}
             </Link>
             <Link
               to={`/${language}/login`}
-              className="rounded-sm border border-line px-6 py-3 text-xs font-semibold uppercase tracking-wider text-chalk-dim transition hover:bg-ink-raised hover:text-chalk"
+              className="btn btn-secondary btn-md h-11 px-6 text-sm"
             >
               {copy.ctaLogin}
             </Link>
           </div>
+          <p className="mt-6 text-sm text-chalk-faint">{copy.tagline}</p>
         </section>
 
-        <section className="border-t border-line bg-ink-raised">
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-            <h2 className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.25em] text-chalk-faint">
+        <section className="flex-1 border-t border-line bg-ink">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+            <h2 className="font-display text-title font-bold text-chalk">
               {copy.featuresTitle}
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {copy.features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="rounded-sm border border-line bg-ink-raised-2 p-5 transition hover:border-accent"
-                >
-                  <div className="mb-3 text-2xl">{feature.icon}</div>
-                  <h3 className="mb-1.5 text-sm font-semibold text-chalk">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs leading-relaxed text-chalk-dim">
-                    {feature.description}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <ul className="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              {copy.features.map((feature) => {
+                const Icon = FEATURE_ICONS[feature.icon];
+                return (
+                  <li key={feature.title} className="flex gap-4">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-line text-accent">
+                      <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="font-display text-heading font-semibold text-chalk">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-chalk-dim">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-line px-4 py-8 text-center text-xs text-chalk-faint">
-        {copy.footerNote}
+      <footer className="border-t border-line bg-ink">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-chalk-faint sm:px-6">
+          <span className="flex items-center gap-2">
+            <BrandMark className="h-5 w-5" />
+            {copy.brand}
+          </span>
+          <span>{copy.footerNote}</span>
+        </div>
       </footer>
 
       {/* /login e /register renderizam aqui como modal, sem trocar de página */}

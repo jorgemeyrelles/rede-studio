@@ -45,6 +45,27 @@ export function pixelToCell(
   };
 }
 
+/**
+ * Como `pixelToCell`, mas SEM clamp: devolve `null` quando a posição cai
+ * fora da grade do layer. Usado no arrasto de nó — soltar fora da própria
+ * tier não pode "grudar" o nó na célula da borda (ele volta à origem).
+ */
+export function pixelToCellStrict(
+  x: number,
+  y: number,
+  columns: number,
+  rows: number,
+): { row: number; col: number } | null {
+  const col = Math.round(
+    (x - QUADRANT_ORIGIN_OFFSET_PX) / QUADRANT_COL_STEP_PX,
+  );
+  const row = Math.round(
+    (y - QUADRANT_ORIGIN_OFFSET_PX) / QUADRANT_ROW_STEP_PX,
+  );
+  if (col < 0 || row < 0 || col > columns - 1 || row > rows - 1) return null;
+  return { row, col };
+}
+
 /** Tamanho (em pixel) do container do layer para caber `columns` x `rows` quadrantes. */
 export function computeLayerGridSize(columns: number, rows: number) {
   const cols = Math.max(1, columns);

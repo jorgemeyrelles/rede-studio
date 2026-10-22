@@ -39,27 +39,19 @@ export default function LoginModal() {
       : null;
 
   return (
-    <Modal onClose={close}>
-      <form
-        onSubmit={handleSubmit}
-        className="relative flex w-full flex-col gap-3 rounded-sm border border-line bg-ink-raised p-6"
-      >
-        <button
-          type="button"
-          onClick={close}
-          aria-label={copy.backToHome}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-sm text-chalk-faint hover:bg-ink-raised-2 hover:text-chalk"
-        >
-          ✕
-        </button>
+    <Modal
+      onClose={close}
+      title={copy.title}
+      closeLabel={copy.backToHome}
+      leading={<BrandMark className="h-9 w-9" />}
+      centered
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <p className="-mt-3 text-center text-sm text-chalk-dim">
+          {copy.subtitle}
+        </p>
 
-        <div className="mb-1 flex flex-col items-center gap-1.5 text-center">
-          <BrandMark className="h-8 w-8" />
-          <h1 className="text-base font-semibold text-chalk">{copy.title}</h1>
-          <p className="text-xs text-chalk-dim">{copy.subtitle}</p>
-        </div>
-
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.emailLabel}
           <input
             type="email"
@@ -68,11 +60,11 @@ export default function LoginModal() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs text-chalk-dim">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
           {copy.passwordLabel}
           <input
             type="password"
@@ -80,12 +72,12 @@ export default function LoginModal() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-sm border border-line bg-ink px-3 py-2 text-sm text-chalk outline-none focus:border-accent"
+            className="field"
           />
         </label>
 
         {error && (
-          <p className="text-xs text-signal-down">
+          <p role="alert" className="text-xs text-signal-down">
             {getAuthErrorMessage(error, language)}
           </p>
         )}
@@ -93,19 +85,24 @@ export default function LoginModal() {
         <button
           type="submit"
           disabled={loginMutation.isPending}
-          className="btn-planta-solid mt-1 rounded-sm px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+          className="btn btn-primary btn-md mt-1 h-10 w-full"
         >
           {loginMutation.isPending ? copy.submitting : copy.submit}
         </button>
 
-        <OAuthButtons language={language} mode="login" copy={copy} onSuccess={goToProjects} />
+        <OAuthButtons
+          language={language}
+          mode="login"
+          copy={copy}
+          onSuccess={goToProjects}
+        />
 
-        <p className="text-center text-xs text-chalk-faint">
+        <p className="text-center text-xs text-chalk-dim">
           {copy.noAccountText}{' '}
           <button
             type="button"
             onClick={() => navigate(`/${language}/register`)}
-            className="font-semibold text-accent hover:underline"
+            className="font-semibold text-accent underline-offset-2 hover:underline"
           >
             {copy.registerLinkText}
           </button>

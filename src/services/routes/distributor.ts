@@ -1,6 +1,8 @@
 import { addressingRoutes } from './addressingRoutes';
 import { authRoutes } from './authRoutes';
 import { catalogRoutes } from './catalogRoutes';
+import { cloudCatalogRoutes } from './cloudCatalogRoutes';
+import { cloudPricesRoutes } from './cloudPricesRoutes';
 import { equipmentsRoutes } from './equipmentsRoutes';
 import { languageRoutes } from './languageRoutes';
 import { persistenceRoutes } from './persistenceRoutes';
@@ -26,6 +28,8 @@ export const servicesRoutes = {
   projects: projectsRoutes,
   language: languageRoutes,
   equipments: equipmentsRoutes,
+  cloudPrices: cloudPricesRoutes,
+  cloudCatalog: cloudCatalogRoutes,
 };
 
 export type ServicesRoutes = typeof servicesRoutes;

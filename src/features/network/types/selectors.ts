@@ -80,7 +80,8 @@ export type FirewallRuleRow = {
   parentRuleId?: string;
   linkId?: string;
   fwNatMode?: 'pat' | 'snat' | 'dnat' | 'hybrid' | 'none';
-  ipsecAuthBadge?: 'PSK' | 'PKI' | 'EAP' | 'keypair' | '⚠ sem IKE';
+  /** `NO_IKE` = túnel sem IKE configurado (rótulo localizado só na UI). */
+  ipsecAuthBadge?: 'PSK' | 'PKI' | 'EAP' | 'keypair' | 'NO_IKE';
 };
 
 export type FirewallGroupedResult = {

@@ -4,7 +4,7 @@
  * apareça em texto plano ao abrir o DevTools/exportar o storage; a "chave"
  * (o próprio algoritmo, fixo no bundle JS público) não é secreta, então
  * isso é reversível por qualquer um com acesso ao código-fonte publicado.
- * Ver `.claude/plans/grid-e-camada-de-dados.md` (Fase 5 / "Fora de escopo")
+ * Ver `.claude/plans/_arquivo/grid-e-camada-de-dados.md` (Fase 5 / "Fora de escopo")
  * pra por que criptografia real não se aplica aqui.
  */
 
@@ -23,7 +23,15 @@ export function encodeForStorage(value: unknown): string {
   const json = JSON.stringify(value);
   const bytes = new TextEncoder().encode(json);
   const obfuscated = xorBytes(bytes);
-  return btoa(String.fromCharCode(...obfuscated));
+  // Em blocos: `String.fromCharCode(...array)` com o array inteiro estoura a
+  // pilha ("Maximum call stack size exceeded") em projetos de algumas
+  // centenas de KB — e aí o cache falhava e o Studio não abria o projeto.
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < obfuscated.length; i += CHUNK) {
+    binary += String.fromCharCode(...obfuscated.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 /**

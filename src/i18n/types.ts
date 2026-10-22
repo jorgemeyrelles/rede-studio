@@ -3,8 +3,16 @@
  * escopo do Studio (que já tem seu próprio i18n em `src/components/studio`).
  */
 
+export type LandingFeatureIcon =
+  | 'diagram'
+  | 'routes'
+  | 'firewall'
+  | 'addressing'
+  | 'protocols'
+  | 'report';
+
 export type LandingFeature = {
-  icon: string;
+  icon: LandingFeatureIcon;
   title: string;
   description: string;
 };
@@ -77,6 +85,20 @@ export type ProjectsPageCopy = {
   cancelButton: string;
   defaultProjectNamePrefix: string;
   renameAriaLabel: string;
+  comingSoon: string;
+  networkTypeComingSoonHint: string;
+  deleteAriaLabel: string;
+  deleteModalTitle: string;
+  deleteModalBody: string;
+  deleteConfirmLabel: string;
+  deleteConfirmHint: string;
+  deleteButton: string;
+  deleting: string;
+  deleteError: string;
+  emptyStateCta: string;
+  loading: string;
+  loadError: string;
+  retry: string;
 };
 
 export type UserMenuCopy = {
@@ -84,6 +106,7 @@ export type UserMenuCopy = {
   newProject: string;
   settings: string;
   logout: string;
+  loggingOut: string;
 };
 
 export type SettingsModalCopy = {

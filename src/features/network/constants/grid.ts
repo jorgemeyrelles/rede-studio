@@ -2,8 +2,10 @@
 // nós dentro de um layer. Vive em features/network (não em components/studio)
 // porque a Layer.width/height derivada destes valores é estado de domínio,
 // consumido tanto pelos reducers (networkSlice) quanto pelo renderer GoJS.
-export const QUADRANT_ROW_GAP_PX = 24; // 1.5rem a 16px/rem
-export const QUADRANT_COLUMN_GAP_PX = 16; // 1rem
+// 32px nos dois eixos: abre corredores pras linhas de conexão desviarem dos
+// nós (com `avoidableMargin` 8 de cada lado sobram 16px de corredor).
+export const QUADRANT_ROW_GAP_PX = 32;
+export const QUADRANT_COLUMN_GAP_PX = 32;
 export const QUADRANT_WIDTH_PX = 90; // largura do nó em repouso
 export const QUADRANT_HEIGHT_PX = 77; // altura do nó em repouso
 

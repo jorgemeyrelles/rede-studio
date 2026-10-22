@@ -1,3 +1,4 @@
+import { AlertTriangle, Clock, Pencil, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
@@ -7,19 +8,16 @@ import {
 } from '../../features/network/networkSlice';
 import type { CertificateType } from '../../features/network/types';
 
-const TYPE_LABEL: Record<CertificateType, string> = {
-  local: 'Local',
-  ca: 'CA',
-  remote: 'Remoto',
-  crl: 'CRL',
-};
+import Modal from '../Modal';
+import type { ServicesCertificatesCopy, StudioLanguage } from './types';
+import { getServicesCertificatesCopy } from './utils/i18n';
 
-const TYPE_COLOR: Record<CertificateType, string> = {
-  local: 'bg-sky-800/50 text-sky-300',
-  ca: 'bg-emerald-800/50 text-emerald-300',
-  remote: 'bg-purple-800/50 text-purple-300',
-  crl: 'bg-slate-700/50 text-slate-300',
-};
+const CERT_TYPES: CertificateType[] = ['local', 'ca', 'remote', 'crl'];
+
+function typeLabel(type: CertificateType, copy: ServicesCertificatesCopy) {
+  if (type === 'remote') return copy.typeRemote;
+  return type === 'local' ? 'Local' : type.toUpperCase();
+}
 
 type DraftCert = {
   name: string;
@@ -51,7 +49,12 @@ function isExpiredOrSoon(dateStr: string) {
   return 'ok';
 }
 
-export default function CertificatePanel() {
+export default function CertificatePanel({
+  language,
+}: {
+  language: StudioLanguage;
+}) {
+  const copy = getServicesCertificatesCopy(language);
   const dispatch = useAppDispatch();
   const certificates = useAppSelector((s) => s.network.certificates);
   const [open, setOpen] = useState(false);
@@ -100,103 +103,113 @@ export default function CertificatePanel() {
   }
 
   return (
-    <div className="relative rounded-xl border border-line bg-ink-raised px-3 py-2 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
-      {/* Header */}
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          🔐 Certificados
-        </span>
+    <section className="panel">
+      <header className="panel-header">
+        <h3 className="panel-title">{copy.certificatesTitle}</h3>
         <button
           type="button"
           onClick={openCreate}
-          className="rounded border border-emerald-600/50 bg-emerald-900/30 px-2 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-800/40"
+          className="btn btn-secondary btn-sm"
         >
-          + Novo Certificado
+          <Plus size={14} aria-hidden="true" />
+          {copy.newCertificate}
         </button>
-      </div>
+      </header>
 
       {certificates.length === 0 ? (
-        <p className="text-[11px] text-slate-500">
-          Nenhum certificado importado.
+        <p className="px-3 py-4 text-xs text-chalk-faint">
+          {copy.noCertificates}
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[10px] text-slate-300">
+        <div className="theme-scrollbar overflow-x-auto px-1 pb-1">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-slate-700/50 text-[9px] uppercase tracking-wider text-slate-500">
-                <th className="py-1 pr-3 text-left">Nome</th>
-                <th className="py-1 pr-3 text-left">Tipo</th>
-                <th className="py-1 pr-3 text-left">CN</th>
-                <th className="py-1 pr-3 text-left">Issuer</th>
-                <th className="py-1 pr-3 text-left">Expira em</th>
-                <th className="py-1 pr-3 text-left">Fingerprint</th>
-                <th className="py-1" />
+              <tr>
+                <th>{copy.name}</th>
+                <th>{copy.type}</th>
+                <th>CN</th>
+                <th>{copy.issuer}</th>
+                <th>{copy.expiresAt}</th>
+                <th>Fingerprint</th>
+                <th>
+                  <span className="sr-only">{copy.edit}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {certificates.map((cert) => {
                 const expStatus = isExpiredOrSoon(cert.expiresAt ?? '');
                 return (
-                  <tr
-                    key={cert.id}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/20"
-                  >
-                    <td className="py-0.5 pr-3 font-semibold text-slate-200">
-                      {cert.name}
+                  <tr key={cert.id}>
+                    <td className="font-semibold text-chalk">{cert.name}</td>
+                    <td>
+                      <span className="chip">{typeLabel(cert.type, copy)}</span>
                     </td>
-                    <td className="py-0.5 pr-3">
-                      <span
-                        className={`rounded px-1 py-0.5 text-[9px] font-semibold ${TYPE_COLOR[cert.type]}`}
-                      >
-                        {TYPE_LABEL[cert.type]}
-                      </span>
-                    </td>
-                    <td className="max-w-[100px] truncate py-0.5 pr-3 text-slate-400">
+                    <td className="max-w-[120px] truncate font-mono">
                       {cert.cn ?? '—'}
                     </td>
-                    <td className="max-w-[100px] truncate py-0.5 pr-3 text-slate-400">
+                    <td className="max-w-[120px] truncate">
                       {cert.issuer ?? '—'}
                     </td>
                     <td
-                      className={`py-0.5 pr-3 font-mono ${
+                      className={`whitespace-nowrap font-mono ${
                         expStatus === 'expired'
-                          ? 'text-red-400'
+                          ? 'text-signal-down'
                           : expStatus === 'soon'
-                            ? 'text-yellow-400'
-                            : 'text-slate-400'
+                            ? 'text-signal-warn'
+                            : ''
                       }`}
                     >
-                      {cert.expiresAt
-                        ? new Date(cert.expiresAt).toLocaleDateString('pt-BR')
-                        : '—'}
-                      {expStatus === 'expired' && (
-                        <span className="ml-1 text-red-400">⚠</span>
-                      )}
-                      {expStatus === 'soon' && (
-                        <span className="ml-1 text-yellow-400">⏰</span>
-                      )}
+                      <span className="inline-flex items-center gap-1">
+                        {cert.expiresAt
+                          ? new Date(cert.expiresAt).toLocaleDateString(
+                              language,
+                            )
+                          : '—'}
+                        {expStatus === 'expired' && (
+                          <AlertTriangle
+                            size={13}
+                            aria-label={copy.expired}
+                            role="img"
+                          />
+                        )}
+                        {expStatus === 'soon' && (
+                          <Clock
+                            size={13}
+                            aria-label={copy.expiringSoon}
+                            role="img"
+                          />
+                        )}
+                      </span>
                     </td>
-                    <td className="max-w-[80px] truncate py-0.5 pr-3 font-mono text-[9px] text-slate-500">
+                    <td
+                      className="max-w-[120px] truncate font-mono text-chalk-faint"
+                      title={cert.fingerprint}
+                    >
                       {cert.fingerprint
                         ? cert.fingerprint.slice(0, 20) + '…'
                         : '—'}
                     </td>
-                    <td className="py-0.5 text-right">
+                    <td className="whitespace-nowrap text-right">
                       <button
                         type="button"
                         onClick={() => openEdit(cert.id)}
-                        className="mr-1 rounded px-1 text-sky-400 hover:bg-sky-900/30"
+                        aria-label={`${copy.edit} ${cert.name}`}
+                        title={copy.edit}
+                        className="btn btn-ghost btn-sm btn-icon"
                       >
-                        ✎
+                        <Pencil size={13} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
                         onClick={() =>
                           dispatch(removeCertificate({ id: cert.id }))
                         }
-                        className="rounded px-1 text-red-400 hover:bg-red-900/30"
+                        aria-label={`${copy.remove} ${cert.name}`}
+                        title={copy.remove}
+                        className="btn btn-ghost btn-sm btn-icon enabled:hover:text-signal-down"
                       >
-                        ✕
+                        <X size={14} aria-hidden="true" />
                       </button>
                     </td>
                   </tr>
@@ -207,135 +220,138 @@ export default function CertificatePanel() {
         </div>
       )}
 
-      {/* Modal */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-[420px] rounded-xl border border-[#3a5b83] bg-[#09162a] p-4 shadow-2xl">
-            <h3 className="mb-3 text-sm font-semibold text-sky-300">
-              {editingId ? 'Editar Certificado' : 'Novo Certificado'}
-            </h3>
-            <div className="space-y-2 text-xs">
-              <label className="block">
-                <span className="mb-0.5 block text-slate-400">Nome *</span>
-                <input
-                  autoFocus
-                  value={draft.name}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, name: e.target.value }))
-                  }
-                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-slate-100"
-                  placeholder="ex: Cert-SSL-VPN"
-                />
-              </label>
+        <Modal
+          onClose={() => setOpen(false)}
+          title={editingId ? copy.editCertificate : copy.newCertificate}
+          closeLabel={copy.cancel}
+          size="md"
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSave();
+            }}
+            className="flex flex-col gap-4"
+          >
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+              {copy.name} *
+              <input
+                autoFocus
+                required
+                value={draft.name}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, name: e.target.value }))
+                }
+                className="field"
+                placeholder="Cert-SSL-VPN"
+              />
+            </label>
 
-              <div>
-                <span className="mb-1 block text-slate-400">Tipo</span>
-                <div className="flex gap-1">
-                  {(Object.keys(TYPE_LABEL) as CertificateType[]).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setDraft((d) => ({ ...d, type: t }))}
-                      className={`rounded px-2 py-0.5 text-[9px] font-semibold transition ${
-                        draft.type === t
-                          ? TYPE_COLOR[t]
-                          : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
-                      }`}
-                    >
-                      {TYPE_LABEL[t]}
-                    </button>
-                  ))}
-                </div>
+            <fieldset>
+              <legend className="mb-1.5 text-xs font-medium text-chalk-dim">
+                {copy.type}
+              </legend>
+              <div role="radiogroup" className="flex flex-wrap gap-1.5">
+                {CERT_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={draft.type === t}
+                    onClick={() => setDraft((d) => ({ ...d, type: t }))}
+                    className={`h-8 rounded-sm border px-2.5 text-xs transition-colors ${
+                      draft.type === t
+                        ? 'border-accent bg-accent/10 text-chalk'
+                        : 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                    }`}
+                  >
+                    {typeLabel(t, copy)}
+                  </button>
+                ))}
               </div>
+            </fieldset>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block">
-                  <span className="mb-0.5 block text-slate-400">
-                    Common Name (CN)
-                  </span>
-                  <input
-                    value={draft.cn}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, cn: e.target.value }))
-                    }
-                    className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 font-mono text-slate-100"
-                    placeholder="*.empresa.com"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-slate-400">Issuer</span>
-                  <input
-                    value={draft.issuer}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, issuer: e.target.value }))
-                    }
-                    className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-slate-100"
-                    placeholder="Let's Encrypt"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-0.5 block text-slate-400">
-                  Data de Expiração
-                </span>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+                {copy.commonName}
                 <input
-                  type="date"
-                  value={draft.expiresAt}
+                  value={draft.cn}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, expiresAt: e.target.value }))
+                    setDraft((d) => ({ ...d, cn: e.target.value }))
                   }
-                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-slate-100"
+                  className="field font-mono"
+                  placeholder="*.empresa.com"
                 />
               </label>
-
-              <label className="block">
-                <span className="mb-0.5 block text-slate-400">
-                  Fingerprint (SHA-256)
-                </span>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+                {copy.issuer}
                 <input
-                  value={draft.fingerprint}
+                  value={draft.issuer}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, fingerprint: e.target.value }))
+                    setDraft((d) => ({ ...d, issuer: e.target.value }))
                   }
-                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 font-mono text-[10px] text-slate-100"
-                  placeholder="AA:BB:CC:..."
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-0.5 block text-slate-400">Descrição</span>
-                <input
-                  value={draft.description}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, description: e.target.value }))
-                  }
-                  className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1.5 text-slate-100"
-                  placeholder="Opcional"
+                  className="field"
+                  placeholder="Let's Encrypt"
                 />
               </label>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+              {copy.expirationDate}
+              <input
+                type="date"
+                value={draft.expiresAt}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, expiresAt: e.target.value }))
+                }
+                className="field [color-scheme:dark]"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+              {copy.fingerprint}
+              <input
+                value={draft.fingerprint}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, fingerprint: e.target.value }))
+                }
+                className="field font-mono text-xs"
+                placeholder="AA:BB:CC:…"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-chalk-dim">
+              {copy.description}
+              <input
+                value={draft.description}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, description: e.target.value }))
+                }
+                className="field"
+                placeholder={copy.optional}
+              />
+            </label>
+
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded border border-slate-600 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200"
+                className="btn btn-secondary btn-md"
               >
-                Cancelar
+                {copy.cancel}
               </button>
               <button
-                type="button"
+                type="submit"
                 disabled={!draft.name.trim()}
-                onClick={handleSave}
-                className="rounded bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600 disabled:opacity-40"
+                className="btn btn-primary btn-md"
               >
-                {editingId ? 'Salvar' : 'Criar'}
+                {editingId ? copy.save : copy.create}
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
-    </div>
+    </section>
   );
 }

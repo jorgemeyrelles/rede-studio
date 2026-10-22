@@ -673,8 +673,11 @@ function normalizeState(input: NetworkState): NetworkState {
       siteId: mappedSiteId,
       columns,
       rows,
-      width: hasGrid ? layer.width : gridSize.width,
-      height: hasGrid ? layer.height : gridSize.height,
+      // Sempre recalculado de columns×rows: o tamanho salvo reflete o
+      // espaçamento de grade da época em que foi gravado (16px antes dos
+      // 32px atuais) e deixaria a última coluna para fora do container.
+      width: gridSize.width,
+      height: gridSize.height,
       // Sprint tiers Fase 6 — projeto salvo antes desta sprint não tem
       // row/slot; cai pra `layerIndex` (mesma chave que `order` já usava
       // como posição, antes de `row` existir), preservando o empilhamento
@@ -1174,7 +1177,7 @@ export const networkSlice = createSlice({
   name: 'network',
   initialState: networkInitialState,
   reducers: {
-    resetNetworkState: () => ({
+    resetNetworkState: (state) => ({
       ...networkInitialState,
       sites: [],
       layers: [],
@@ -1199,10 +1202,43 @@ export const networkSlice = createSlice({
         activeLinkId: null,
         vlanAssignment: null,
       },
-      meta: { ...networkInitialState.meta },
+      // Apagar o conteúdo mantém o projeto (e o nome dele) — só a topologia
+      // volta ao estado inicial.
+      meta: {
+        ...networkInitialState.meta,
+        projectName: state.meta.projectName,
+      },
     }),
     hydrateNetworkState: (_state, action: PayloadAction<NetworkState>) => {
       return normalizeState(action.payload);
+    },
+    /**
+     * Desfazer/refazer (ver `history.ts`): aplica um snapshot do DOMÍNIO
+     * (tudo menos `ui` e `meta`). Seleções que apontam pra algo que não
+     * existe mais no snapshot são limpas.
+     */
+    restoreDomainSnapshot: (
+      state,
+      action: PayloadAction<Omit<NetworkState, 'ui' | 'meta'>>,
+    ) => {
+      const domain = action.payload;
+      const nodeIds = new Set(domain.nodes.map((node) => node.id));
+      const linkIds = new Set(domain.links.map((link) => link.id));
+      return {
+        ...domain,
+        meta: state.meta,
+        ui: {
+          ...state.ui,
+          inspectorNodeId:
+            state.ui.inspectorNodeId && nodeIds.has(state.ui.inspectorNodeId)
+              ? state.ui.inspectorNodeId
+              : null,
+          activeLinkId:
+            state.ui.activeLinkId && linkIds.has(state.ui.activeLinkId)
+              ? state.ui.activeLinkId
+              : null,
+        },
+      };
     },
     addSite: (state) => {
       if (state.sites.length >= 4) {
@@ -3358,6 +3394,7 @@ export const {
   markSaved,
   setProjectName,
   hydrateNetworkState,
+  restoreDomainSnapshot,
   // Fase 3
   addCustomService,
   updateCustomService,

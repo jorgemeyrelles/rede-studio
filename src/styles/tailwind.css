@@ -1,3 +1,112 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Base do app (Planta) ──
+   Em `@layer base` pra que qualquer classe utilitária sobrescreva. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Tabelas técnicas do Studio: cabeçalho é o papel tipográfico `label`
+     (único lugar com caixa-alta), números alinhados em colunas. */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--chalk-faint);
+    text-align: left;
+  }
+}
+
+/* ── Sistema de botões ──
+   Uma família, quatro variantes, dois tamanhos, um raio. Combinar sempre
+   `btn` + variante + tamanho: `btn btn-primary btn-md`.
+   - primary:   1 por contexto (Criar conta, Entrar, Criar projeto, Gerar PDF)
+   - secondary: ações de apoio e Cancelar
+   - ghost:     ações de baixa ênfase em listas, cards e barras
+   - danger:    só a confirmação final de uma ação destrutiva */
+@layer components {
+  .btn {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-md {
+    @apply h-9 px-4 text-sm;
+  }
+  .btn-sm {
+    @apply h-7 px-2.5 text-xs;
+  }
+  .btn-primary {
+    @apply bg-accent text-accent-ink enabled:hover:bg-accent/90;
+  }
+  .btn-secondary {
+    @apply border border-line bg-transparent text-chalk enabled:hover:border-chalk-faint enabled:hover:bg-ink-raised-2;
+  }
+  .btn-ghost {
+    @apply text-chalk-dim enabled:hover:bg-ink-raised-2 enabled:hover:text-chalk;
+  }
+  .btn-danger {
+    @apply bg-signal-down text-ink enabled:hover:bg-signal-down/90;
+  }
+  /* Botão só-ícone: quadrado do mesmo tamanho do `btn-sm`. Sempre com
+     `aria-label` + `title`. */
+  .btn-icon {
+    @apply h-7 w-7 px-0;
+  }
+
+  /* Rótulo de seção/meta: o papel `label` da escala tipográfica. */
+  .text-label {
+    @apply font-mono text-2xs font-medium uppercase tracking-[0.08em];
+  }
+
+  /* Campo de formulário padrão (modais, settings, dashboard). */
+  .field {
+    @apply h-9 w-full rounded-sm border border-line bg-ink px-3 text-sm text-chalk outline-none transition-colors placeholder:text-chalk-faint focus:border-accent;
+  }
+
+  .field-sm {
+    @apply h-7 w-full rounded-sm border border-line bg-ink px-2 text-xs text-chalk outline-none transition-colors placeholder:text-chalk-faint focus:border-accent;
+  }
+
+  /* ── Vocabulário dos painéis do Studio (ritmo denso) ── */
+  .panel {
+    @apply rounded-md border border-line bg-ink-raised;
+  }
+  .panel-header {
+    @apply flex items-center justify-between gap-2 border-b border-line px-3 py-2;
+  }
+  .panel-title {
+    @apply font-display text-heading font-semibold text-chalk;
+  }
+  /* Etiqueta neutra de dado (protocolo, tipo, VLAN...). Cor só quando
+     carrega significado — aí usar os tokens `signal-*`/`route-*`. */
+  .chip {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-sm bg-ink-raised-2 px-1.5 py-0.5 font-mono text-2xs font-medium text-chalk-dim;
+  }
+
+  /* Tabela técnica densa: cabeçalho no papel `label` (ver @layer base),
+     células 12px com números tabulares, linha com hover discreto. */
+  .data-table {
+    @apply w-full border-collapse text-xs text-chalk-dim;
+  }
+  .data-table th {
+    @apply whitespace-nowrap border-b border-line px-2 py-1.5;
+  }
+  .data-table td {
+    @apply border-b px-2 py-1.5 align-middle;
+    border-bottom-color: color-mix(in srgb, var(--line) 55%, transparent);
+  }
+  .data-table tbody tr:hover td {
+    background: color-mix(in srgb, var(--ink-raised-2) 60%, transparent);
+  }
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+}

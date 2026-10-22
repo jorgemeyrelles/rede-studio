@@ -1,4 +1,16 @@
+import { Crosshair, Maximize, Plus, X } from 'lucide-react';
+import {
+  getDiagramTheme,
+  networkPurposeColor,
+  sitePalette,
+} from './utils/diagramTheme';
 import * as go from 'gojs';
+import { AvoidsLinksRouter } from './vendor/gojs/AvoidsLinksRouter';
+import {
+  placeLinkLabelsStable,
+  restoreLinkLabelTexts,
+  type LinkLabelOverflow,
+} from './utils/linkLabelPlacement';
 import {
   forwardRef,
   useEffect,
@@ -44,6 +56,7 @@ import {
   getSiteReserveRange,
   isFixedFirstTier,
   isFixedLastTier,
+  pixelToCellStrict,
 } from '../../features/network/utils';
 import {
   BASE_Y,
@@ -59,7 +72,6 @@ import {
   parseCsvItems,
   parseTechValue,
   parseVlans,
-  pixelToCell,
   RELATION_OPTION_CATEGORIES,
   resolveLayerDrop,
   resolveLinkDescription,
@@ -71,6 +83,7 @@ import {
   type NetworkTooltip,
   type SiteTooltip,
 } from './catalog';
+import { ui as studioUi } from './utils/studioUi';
 
 function CreatableMultiSelectField({
   values,
@@ -111,9 +124,9 @@ function CreatableMultiSelectField({
         <select
           value={selectedOption}
           onChange={(event) => setSelectedOption(event.target.value)}
-          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+          className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
         >
-          <option value="">Selecionar opção...</option>
+          <option value="">{studioUi().selectOption}</option>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -123,9 +136,11 @@ function CreatableMultiSelectField({
         <button
           type="button"
           onClick={addSelected}
-          className="rounded border border-cyan-700/60 bg-cyan-900/30 px-2 py-1 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-800/40"
+          aria-label={studioUi().addSelected}
+          title={studioUi().addSelected}
+          className="inline-flex items-center justify-center rounded-sm border border-line-strong bg-ink-raised-2 px-2 py-1 text-chalk hover:bg-accent/15"
         >
-          +
+          <Plus size={12} aria-hidden="true" />
         </button>
       </div>
 
@@ -140,32 +155,34 @@ function CreatableMultiSelectField({
             }
           }}
           placeholder={placeholder}
-          className="w-full rounded border border-[#35567f] bg-[#0d1a2e] px-2 py-1 font-mono text-[11px] text-slate-100"
+          className="w-full rounded-sm border border-line bg-ink px-2 py-1 font-mono text-2xs text-chalk"
         />
         <button
           type="button"
           onClick={() => addValue(customValue)}
-          className="rounded border border-emerald-700/60 bg-emerald-900/30 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-800/40"
+          className="rounded-sm border border-signal-up/40 bg-signal-up/15 px-2 py-1 text-2xs font-semibold text-signal-up hover:bg-signal-up/15"
         >
           Add
         </button>
       </div>
 
-      <div className="max-h-[88px] overflow-y-auto rounded border border-line bg-ink-raised p-1">
+      <div className="max-h-[88px] overflow-y-auto rounded-sm border border-line bg-ink-raised p-1">
         {values.length === 0 ? (
-          <div className="text-[10px] italic text-slate-500">Sem itens.</div>
+          <div className="text-2xs italic text-chalk-faint">
+            {studioUi().noItems}
+          </div>
         ) : (
           <div className="flex flex-wrap gap-1">
             {values.map((value) => (
               <span
                 key={value}
-                className="inline-flex max-w-full items-center gap-1 rounded border border-violet-700/50 bg-violet-900/25 px-1.5 py-0.5 text-[10px] text-violet-100"
+                className="inline-flex max-w-full items-center gap-1 rounded-sm border border-route-vpn/40 bg-route-vpn/15 px-1.5 py-0.5 text-2xs text-route-vpn"
               >
                 <span className="truncate font-mono">{value}</span>
                 <button
                   type="button"
                   onClick={() => removeValue(value)}
-                  className="rounded px-1 text-[9px] text-rose-300 hover:bg-rose-900/40"
+                  className="rounded-sm px-1 text-2xs text-signal-down hover:bg-signal-down/15"
                   aria-label={`Remover ${value}`}
                 >
                   x
@@ -179,11 +196,22 @@ function CreatableMultiSelectField({
   );
 }
 
+export type DiagramConnectionNote = {
+  marker: string;
+  from: string;
+  to: string;
+  description: string;
+};
+
 export type NetworkDiagramHandle = {
   exportImageDataForPdf: (options?: {
     showLinkDescriptions?: boolean;
-  }) => string | null;
+  }) => { imageData: string; connectionNotes: DiagramConnectionNote[] } | null;
 };
+
+/** Fonte dos rótulos de conexão (mono, tamanho estável). */
+const LINK_LABEL_FONT_PX = 11;
+const PDF_LINK_LABEL_FONT_PX = 10;
 
 /**
  * Sprint equipamentos Fase 1 — empurra um nó remoto para fora do retângulo
@@ -239,6 +267,22 @@ function pushRemoteNodeOutsideSites(
 // mesmo site.
 const REMOTE_NODE_SITE_MARGIN = 60;
 const REMOTE_NODE_STACK_STEP = 90;
+
+/**
+ * Feedback visual de arrasto inválido (nó fora da grade da própria tier):
+ * borda do nó em `signal-down`. Volta à cor do papel do equipamento quando
+ * o arrasto volta pra dentro ou termina.
+ */
+function setDragInvalid(part: go.Part, invalid: boolean, category?: string) {
+  const body = part.findObject('BODY') as go.Shape | null;
+  if (!body) return;
+  const theme = getDiagramTheme();
+  body.stroke = invalid
+    ? theme.signal.down
+    : colorByCategory(String(category ?? ''));
+  body.strokeWidth = invalid ? 2 : 1;
+  if (part.diagram) part.diagram.currentCursor = invalid ? 'not-allowed' : '';
+}
 
 const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
   function NetworkDiagram({ language }, ref) {
@@ -312,7 +356,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         // box em si — deslocá-la pela metade da folga centraliza a grade
         // dentro do box esticado, em vez de deixá-la ancorada à esquerda.
         const renderedWidth =
-          layout.siteMaxLayerWidths.get(layer.siteId) ?? layer.width;
+          layout.layerRenderWidths.get(layer.id) ?? layer.width;
         const centeringOffsetX = Math.max(0, (renderedWidth - layer.width) / 2);
         map.set(layer.id, {
           x: pos.x + centeringOffsetX,
@@ -322,40 +366,31 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         });
       }
       return map;
-    }, [layers, layout.layerPositions, layout.siteMaxLayerWidths]);
+    }, [layers, layout.layerPositions, layout.layerRenderWidths]);
 
     const nodeData = useMemo(() => {
-      const NETWORK_PURPOSE_COLORS: Record<string, string> = {
-        principal: '#3b82f6',
-        dmz: '#f97316',
-        gestao: '#8b5cf6',
-        cliente: '#22c55e',
-        backup: '#f59e0b',
-        custom: '#64748b',
-      };
-
       const items: Array<Record<string, unknown>> = [];
       const limitedSites = sites.slice(0, 4);
-      const sitePalette = ['#38bdf8', '#22c55e', '#f59e0b', '#f43f5e'];
+      const palette = sitePalette();
       const siteVisualById = new Map<
         string,
         { stroke: string; siteFill: string; layerFill: string }
       >();
 
       limitedSites.forEach((site, index) => {
-        const stroke = sitePalette[index % sitePalette.length];
+        const stroke = palette[index % palette.length];
         siteVisualById.set(site.id, {
           stroke,
-          siteFill: `${stroke}22`,
-          layerFill: `${stroke}12`,
+          siteFill: getDiagramTheme().alpha(stroke, 0.13),
+          layerFill: getDiagramTheme().alpha(stroke, 0.07),
         });
       });
 
       for (const site of limitedSites) {
         const visual = siteVisualById.get(site.id) ?? {
-          stroke: '#38bdf8',
-          siteFill: '#38bdf822',
-          layerFill: '#38bdf812',
+          stroke: getDiagramTheme().accent,
+          siteFill: getDiagramTheme().alpha(getDiagramTheme().accent, 0.13),
+          layerFill: getDiagramTheme().alpha(getDiagramTheme().accent, 0.07),
         };
 
         items.push({
@@ -384,7 +419,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               group: site.id,
               isGroup: true,
               category: 'network',
-              networkColor: NETWORK_PURPOSE_COLORS[net.purpose] ?? '#64748b',
+              networkColor: networkPurposeColor(net.purpose),
             });
           });
 
@@ -394,8 +429,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
         siteLayers.forEach((layer) => {
           const layerPos = layout.layerPositions.get(layer.id);
-          const uniformLayerWidth =
-            layout.siteMaxLayerWidths.get(site.id) ?? layer.width;
+          const renderWidth =
+            layout.layerRenderWidths.get(layer.id) ?? layer.width;
           const layerNodes = nodes.filter((node) => node.layerId === layer.id);
           const canRemoveRow =
             layer.rows > MIN_LAYER_ROWS &&
@@ -411,7 +446,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             category: 'layer',
             layerStroke: visual.stroke,
             layerFill: visual.layerFill,
-            size: `${uniformLayerWidth} ${layer.height}`,
+            size: `${renderWidth} ${layer.height}`,
             loc: `${layerPos?.x ?? 20} ${layerPos?.y ?? BASE_Y + 62}`,
             layerId: layer.id,
             minHeight: layer.minHeight,
@@ -639,7 +674,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
       }
 
       const diagram = $(go.Diagram, diagramDivRef.current, {
-        'undoManager.isEnabled': true,
+        // Desfazer é do Redux (features/network/history.ts) — o model do
+        // GoJS é trocado inteiro a cada update, então o undo dele não serve.
+        'undoManager.isEnabled': false,
         initialAutoScale: go.AutoScale.None,
         contentAlignment: go.Spot.Default,
         allowZoom: true,
@@ -706,6 +743,13 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         setActiveSiteTooltip(null);
       };
 
+      // Espaça segmentos de links que dividem o mesmo corredor (extensão
+      // oficial do GoJS 3, vendorizada em ./vendor/gojs) — links paralelos
+      // nunca ficam um em cima do outro.
+      const linksRouter = new AvoidsLinksRouter();
+      linksRouter.linkSpacing = 6;
+      diagram.routers.add(linksRouter);
+
       diagram.groupTemplateMap.add(
         'network',
         $(
@@ -713,6 +757,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           'Vertical',
           {
             movable: false,
+            // Contêiner (rede/site) não bloqueia rota: o link atravessa a
+            // caixa e desvia só dos nós.
+            avoidable: false,
             locationSpot: go.Spot.TopLeft,
             computesBoundsAfterDrag: true,
             computesBoundsIncludingLinks: false,
@@ -727,7 +774,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             $(
               go.TextBlock,
               {
-                stroke: '#7dd3fc',
+                name: 'NETWORK_TITLE',
+                stroke: getDiagramTheme().chalkDim,
                 font: '600 11px Barlow',
                 margin: new go.Margin(0, 4, 0, 6),
               },
@@ -748,14 +796,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 },
               },
               $(go.Shape, 'Circle', {
-                fill: '#3b82f6',
-                stroke: '#1d4ed8',
+                fill: getDiagramTheme().raised2,
+                stroke: getDiagramTheme().lineStrong,
                 strokeWidth: 1,
               }),
               $(go.TextBlock, {
                 text: 'i',
                 font: 'bold 9px sans-serif',
-                stroke: '#fff',
+                stroke: getDiagramTheme().accent,
                 textAlign: 'center',
                 verticalAlignment: go.Spot.Center,
               }),
@@ -768,8 +816,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               go.Shape,
               'RoundedRectangle',
               {
-                fill: 'rgba(30,60,100,0.15)',
-                stroke: '#1e3a5f',
+                fill: getDiagramTheme().alpha(getDiagramTheme().raised2, 0.35),
+                stroke: getDiagramTheme().line,
                 strokeWidth: 1,
                 strokeDashArray: [6, 3],
               },
@@ -787,6 +835,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           'Vertical',
           {
             movable: false,
+            avoidable: false,
             locationSpot: go.Spot.TopLeft,
             locationObjectName: 'SITE_BODY',
             computesBoundsAfterDrag: true,
@@ -803,7 +852,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             $(
               go.TextBlock,
               {
-                stroke: '#a5f3fc',
+                name: 'SITE_TITLE',
+                stroke: getDiagramTheme().chalk,
                 font: '700 13px Barlow',
                 margin: new go.Margin(0, 6, 0, 0),
               },
@@ -824,14 +874,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                 },
               },
               $(go.Shape, 'Circle', {
-                fill: '#5a9fd4',
-                stroke: '#2a6ba6',
+                fill: getDiagramTheme().raised2,
+                stroke: getDiagramTheme().lineStrong,
                 strokeWidth: 1,
               }),
               $(go.TextBlock, {
                 text: 'i',
                 font: 'bold 10px sans-serif',
-                stroke: '#fff',
+                stroke: getDiagramTheme().accent,
                 textAlign: 'center',
               }),
             ),
@@ -846,8 +896,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               go.Shape,
               'RoundedRectangle',
               {
-                fill: 'rgba(15, 23, 42, 0.35)',
-                stroke: '#334155',
+                fill: getDiagramTheme().alpha(getDiagramTheme().ink, 0.35),
+                stroke: getDiagramTheme().line,
                 strokeWidth: 1.5,
               },
               new go.Binding('fill', 'siteFill'),
@@ -868,6 +918,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           go.Group,
           'Spot',
           {
+            avoidable: false,
             // Sprint tiers Fase 4 — arrastável (exceto edge/endpoint, ver
             // binding abaixo); o reposicionamento real (row/slot) só é
             // decidido no drop, pelo listener `SelectionMoved` mais abaixo
@@ -897,8 +948,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
               'RoundedRectangle',
               {
                 name: 'LAYER_BG',
-                fill: 'rgba(2, 6, 23, 0.55)',
-                stroke: '#475569',
+                fill: getDiagramTheme().alpha(getDiagramTheme().ink, 0.55),
+                stroke: getDiagramTheme().lineStrong,
                 strokeDashArray: [5, 4],
               },
               new go.Binding('fill', 'layerFill'),
@@ -912,7 +963,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           $(
             go.TextBlock,
             {
-              stroke: '#f8fafc',
+              name: 'TIER_TITLE',
+              stroke: getDiagramTheme().chalk,
               font: '600 12px Barlow',
               alignment: new go.Spot(0, 0, 2, -4),
               alignmentFocus: go.Spot.BottomLeft,
@@ -951,7 +1003,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             $(
               go.Shape,
               'Rectangle',
-              { height: 14, fill: 'rgba(148, 163, 184, 0.001)', stroke: null },
+              { height: 14, fill: 'transparent', stroke: null },
               new go.Binding(
                 'desiredSize',
                 'size',
@@ -979,14 +1031,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   },
                 },
                 $(go.Shape, 'Circle', {
-                  fill: '#334155',
-                  stroke: '#64748b',
+                  fill: getDiagramTheme().raised2,
+                  stroke: getDiagramTheme().lineStrong,
                   strokeWidth: 1,
                 }),
                 $(go.TextBlock, {
                   text: '+',
                   font: 'bold 10px sans-serif',
-                  stroke: '#e2e8f0',
+                  stroke: getDiagramTheme().chalk,
                   textAlign: 'center',
                   verticalAlignment: go.Spot.Center,
                 }),
@@ -1008,14 +1060,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   },
                 },
                 $(go.Shape, 'Circle', {
-                  fill: '#334155',
-                  stroke: '#64748b',
+                  fill: getDiagramTheme().raised2,
+                  stroke: getDiagramTheme().lineStrong,
                   strokeWidth: 1,
                 }),
                 $(go.TextBlock, {
                   text: '−',
                   font: 'bold 10px sans-serif',
-                  stroke: '#e2e8f0',
+                  stroke: getDiagramTheme().chalk,
                   textAlign: 'center',
                   verticalAlignment: go.Spot.Center,
                 }),
@@ -1054,7 +1106,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             $(
               go.Shape,
               'Rectangle',
-              { width: 14, fill: 'rgba(148, 163, 184, 0.001)', stroke: null },
+              { width: 14, fill: 'transparent', stroke: null },
               new go.Binding(
                 'desiredSize',
                 'size',
@@ -1082,14 +1134,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   },
                 },
                 $(go.Shape, 'Circle', {
-                  fill: '#334155',
-                  stroke: '#64748b',
+                  fill: getDiagramTheme().raised2,
+                  stroke: getDiagramTheme().lineStrong,
                   strokeWidth: 1,
                 }),
                 $(go.TextBlock, {
                   text: '+',
                   font: 'bold 10px sans-serif',
-                  stroke: '#e2e8f0',
+                  stroke: getDiagramTheme().chalk,
                   textAlign: 'center',
                   verticalAlignment: go.Spot.Center,
                 }),
@@ -1111,14 +1163,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   },
                 },
                 $(go.Shape, 'Circle', {
-                  fill: '#334155',
-                  stroke: '#64748b',
+                  fill: getDiagramTheme().raised2,
+                  stroke: getDiagramTheme().lineStrong,
                   strokeWidth: 1,
                 }),
                 $(go.TextBlock, {
                   text: '−',
                   font: 'bold 10px sans-serif',
-                  stroke: '#e2e8f0',
+                  stroke: getDiagramTheme().chalk,
                   textAlign: 'center',
                   verticalAlignment: go.Spot.Center,
                 }),
@@ -1134,29 +1186,39 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         {
           locationSpot: go.Spot.Center,
           avoidable: true,
-          // Folga maior em torno de cada nó pro roteamento (`AvoidsNodes`)
-          // passar mais longe do ícone, não só rente à borda.
-          avoidableMargin: new go.Margin(22, 26, 22, 26),
+          // Folga de desvio do roteamento (`AvoidsNodes`). Precisa caber no
+          // espaço entre nós da grade (32px, ver constants/grid.ts) junto com
+          // o botão "i", que sai pra fora da caixa do nó e alarga o
+          // `actualBounds`. Com folga maior, as zonas de vizinhos se
+          // sobrepõem, não sobra corredor e o roteador desiste, desenhando
+          // por cima dos nós (medido: 8px → 8 cruzamentos; 4px → 0).
+          avoidableMargin: new go.Margin(4, 4, 4, 4),
           movable: true,
           // Snap em tempo real durante o arrasto — o nó "pula" de célula em
           // célula da grade do seu layer, nunca aparece solto entre elas
           // (o handler `SelectionMoved`, mais abaixo, só confirma no Redux a
           // célula onde o nó já apareceu visualmente aqui).
+          //
+          // Fora da grade da PRÓPRIA tier o nó acompanha o cursor livre, com
+          // a borda em `signal-down` sinalizando "soltar aqui não vale" — ao
+          // soltar, `SelectionMoved` devolve o nó à célula de origem.
           dragComputation: (part, pt) => {
             const data = part.data as
-              | { layerId?: string; isRemote?: boolean }
+              | { layerId?: string; isRemote?: boolean; category?: string }
               | undefined;
             if (!data?.layerId || data.isRemote) return pt;
             const layer = layersRef.current.find((l) => l.id === data.layerId);
             const rect = layerRectByIdRef.current.get(data.layerId);
             if (!layer || !rect) return pt;
-            const { row, col } = pixelToCell(
+            const cellAtPoint = pixelToCellStrict(
               pt.x - rect.x,
               pt.y - rect.y,
               layer.columns,
               layer.rows,
             );
-            const cell = cellToPixel(row, col);
+            setDragInvalid(part, !cellAtPoint, data.category);
+            if (!cellAtPoint) return pt;
+            const cell = cellToPixel(cellAtPoint.row, cellAtPoint.col);
             return new go.Point(rect.x + cell.x, rect.y + cell.y);
           },
           mouseEnter: (_event, obj) => {
@@ -1165,6 +1227,12 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             node.findLinksConnected().each((link) => {
               link.isHighlighted = true;
             });
+            if (node.diagram) {
+              placeLinkLabelsStable(node.diagram, {
+                include: (link) => link.isHighlighted,
+                fontSizePx: LINK_LABEL_FONT_PX,
+              });
+            }
           },
           mouseLeave: (_event, obj) => {
             const node = obj as go.Node;
@@ -1172,6 +1240,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             node.findLinksConnected().each((link) => {
               link.isHighlighted = false;
             });
+            if (node.diagram) restoreLinkLabelTexts(node.diagram);
           },
           click: (_event, obj) => {
             const node = obj as go.Node;
@@ -1213,8 +1282,8 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             {
               name: 'BODY',
               figure: 'RoundedRectangle',
-              fill: '#060d19',
-              stroke: '#1d3353',
+              fill: getDiagramTheme().raised,
+              stroke: getDiagramTheme().line,
               strokeWidth: 1,
               width: 90,
               height: 77,
@@ -1258,7 +1327,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             go.TextBlock,
             {
               margin: new go.Margin(42, 6, 11, 6),
-              stroke: '#d8e7fb',
+              stroke: getDiagramTheme().chalk,
               font: '700 12px Barlow',
               textAlign: 'center',
               maxSize: new go.Size(83, NaN),
@@ -1269,7 +1338,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             go.TextBlock,
             {
               alignment: new go.Spot(0.5, 1, 0, -5),
-              stroke: '#9ec9f2',
+              stroke: getDiagramTheme().chalkDim,
               font: '700 11px "Share Tech Mono"',
             },
             new go.Binding('text', 'marker', (marker) => `[${String(marker)}]`),
@@ -1390,14 +1459,14 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             },
           },
           $(go.Shape, 'Circle', {
-            fill: '#5a9fd4',
-            stroke: '#2a6ba6',
+            fill: getDiagramTheme().raised2,
+            stroke: getDiagramTheme().lineStrong,
             strokeWidth: 1,
           }),
           $(go.TextBlock, {
             text: 'i',
             font: 'bold 10px sans-serif',
-            stroke: '#fff',
+            stroke: getDiagramTheme().accent,
             textAlign: 'center',
             verticalAlignment: go.Spot.Center,
           }),
@@ -1411,11 +1480,11 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           layerName: 'Foreground',
           routing: go.Routing.AvoidsNodes,
           curve: go.Curve.JumpGap,
-          corner: 8,
+          corner: 6,
           fromSpot: go.Spot.AllSides,
           toSpot: go.Spot.AllSides,
-          fromEndSegmentLength: 14,
-          toEndSegmentLength: 14,
+          fromEndSegmentLength: 12,
+          toEndSegmentLength: 12,
         },
         // Área de hit invisível — facilita clicar em linhas finas
         $(go.Shape, {
@@ -1430,7 +1499,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           {
             isPanelMain: true,
             strokeWidth: 0,
-            stroke: '#38bdf8',
+            stroke: getDiagramTheme().accent,
             opacity: 0,
           },
           new go.Binding('stroke', 'stroke'),
@@ -1446,7 +1515,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           go.Shape,
           {
             isPanelMain: true,
-            stroke: '#38bdf8',
+            stroke: getDiagramTheme().accent,
             strokeWidth: 1.8,
           },
           new go.Binding('stroke', 'stroke'),
@@ -1462,7 +1531,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           {
             fromArrow: 'Circle',
             stroke: null,
-            fill: '#38bdf8',
+            fill: getDiagramTheme().accent,
             scale: 0.9,
           },
           new go.Binding('fill', 'stroke'),
@@ -1472,7 +1541,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           {
             toArrow: 'Circle',
             stroke: null,
-            fill: '#38bdf8',
+            fill: getDiagramTheme().accent,
             scale: 0.9,
           },
           new go.Binding('fill', 'stroke'),
@@ -1485,21 +1554,20 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
             Boolean(h),
           ).ofObject(),
           $(go.Shape, 'RoundedRectangle', {
-            fill: '#060d19',
-            stroke: '#1d3353',
+            fill: getDiagramTheme().ink,
+            stroke: getDiagramTheme().lineStrong,
           }),
           $(
             go.TextBlock,
             {
               name: 'LINK_LABEL_TEXT',
               margin: new go.Margin(2, 5, 2, 5),
-              stroke: '#b9d6f6',
-              font: '700 7px "Share Tech Mono"',
+              stroke: getDiagramTheme().chalk,
+              // Tamanho estável (o hover não muda a fonte) — a estimativa de
+              // largura do posicionamento (linkLabelPlacement) conta com isso.
+              font: `500 ${LINK_LABEL_FONT_PX}px "IBM Plex Mono"`,
             },
             new go.Binding('text', 'label'),
-            new go.Binding('font', 'isHighlighted', (h) =>
-              h ? '700 15px "Share Tech Mono"' : '700 7px "Share Tech Mono"',
-            ).ofObject(),
           ),
         ),
       );
@@ -1630,15 +1698,30 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
           const layer = layersRef.current.find((l) => l.id === node.layerId);
           const rect = layerRectByIdRef.current.get(node.layerId);
+          setDragInvalid(part, false, node.category);
           if (!layer || !rect) return;
 
-          const { row, col } = pixelToCell(
+          const target = pixelToCellStrict(
             part.location.x - rect.x,
             part.location.y - rect.y,
             layer.columns,
             layer.rows,
           );
-          dispatch(updateNodePosition({ id: data.nodeId, row, col }));
+          if (!target) {
+            // Soltou fora da própria tier: volta pra célula de onde saiu,
+            // sem tocar no Redux (nem no histórico de desfazer).
+            const origin = cellToPixel(node.row ?? 0, node.col ?? 0);
+            part.location = new go.Point(rect.x + origin.x, rect.y + origin.y);
+            return;
+          }
+          if (target.row === node.row && target.col === node.col) return;
+          dispatch(
+            updateNodePosition({
+              id: data.nodeId,
+              row: target.row,
+              col: target.col,
+            }),
+          );
         });
       });
 
@@ -1651,9 +1734,61 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
         setActiveSiteTooltip(null);
       });
 
+      // Seleção sincronizada com o painel Estrutura (LegendPanel):
+      // diagrama → painel via `rede:diagram-selection`; painel → diagrama via
+      // `rede:focus-node` (seleciona e centraliza o nó na área visível).
+      diagram.addDiagramListener('ChangedSelection', () => {
+        const selected = diagram.selection.first();
+        const nodeId =
+          selected instanceof go.Node && !(selected instanceof go.Group)
+            ? String((selected.data as { nodeId?: string })?.nodeId ?? '')
+            : '';
+        window.dispatchEvent(
+          new CustomEvent('rede:diagram-selection', {
+            detail: { nodeId: nodeId || null },
+          }),
+        );
+      });
+      const handleFocusNode = (event: Event) => {
+        const nodeId = (event as CustomEvent<{ nodeId: string }>).detail
+          ?.nodeId;
+        if (!nodeId) return;
+        let target: go.Node | null = null;
+        diagram.nodes.each((node) => {
+          if (
+            !target &&
+            !(node instanceof go.Group) &&
+            (node.data as { nodeId?: string })?.nodeId === nodeId
+          ) {
+            target = node;
+          }
+        });
+        if (!target) return;
+        const node: go.Node = target;
+        diagram.select(node);
+        // A gaveta Estrutura (360px) cobre a esquerda do diagrama: centraliza
+        // o nó na área visível à direita dela.
+        // Folga de rolagem à esquerda do tamanho da gaveta — sem ela o GoJS
+        // limita a rolagem aos limites do documento e um nó perto da borda
+        // esquerda continuaria embaixo da gaveta.
+        diagram.scrollMargin = new go.Margin(0, 0, 0, 380);
+        const viewport = diagram.viewportBounds;
+        const drawerDoc = 380 / diagram.scale;
+        diagram.position = new go.Point(
+          node.location.x - drawerDoc - (viewport.width - drawerDoc) / 2,
+          node.location.y - viewport.height / 2,
+        );
+        node.isHighlighted = true;
+        window.setTimeout(() => {
+          node.isHighlighted = false;
+        }, 1200);
+      };
+      window.addEventListener('rede:focus-node', handleFocusNode);
+
       diagramRef.current = diagram;
 
       return () => {
+        window.removeEventListener('rede:focus-node', handleFocusNode);
         diagram.div = null;
         diagramRef.current = null;
       };
@@ -1798,17 +1933,36 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
             panel.visible = showLinkDescriptions;
             if (showLinkDescriptions && textBlock) {
-              textBlock.font = '700 10px "Share Tech Mono"';
+              textBlock.font = `500 ${PDF_LINK_LABEL_FONT_PX}px "IBM Plex Mono"`;
             }
           });
         }, 'prepare-pdf-export');
+
+        // Rótulos sem colisão; os que não cabem viram ①②… e voltam como
+        // notas pra tabela "Descrição das conexões" do PDF.
+        const overflow: LinkLabelOverflow[] = showLinkDescriptions
+          ? placeLinkLabelsStable(diagram, {
+              include: (link) =>
+                Boolean(
+                  (link.findObject('LINK_LABEL_PANEL') as go.Panel | null)
+                    ?.visible,
+                ),
+              fontSizePx: PDF_LINK_LABEL_FONT_PX,
+            })
+          : [];
+        const connectionNotes = overflow.map((item) => ({
+          marker: item.marker,
+          from: String(item.link.fromNode?.data?.text ?? ''),
+          to: String(item.link.toNode?.data?.text ?? ''),
+          description: item.text,
+        }));
 
         const bounds = diagram.documentBounds;
         const margin = 10;
         const imageData = diagram.makeImageData({
           returnType: 'string',
           type: 'image/png',
-          background: '#0b172a',
+          background: getDiagramTheme().ink,
           scale: 1,
           position: new go.Point(bounds.x - margin, bounds.y - margin),
           size: new go.Size(
@@ -1817,16 +1971,17 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
           ),
         }) as string;
 
-        diagram.commit(() => {
+        diagram.commit((d) => {
           for (const state of panelStates) {
             state.panel.visible = state.visible;
             if (state.textBlock && state.font) {
               state.textBlock.font = state.font;
             }
           }
+          restoreLinkLabelTexts(d);
         }, 'restore-pdf-export');
 
-        return imageData;
+        return { imageData, connectionNotes };
       },
     }));
 
@@ -1847,7 +2002,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
     };
 
     return (
-      <div className="relative h-[660px] rounded-lg border border-slate-700 bg-slate-950/70">
+      <div className="relative h-[660px] rounded-sm border border-line bg-ink">
         <div
           ref={diagramDivRef}
           className="h-full w-full"
@@ -1856,48 +2011,24 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
 
         {/* Botão Enquadrar */}
         <button
+          type="button"
           onClick={fitDiagram}
-          title="Enquadrar diagrama"
-          className="absolute bottom-3 right-12 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/40 text-slate-400 opacity-30 transition-all duration-200 hover:border-slate-400 hover:bg-slate-800/80 hover:text-slate-100 hover:opacity-100"
+          aria-label={studioUi().fitDiagram}
+          title={studioUi().fitDiagram}
+          className="absolute bottom-3 right-12 z-10 flex h-8 w-8 items-center justify-center rounded-sm border border-line bg-ink-raised text-chalk-dim opacity-60 transition-[opacity,color,background-color] duration-150 hover:bg-ink-raised-2 hover:text-chalk hover:opacity-100 focus-visible:opacity-100"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-          >
-            <path d="M3 3h4v2H5v2H3V3zm14 0v4h-2V5h-2V3h4zM3 17v-4h2v2h2v2H3zm12 0v-2h2v-2h2v4h-4z" />
-          </svg>
+          <Maximize size={16} aria-hidden="true" />
         </button>
 
         {/* Botão Centralizar */}
         <button
+          type="button"
           onClick={centerDiagram}
-          title="Centralizar diagrama"
-          className="absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-900/40 text-slate-400 opacity-30 transition-all duration-200 hover:border-slate-400 hover:bg-slate-800/80 hover:text-slate-100 hover:opacity-100"
+          aria-label={studioUi().centerDiagram}
+          title={studioUi().centerDiagram}
+          className="absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-sm border border-line bg-ink-raised text-chalk-dim opacity-60 transition-[opacity,color,background-color] duration-150 hover:bg-ink-raised-2 hover:text-chalk hover:opacity-100 focus-visible:opacity-100"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-          >
-            <circle cx="10" cy="10" r="2" />
-            <path
-              d="M10 3v2M10 15v2M3 10h2M15 10h2"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-            <circle
-              cx="10"
-              cy="10"
-              r="5.5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              fill="none"
-            />
-          </svg>
+          <Crosshair size={16} aria-hidden="true" />
         </button>
 
         {activeTooltip &&
@@ -2078,7 +2209,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                     onClick={() => setActiveTooltip(null)}
                     aria-label={copy.close}
                   >
-                    ✕
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
 
@@ -2100,7 +2231,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2118,7 +2249,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                          className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2134,7 +2265,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                          className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                           placeholder="2001:db8::10"
                         />
                       </label>
@@ -2154,7 +2285,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                          className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2175,7 +2306,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                               }),
                             )
                           }
-                          className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                          className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                         />
                       </label>
 
@@ -2200,7 +2331,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                   }),
                                 )
                               }
-                              className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                              className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                             />
                           </label>
 
@@ -2242,7 +2373,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                   ) && (
                     <label className="gojs-tooltip-row">
                       <span className="gojs-tooltip-label">
-                        Site de origem:
+                        {studioUi().originSite}
                       </span>
                       <select
                         value={tooltipNode.originSiteId ?? ''}
@@ -2256,9 +2387,9 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                             }),
                           );
                         }}
-                        className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                        className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                       >
-                        <option value="">— não definido —</option>
+                        <option value="">{studioUi().notDefinedOption}</option>
                         {sites.map((site) => (
                           <option key={site.id} value={site.id}>
                             {site.name}
@@ -2280,13 +2411,13 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="h-16 w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="h-16 w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
                   {techWarnings.length > 0 && (
-                    <div className="rounded border border-signal-warn/40 bg-signal-warn/10 px-2 py-2 text-[11px] text-signal-warn">
-                      <div className="mb-1 font-semibold uppercase tracking-wide text-signal-warn">
+                    <div className="rounded-sm border border-signal-warn/40 bg-signal-warn/10 px-2 py-2 text-2xs text-signal-warn">
+                      <div className="mb-1 font-semibold uppercase tracking-[0.06em] text-signal-warn">
                         {copy.validations}
                       </div>
                       <div className="space-y-1">
@@ -2376,7 +2507,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                       }),
                                     )
                                   }
-                                  className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                                  className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                                 >
                                   <option value="true">{copy.yes}</option>
                                   <option value="false">{copy.no}</option>
@@ -2428,7 +2559,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                       }),
                                     )
                                   }
-                                  className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                                  className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                                 >
                                   {options.map((option) => (
                                     <option key={option} value={option}>
@@ -2472,7 +2603,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                                     }),
                                   )
                                 }
-                                className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                                className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                               />
                             </label>
                           );
@@ -2519,7 +2650,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                     onClick={() => setActiveSiteTooltip(null)}
                     aria-label={copy.close}
                   >
-                    ✕
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
 
@@ -2541,7 +2672,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2560,7 +2691,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2579,7 +2710,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2602,7 +2733,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                           }),
                         )
                       }
-                      className="w-full rounded border border-line bg-ink-raised-2 px-2 py-1 text-[11px] text-chalk outline-none focus:border-accent"
+                      className="w-full rounded-sm border border-line bg-ink-raised-2 px-2 py-1 text-2xs text-chalk outline-none focus:border-accent"
                     />
                   </label>
 
@@ -2671,7 +2802,7 @@ const NetworkDiagram = forwardRef<NetworkDiagramHandle, NetworkDiagramProps>(
                     onClick={() => setActiveNetworkTooltip(null)}
                     aria-label={copy.close}
                   >
-                    ✕
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
 
